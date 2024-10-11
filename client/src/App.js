@@ -1,51 +1,35 @@
-import React, { useEffect, useState } from 'react';  // Import useEffect and useState for fetching data
-import logo from './logo.svg';
+import React, { useEffect, useState } from 'react';
 import './App.css';
 
 function App() {
-  // State to store the fetched data
-  const [data, setData] = useState(null);
+  const [products, setProducts] = useState([]);
 
-  // useEffect to fetch data when the component mounts
+  // Fetch products from the backend when the component loads
   useEffect(() => {
-    // Fetch from your backend
-    fetch('/api/some-endpoint')  // This will be proxied to http://localhost:3001/api/some-endpoint
-      .then(response => response.json())
-      .then(data => {
-        console.log(data);  // Log the data to the console for debugging
-        setData(data);  // Set the fetched data into state
-      })
-      .catch(error => console.error('Error fetching data:', error));
-  }, []);  // Empty array means this effect runs only once when the component mounts
+    fetch('/api/products')
+      .then((response) => response.json())
+      .then((data) => setProducts(data))
+      .catch((error) => console.error('Error fetching products:', error));
+  }, []);
 
   return (
     <div className="App">
       <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
+        <h1>Online Store</h1>
+        <div className="product-list">
+          {products.length > 0 ? (
+            products.map((product) => (
+              <div key={product.id} className="product">
+                <h2>{product.name}</h2>
+                <p>{product.description}</p>
+                <p>${product.price.toFixed(2)}</p>
+              </div>
+            ))
+          ) : (
+            <p>Loading products...</p>
+          )}
+        </div>
       </header>
-
-      {/* Display fetched data or a loading message */}
-      <div>
-        {data ? (
-          <div>
-            <h2>Data from Backend:</h2>
-            <pre>{JSON.stringify(data, null, 2)}</pre>
-          </div>
-        ) : (
-          <p>Loading data from backend...</p>
-        )}
-      </div>
     </div>
   );
 }

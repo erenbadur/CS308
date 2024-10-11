@@ -1,3 +1,1 @@
-Hadi
-
-linked with vscode
+CS 308

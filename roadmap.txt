@@ -1,0 +1,10 @@
+Windows we will use:
+
+1. Main page
+2. Search page
+3. Product page (After clicking on a category on the main page)
+4. Cart page
+5. Sign Up page
+6. Sign In page
+7. Payment page
+8. Profile page

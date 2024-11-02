@@ -1,0 +1,78 @@
+const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
+// Define the User Schema
+const userSchema = new mongoose.Schema({
+    username: {
+        type: String, 
+        required: [true, 'Username is required'],  // Field validation
+        unique: true,  // Ensure username is unique
+        trim: true,  // Remove whitespace from both ends
+        minlength: [3, 'Username must be at least 3 characters'], 
+        maxlength: [30, 'Username cannot exceed 30 characters'] 
+    },
+    email: { 
+        type: String,
+        required: [true, 'email is required'],
+        unique: true,
+        trim: true,
+        lowercase: true,
+        match: [/\S+@\S+\.\S+/, 'invalid email'],
+    },
+    password: {
+        type: String,
+        required: [true, 'Password is required'],
+        minlength: 8,
+        select: false, // Exclude password from query results by default
+    },
+    isAdmin: {
+        type: Boolean,
+        default: false
+    }})
+    // Define Comment Subschema
+const commentSchema = new mongoose.Schema({
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // Reference to the User model
+    content: { type: String, required: true, maxlength: 500 }, // Comment content
+    approved: { type: Boolean, default: false }, // Approved by product manager
+    createdAt: { type: Date, default: Date.now } // Timestamp of comment creation
+});
+
+// Define Product Schema
+const productSchema = new mongoose.Schema({
+    name: { type: String, required: true, trim: true }, // Product name
+    model: { type: String, required: true, unique: true }, // Unique model number
+    serialNumber: { type: String, required: true, unique: true }, // Unique serial number
+    description: { type: String, trim: true }, // Product description
+    quantityInStock: { type: Number, required: true, min: 0 }, // Stock quantity
+    price: { type: Number, required: true, min: 0 }, // Product price
+    warrantyStatus: { type: Boolean, default: true }, // Warranty status
+    distributor: { type: String, required: true }, // Distributor information
+
+    ratings: [
+        {
+            user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // Reference to User
+            rating: { type: Number, required: true, min: 1, max: 10 } // Rating value (1-10)
+        }
+    ],
+
+    averageRating: { type: Number, default: 0 }, // Calculated average rating
+    comments: [commentSchema], // Array of comments (requires approval)
+
+    popularity: { type: Number, default: 0 }, // Track product popularity for sorting
+
+    discount: {
+        percentage: { type: Number, min: 0, max: 100, default: 0 }, // Discount percentage
+        validUntil: { type: Date } // Discount expiration date
+    }
+}, { timestamps: true }); // Automatically adds createdAt and updatedAt fields
+
+// Pre-save Hook to Calculate Average Rating
+productSchema.pre('save', function (next) {
+    if (this.ratings.length > 0) {
+        const sum = this.ratings.reduce((acc, rating) => acc + rating.rating, 0);
+        this.averageRating = sum / this.ratings.length;
+    }
+    next();
+});
+
+// Export the Product Model
+module.exports = mongoose.model('Product', productSchema);

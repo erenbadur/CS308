@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
+
 // Define the User Schema
 const userSchema = new mongoose.Schema({
     username: {
@@ -12,23 +13,42 @@ const userSchema = new mongoose.Schema({
     },
     email: { 
         type: String,
-        required: [true, 'email is required'],
+        required: [true, 'Email is required'],
         unique: true,
         trim: true,
         lowercase: true,
-        match: [/\S+@\S+\.\S+/, 'invalid email'],
+        match: [/\S+@\S+\.\S+/, 'Invalid email'],
     },
     password: {
         type: String,
         required: [true, 'Password is required'],
         minlength: 8,
-        select: false, // Exclude password from query results by default
+        select: false // Exclude password from query results by default
     },
     isAdmin: {
         type: Boolean,
         default: false
-    }})
-    // Define Comment Subschema
+    },
+    orders: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Order' }] // Reference to Order documents
+});
+
+// Password hashing before saving
+userSchema.pre('save', async function(next) {
+    if (!this.isModified('password')) return next(); // Only hash if password is new or changed
+    try {
+        const salt = await bcrypt.genSalt(10); // Generate salt
+        this.password = await bcrypt.hash(this.password, salt); // Hash the password
+        next();
+    } catch (error) {
+        next(error);
+    }
+});
+
+// Export the User Model
+const User = mongoose.model('User', userSchema);
+module.exports.User = User;
+
+// Define Comment Subschema
 const commentSchema = new mongoose.Schema({
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // Reference to the User model
     content: { type: String, required: true, maxlength: 500 }, // Comment content
@@ -75,4 +95,5 @@ productSchema.pre('save', function (next) {
 });
 
 // Export the Product Model
-module.exports = mongoose.model('Product', productSchema);
+const Product = mongoose.model('Product', productSchema);
+module.exports.Product = Product;

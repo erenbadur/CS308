@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcrypt');    // to hash passwords
 
 // Define the User Schema
 const userSchema = new mongoose.Schema({
@@ -23,11 +23,11 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Password is required'],
         minlength: 8,
-        select: false // Exclude password from query results by default
+        select: false // Exclude password from query results by default to ensure security
     },
     isAdmin: {
         type: Boolean,
-        default: false
+        default: false  // regular user status
     },
     orders: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Order' }] // Reference to Order documents
 });

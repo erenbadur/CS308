@@ -3,7 +3,9 @@ const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const signinRoutes = require('./signin.js'); // Import your signin routes
 const { MongoClient } = require('mongodb');
-
+const User = require('./models/user'); // Import User model
+const Product = require('./models/product').default; // Import Product model
+const bcrypt = require('bcrypt');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -30,7 +32,7 @@ app.get('/api/products', async (req, res) => {
     const database = client.db('db1'); // Use your database name
     const collection = database.collection('cl1'); // Use your collection name
 
-    const products = await collection.find({}).toArray(); // Fetch all products
+    const products = await Product.find({}).lean(); // Fetch all products
     res.json(products); // Send the products as a response
   } catch (error) {
     console.error('Error fetching products:', error);

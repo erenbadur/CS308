@@ -1,7 +1,6 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
-const { User } = require('./user.js'); // Import the User model
-
+const User = require('./models/user');
 const router = express.Router();
 
 // Sign-Up Route
@@ -26,6 +25,33 @@ router.post('/signup', async (req, res) => {
   }
 });
 
-// Additional routes like sign-in can be added here
+
+
+router.post('/login', async (req, res) => {
+  const { username, password } = req.body;
+
+  try {
+    // Find the user by username
+    const user = await User.findOne({ username }).select('+password'); // Ensure password is selected
+    if (!user) {
+      return res.status(400).json({ message: 'Username is incorrect' });
+    }
+
+    // Uncomment password comparison
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Username or password is incorrect' });
+    }
+
+    // If login is successful
+    res.status(200).json({ message: 'Welcome' });
+  } catch (error) {
+    console.error('Error during login:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
+
 
 module.exports = router;

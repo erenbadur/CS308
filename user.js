@@ -1,5 +1,9 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');    // to hash passwords
+const bcrypt = require('bcrypt'); // To hash passwords
+const express = require('express');
+const listEndpoints = require('express-list-endpoints'); // For listing routes
+
+const app = express();
 
 // Define the User Schema
 const userSchema = new mongoose.Schema({
@@ -7,7 +11,6 @@ const userSchema = new mongoose.Schema({
         type: String, 
         required: [true, 'Username is required'],  // Field validation
         unique: true,  // Ensure username is unique
-        trim: true,  // Remove whitespace from both ends
         minlength: [3, 'Username must be at least 3 characters'], 
         maxlength: [30, 'Username cannot exceed 30 characters'] 
     },
@@ -27,7 +30,7 @@ const userSchema = new mongoose.Schema({
     },
     isAdmin: {
         type: Boolean,
-        default: false  // regular user status
+        default: false  // Regular user status
     },
     orders: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Order' }] // Reference to Order documents
 });
@@ -97,3 +100,13 @@ productSchema.pre('save', function (next) {
 // Export the Product Model
 const Product = mongoose.model('Product', productSchema);
 module.exports.Product = Product;
+
+// Initialize Express and List Endpoints
+app.get('/test', (req, res) => res.send('Test endpoint'));
+
+// Log all endpoints (add this line at the bottom to see all routes)
+console.log(listEndpoints(app));
+
+app.listen(3000, () => {
+    console.log('Server is running on port 3000');
+});

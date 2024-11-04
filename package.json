@@ -1,18 +1,24 @@
 {
-  "name": "ortak",
+  "name": "cs308",
   "version": "1.0.0",
   "description": "CS 308",
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "bcrypt": "^5.1.1",
     "express": "^4.21.1",
     "mongodb": "^6.9.0",
+    "mongoose": "^8.8.0",
     "react-router-dom": "^6.26.2"
+  },
+  "devDependencies": {
+    "webpack": "^5.96.1",
+    "webpack-cli": "^5.1.4"
   }
 }

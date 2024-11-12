@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import './LoginPage.css';
 import logo from './logo.png';
+import { useNavigate } from 'react-router-dom';
+
 
 const LoginPage = () => {
   const [username, setUsername] = useState(''); // Use username instead of email
@@ -9,10 +11,17 @@ const LoginPage = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
+  const navigate = useNavigate(); 
+  
+
   const toggleShowPassword = () => {
     setShowPassword(!showPassword);
   };
 
+  const handleSignIn = () => {
+    navigate('/signin');
+  };
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
@@ -104,7 +113,7 @@ const LoginPage = () => {
           </form>
           <div id="google" className="google-login">
             <button>
-              <span className="google-icon"></span> Log in with Google
+            <button onClick={handleSignIn}>Sign In</button> {/* Sign in button */}
             </button>
           </div>
         </div>

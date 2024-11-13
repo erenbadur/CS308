@@ -12,6 +12,7 @@ const commentSchema = new Schema({
 const productSchema = new Schema({
     name: { type: String, required: true, trim: true }, // Product name
     model: { type: String, required: true, unique: true }, // Unique model identifier
+    category: {type: String, reuired: true, trim: true}, // Product category
     serialNumber: { type: String, required: true, unique: true }, // Unique serial number
     description: { type: String, trim: true }, // Optional description
     quantityInStock: { type: Number, required: true, min: 0 }, // Stock quantity cannot go below 0

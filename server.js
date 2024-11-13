@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const signinRoutes = require('./signin.js'); // Import your signin routes
+const productRoutes = require('./productController.js'); // Import product controller routes
 const { MongoClient } = require('mongodb');
 const User = require('./models/user'); // Import User model
 const Product = require('./models/product').default; // Import Product model
@@ -44,6 +45,9 @@ app.get('/api/products', async (req, res) => {
 
 // Use the signin routes
 app.use('/api/auth', signinRoutes);
+
+// Use the product controller routes
+app.use('/api/product', productRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

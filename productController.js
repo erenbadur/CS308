@@ -68,7 +68,7 @@ router.post('/add-multiple_products', async(req,res) =>{
             if (existingProduct){
                 console.log(`Product already exist in the database with model: ${product.model} or serial number: ${product.serialNumber} `);
 
-                duplicateCount ++;
+                existingProductCount ++;
 
                 continue; //skip this product since its already in the database
             }

@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt'); // To hash passwords
 
 // Define the User Schema
 const userSchema = new mongoose.Schema({
-    userID: {
+    userId: {
         type: String,
         required: true,
         unique: true, // Ensure userID is unique

@@ -2,10 +2,13 @@ const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const signinRoutes = require('./signin.js'); // Import your signin routes
+const purchaseRoute = require('./purchaseRoute'); // Correct relative path
+const productRoutes = require('./productRoutes')
 const User = require('./models/user'); // Import User model
 const Product = require('./models/product'); // Correctly import Product model
 const app = express();
 const PORT = process.env.PORT || 3001;
+
 
 // Middleware
 app.use(bodyParser.json()); // Parse JSON request body
@@ -43,6 +46,8 @@ app.get('/api/categories', async (req, res) => {
 
 // Use the signin routes
 app.use('/api/auth', signinRoutes);
+app.use('/api/purchases', purchaseRoute); // Purchase routes
+app.use('/api/products', productRoutes); // Product routes
 
 // Start the server
 app.listen(PORT, () => {

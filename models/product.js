@@ -10,7 +10,7 @@ const commentSchema = new Schema({
 });
 
 const productSchema = new Schema({
-    productID: {
+    productId: {
         type: String,
         required: true,
         unique: true,

@@ -10,6 +10,14 @@ const commentSchema = new Schema({
 });
 
 const productSchema = new Schema({
+    productID: {
+        type: String,
+        required: true,
+        unique: true,
+        default: function () {
+            return `PROD-${new mongoose.Types.ObjectId()}`; // Generate unique product ID
+        },
+    },
     name: { type: String, required: true, trim: true }, // Product name
     model: { type: String, required: true, unique: true }, // Unique model identifier
     serialNumber: { type: String, required: true, unique: true }, // Unique serial number

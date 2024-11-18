@@ -44,13 +44,13 @@ router.post('/add-product', async(req, res) => {
 );
 
 // add multiple products to database
-router.post('/add-multiple_products', async(req,res) =>{
+router.post('/add-multiple-products', async(req,res) =>{
     const products = req.body;
     const uniqueProducts = []; // this will hold uniqe products within the list
     let existingProductCount = 0; 
 
     // filter duplicates within the products list
-    for(const product in products){
+    for(const product of products){
         const {model, serialNumber} = product;
         // check if the product with the same model or serailNumber exist in the uniqeProducts
         if (!uniqueProducts.some(p => p.model === model || p.serailNumber === serialNumber)){
@@ -60,7 +60,9 @@ router.post('/add-multiple_products', async(req,res) =>{
 
     // process each product in uniqueProduct to check if they exist in the db
     try{
-       for (const product in uniqueProduct){
+       for (const product of uniqueProducts){
+            const {model, serialNumber} = product;
+
             const existingProduct = await Product.findOne({
                 $or: [{model: model}, {serialNumber: serialNumber}]
             });
@@ -77,7 +79,7 @@ router.post('/add-multiple_products', async(req,res) =>{
        } 
 
        res.status(201).json({
-            message: `${uniqueProducts.length - duplicateCount} products added successfully.`, duplicateCount
+            message: `${uniqueProducts.length - existingProductCount} products added successfully.`, existingProductCount
        });
     } catch (error){
         console.error('Error adding multiple products:', error);

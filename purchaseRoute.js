@@ -17,12 +17,13 @@ router.post('/add', async (req, res) => {
             return res.status(400).json({ error: 'All fields (userId, productId, quantity) are required.' });
         }
 
-        if (quantity <= 0) {
+        if (!(quantity > 0)) {
             return res.status(400).json({ error: 'Quantity must be greater than 0.' });
         }
 
         // Find the product by productId (custom field)
-        const product = await Product.findOne({ productID: productId });
+        console.log("Received productId:", productId);
+        const product = await Product.findOne({ productId: productId });
         if (!product) {
             return res.status(404).json({ error: 'Product not found.' });
         }

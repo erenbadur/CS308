@@ -4,8 +4,12 @@ const bodyParser = require('body-parser');
 const signinRoutes = require('./signin.js'); // Import your signin routes
 const purchaseRoute = require('./purchaseRoute'); // Correct relative path
 const productRoutes = require('./productRoutes')
+const createUser = require('./createUser')
+const orderProcessingRoute = require('./orderProcessing')
+const createProduct = require('./createProduct')
 const User = require('./models/user'); // Import User model
 const Product = require('./models/product'); // Correctly import Product model
+const Order = require('./models/order');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -48,7 +52,9 @@ app.get('/api/categories', async (req, res) => {
 app.use('/api/auth', signinRoutes);
 app.use('/api/purchases', purchaseRoute); // Purchase routes
 app.use('/api/products', productRoutes); // Product routes
-
+app.use('/api/processing', orderProcessingRoute); 
+app.use('/api/createProduct', createProduct); 
+app.use('/api/createUser', createUser); 
 // Start the server
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

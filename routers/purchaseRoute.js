@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const Product = require('./models/product'); // Adjust path for Product model
-const User = require('./models/user'); // Adjust path for User model
-const PurchaseHistory = require('./models/PurchaseHistory'); // Adjust path as needed
+const Product = require('../models/product'); // Adjust path for Product model
+const User = require('../models/user'); // Adjust path for User model
+const PurchaseHistory = require('../models/PurchaseHistory'); // Adjust path as needed
 
 
 // Add a purchase to purchase history

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const Product = require('./models/product'); // Import Product model
-const PurchaseHistory = require('./models/PurchaseHistory');
+const Product = require('../models/product'); // Import Product model
+const PurchaseHistory = require('../models/PurchaseHistory');
 
 
 // Middleware to check if the user purchased the product

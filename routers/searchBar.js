@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Product = require('./models/product'); // Adjust the path for your product model
+const Product = require('../models/product'); // Adjust the path for your product model
 const stringSimilarity = require('string-similarity'); // Install with npm install string-similarity
 
 router.get('/search', async (req, res) => {

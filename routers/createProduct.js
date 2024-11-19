@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Product = require('./models/product'); // Adjust path for Product model
+const Product = require('../models/product'); // Adjust path for Product model
 
 // Create a new product
 router.post('/product', async (req, res) => {

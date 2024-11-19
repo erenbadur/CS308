@@ -1,0 +1,124 @@
+/* General Reset */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* General Styling */
+body {
+    font-family: Arial, sans-serif;
+    padding: 8px;
+    overflow-x: hidden;
+    background-color: white;
+}
+
+div {
+    padding: 2px;
+}
+
+/* Smooth Scroll */
+html {
+    scroll-behavior: smooth;
+}
+
+.section-header {
+    cursor: pointer;
+    padding: 10px;
+    background-color: #f9f9f9;
+    border-bottom: 1px solid #ccc;
+}
+  
+.section-header h2 {
+    margin: 0;
+}
+  
+.section-header:hover {
+    background-color: #e0e0e0;
+}
+
+
+.header {
+    background-color: darkgrey;
+    text-align: center;
+    padding: 20px;
+}
+
+.row {
+    display: -ms-flexbox; /* IE10 */
+    display: flex;
+    -ms-flex-wrap: wrap; /* IE10 */
+    flex-wrap: wrap;
+    margin: 0 -16px;
+  }
+
+/* Clear floats after the columns */
+.row::after {
+    content: "";
+    display: table;
+    clear: both;
+  }  
+
+.container {
+background-color: #f2f2f2;
+padding: 5px 20px 15px 20px;
+border: 1px solid lightgrey;
+border-radius: 3px;
+}
+
+.column {
+    float: left;
+}
+
+.column.main{
+    -ms-flex: 70%; /* IE10 */
+    flex: 70%;
+}
+
+.column.side{
+    -ms-flex: 30%; /* IE10 */
+    flex: 30%;
+}
+
+.column.half{
+    -ms-flex: 50%; /* IE10 */
+    flex: 50%;
+}
+
+input[type=text]:focus{
+    width: 100%;
+    padding: 2px;
+    margin: 2px 0;
+    box-sizing: border-box;
+    border: 3px solid #555;
+}
+
+label {
+    margin-bottom: 10px;
+    display: block;
+  }
+
+hr {
+    border: 1px solid rgb(69, 69, 69);
+}
+
+span.price {
+    float: right;
+    color: blue;
+  }
+
+.finish-payment-btn {
+    background-color: #28a745; /* Green color */
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 20px;
+}
+
+.finish-payment-btn:hover {
+    background-color: #218838; /* Darker green on hover */
+}

@@ -6,6 +6,7 @@ const purchaseRoute = require('./purchaseRoute'); // Correct relative path
 const productRoutes = require('./productRoutes')
 const createUser = require('./createUser')
 const orderProcessingRoute = require('./orderProcessing')
+const searchBar = require('./searchBar')
 const createProduct = require('./createProduct')
 const User = require('./models/user'); // Import User model
 const Product = require('./models/product'); // Correctly import Product model
@@ -55,6 +56,7 @@ app.use('/api/products', productRoutes); // Product routes
 app.use('/api/processing', orderProcessingRoute); 
 app.use('/api/createProduct', createProduct); 
 app.use('/api/createUser', createUser); 
+app.use('/api/searchBar', searchBar); 
 // Start the server
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

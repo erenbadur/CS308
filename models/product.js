@@ -22,7 +22,13 @@ const productSchema = new Schema({
     model: { type: String, required: true, unique: true }, // Unique model identifier
     serialNumber: { type: String, required: true, unique: true }, // Unique serial number
     description: { type: String, trim: true }, // Optional description
-    quantityInStock: { type: Number, required: true, min: 0, default: 100}, // Stock quantity cannot go below 0
+    category: {
+        type: String,
+        required: true, // Makes the category mandatory
+        enum: ['mobile phone', 'laptop', 'tablet', 'electronic accessory', 'earphone'], // Define allowed categories
+        default: 'accessory', // Default value if not specified
+    },
+    quantityInStock: { type: Number, required: true, min: 0, default: 100 }, // Stock quantity cannot go below 0
     price: { type: Number, required: true, min: 0 }, // Price of the product
     warrantyStatus: { type: Boolean, default: true }, // Indicates if the product is under warranty
     distributor: { type: String, required: true }, // Distributor information

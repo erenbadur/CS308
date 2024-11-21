@@ -1,12 +1,9 @@
-// src/mainpage.js
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import './mainpage.css';
 
-
-
-
-
 const MainPage = () => {
+    const [activeCategory, setActiveCategory] = useState(""); // State to track the active category
+
     useEffect(() => {
         const handleScroll = () => {
             const backToTopBtn = document.getElementById("backToTopBtn");
@@ -31,6 +28,10 @@ const MainPage = () => {
         });
     };
 
+    const handleButtonClick = (category) => {
+        setActiveCategory(category); // Set the clicked category as active
+    };
+
     return (
         <div>
             <div id="home-section"></div>
@@ -44,24 +45,90 @@ const MainPage = () => {
                 </div>
                 <div className="nav-items">
                     <div className="category-dropdown">
-                        <button>Product Category</button>
+                        <button className="first-button">Product Category</button>
+
                         <div className="category-dropdown-content">
-                            <a href="phone.html" className="category-card">
+                            {/* Category Buttons */}
+                            <div className="category-card">
                                 <img src="resimler/pone_new.webp" alt="Phone" />
                                 <p>Phone</p>
-                            </a>
-                            <a href="tv.html" className="category-card">
-                                <img src="resimler/tv_new.webp" alt="TV" />
-                                <p>TV</p>
-                            </a>
-                            <a href="tablet.html" className="category-card">
+                                <button
+                                    className={`category-button ${activeCategory === "Phone" ? "active" : ""}`}
+                                    onClick={() => handleButtonClick("Phone")}
+                                >
+                                    Select
+                                </button>
+                            </div>
+                            <div className="category-card">
+                                <img src="resimler/computer.webp" alt="Computer" />
+                                <p>Computer</p>
+                                <button
+                                    className={`category-button ${activeCategory === "Computer" ? "active" : ""}`}
+                                    onClick={() => handleButtonClick("Computer")}
+                                >
+                                   Select
+                                </button>
+                            </div>
+                            <div className="category-card">
                                 <img src="resimler/tablet_new.webp" alt="Tablet" />
                                 <p>Tablet</p>
-                            </a>
-                            <a href="watch.html" className="category-card">
-                                <img src="resimler/watch_new.webp" alt="Watch" />
-                                <p>Watch</p>
-                            </a>
+                                <button
+                                    className={`category-button ${activeCategory === "Tablet" ? "active" : ""}`}
+                                    onClick={() => handleButtonClick("Tablet")}
+                                >
+                                    Select
+                                </button>
+                            </div>
+                            <div className="category-card">
+                                <img src="resimler/accessory.webp" alt="Accessories" />
+                                <p>Accessories</p>
+                                <button
+                                    className={`category-button ${activeCategory === "Accessories" ? "active" : ""}`}
+                                    onClick={() => handleButtonClick("Accessories")}
+                                >
+                                    Select
+                                </button>
+                            </div>
+                            <div className="category-card">
+                                <img src="resimler/headphone.webp" alt="Headphone" />
+                                <p>Headphone</p>
+                                <button
+                                    className={`category-button ${activeCategory === "Headphone" ? "active" : ""}`}
+                                    onClick={() => handleButtonClick("Headphone")}
+                                >
+                                    Select
+                                </button>
+                            </div>
+                            <div className="category-card">
+                                <img src="resimler/smartwatch.webp" alt="Smartwatch" />
+                                <p>Smartwatch</p>
+                                <button
+                                    className={`category-button ${activeCategory === "Smartwatch" ? "active" : ""}`}
+                                    onClick={() => handleButtonClick("Smartwatch")}
+                                >
+                                    Select
+                                </button>
+                            </div>
+                            <div className="category-card">
+                                <img src="resimler/tv_new.webp" alt="Television" />
+                                <p>Television</p>
+                                <button
+                                    className={`category-button ${activeCategory === "Television" ? "active" : ""}`}
+                                    onClick={() => handleButtonClick("Television")}
+                                >
+                                    Select
+                                </button>
+                            </div>
+                            <div className="category-card">
+                                <img src="resimler/camera.webp" alt="Camera" />
+                                <p>Camera</p>
+                                <button
+                                    className={`category-button ${activeCategory === "Camera" ? "active" : ""}`}
+                                    onClick={() => handleButtonClick("Camera")}
+                                >
+                                    Select
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <div className="search-bar-container">
@@ -326,3 +393,5 @@ const MainPage = () => {
 };
 
 export default MainPage;
+
+

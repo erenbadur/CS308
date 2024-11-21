@@ -12,7 +12,6 @@ html {
 }
 
 
-
 /* Navbar */
 .navbar {
     display: flex;
@@ -73,7 +72,7 @@ html {
     gap: 5px;
 }
 
-.category-dropdown button::after {
+.category-dropdown .first-button::after {
     content: "▼";
     font-size: 0.8em;
 }
@@ -82,7 +81,7 @@ html {
     display: none;
     position: absolute;
     background-color: rgba(0, 0, 0, 0.5);
-    width: 500px;
+    width: 900px;
     padding: 10px;
     border-radius: 5px;
     overflow: hidden;
@@ -125,6 +124,39 @@ html {
     margin: 0;
     color: #333;
 }
+
+
+
+.category-button {
+    margin-left: 12px;
+    margin-top: 5px;
+    padding: 8px 16px;
+    font-size: 14px;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.category-button:hover{
+    background-color: #ec9c33;
+}
+
+
+
+
+/* Active button style (keeps hover effect after clicking) */
+.category-button.active {
+    background-color: #ec9c33;
+    color: white;
+    font-weight: bold;
+    outline: none;
+    border: 2px solid #0056b3;
+}
+
+
+
 
 /* Search Bar */
 .search-bar-container {

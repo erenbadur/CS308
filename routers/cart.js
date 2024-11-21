@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const Cart = require('./models/cartModel');
-const Product = require('./models/product'); 
+const Cart = require('../models/cartModel');
+const Product = require('../models/product'); 
+
 
 // Middleware to get or create a cart
 async function getOrCreateCart(req, res, next) {

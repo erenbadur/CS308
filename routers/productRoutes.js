@@ -51,10 +51,32 @@ router.post('/:productId/rate', canCommentOrRate, async (req, res) => {
 
 router.get('/', async (req, res) => {
     try {
-      const products = await Product.find({});
-      res.json(products);
+      const page = parseInt(req.query.page) || 1; 
+      const limit = parseInt(req.query.limit) || 12; 
+  
+      const startIndex = (page - 1) * limit;
+  
+      const totalProducts = await Product.countDocuments();
+  
+      const products = await Product.find()
+        .skip(startIndex)
+        .limit(limit);
+  
+      const pagination = {
+        currentPage: page,
+        totalPages: Math.ceil(totalProducts / limit),
+        pageSize: limit,
+        totalProducts: totalProducts,
+        hasPrevPage: page > 1,
+        hasNextPage: page < Math.ceil(totalProducts / limit),
+      };
+  
+      res.json({
+        products,
+        pagination,
+      });
     } catch (error) {
       res.status(500).json({ message: 'Server Error' });
     }
-  }); 
+  });
 module.exports = router;

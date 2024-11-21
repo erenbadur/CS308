@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import './mainpage.css';
-
+import axios from 'axios';
 const MainPage = () => {
     const [activeCategory, setActiveCategory] = useState(""); // State to track the active category
-
+    const [products, setProducts] = useState([]); 
     useEffect(() => {
         const handleScroll = () => {
             const backToTopBtn = document.getElementById("backToTopBtn");
@@ -13,6 +13,16 @@ const MainPage = () => {
                 backToTopBtn.style.display = "none";
             }
         };
+
+        const fetchProducts = async () => {
+            try {
+                const response = await axios.get('/api/products'); 
+                setProducts(response.data); 
+            } catch (error) {
+                console.error('Ürünler alınırken hata oluştu:', error);
+            }
+        };
+        fetchProducts();
 
         window.addEventListener("scroll", handleScroll);
 
@@ -188,123 +198,19 @@ const MainPage = () => {
                 <p style={{ fontSize: "1.5em" }}>Check out some of our most popular items. Get the best deals and hottest products in our store!</p>
 
                 <div className="product-grid">
-                    <div className="product-card">
-                        <img src="resimler/1-big.jpeg" alt="Product 1" className="product-image" />
-                        <h3 className="product-name">Apple Watch White</h3>
-                        <p className="product-price">$299</p>
-                        <div className="product-rating">
-                            <span>⭐️⭐️⭐️⭐️☆</span>
+                    {products.map((product) => (
+                        <div className="product-card" key={product._id}>
+                            <img src={product.imageUrl} alt={product.name} className="product-image" />
+                            <h3 className="product-name">{product.name}</h3>
+                            <p className="product-price">${product.price}</p>
+                            <div className="product-rating">
+                                <span>{'⭐️'.repeat(Math.round(product.averageRating || 0))}</span>
+                            </div>
+                            <a href="cart.html" className="add-to-cart-button">Add to Cart</a>
                         </div>
-                        <a href="cart.html" className="add-to-cart-button">Add to Cart</a>
-                    </div>
-
-                    {/* Additional product cards */}
-                    <div className="product-card">
-                        <img src="resimler/8.jpeg" alt="Product 2" className="product-image" />
-                        <h3 className="product-name">Iphone 11 Pro</h3>
-                        <p className="product-price">$999</p>
-                        <div className="product-rating">
-                            <span>⭐️⭐️⭐️⭐️⭐️</span>
-                        </div>
-                        <a href="cart.html" className="add-to-cart-button">Add to Cart</a>
-                    </div>
-
-
-                    {/* Additional product cards */}
-                    <div className="product-card">
-                        <img src="resimler/2.jpeg" alt="Product 2" className="product-image" />
-                        <h3 className="product-name">Iphone 11 Pro</h3>
-                        <p className="product-price">$999</p>
-                        <div className="product-rating">
-                            <span>⭐️⭐️⭐️⭐️⭐️</span>
-                        </div>
-                        <a href="cart.html" className="add-to-cart-button">Add to Cart</a>
-                    </div>
-
-
-                    {/* Additional product cards */}
-                    <div className="product-card">
-                        <img src="resimler/5.jpeg" alt="Product 2" className="product-image" />
-                        <h3 className="product-name">Iphone 11 Pro</h3>
-                        <p className="product-price">$999</p>
-                        <div className="product-rating">
-                            <span>⭐️⭐️⭐️⭐️⭐️</span>
-                        </div>
-                        <a href="cart.html" className="add-to-cart-button">Add to Cart</a>
-                    </div>
-
-
-
-                    {/* Additional product cards */}
-                    <div className="product-card">
-                        <img src="resimler/7.jpeg" alt="Product 2" className="product-image" />
-                        <h3 className="product-name">Iphone 11 Pro</h3>
-                        <p className="product-price">$999</p>
-                        <div className="product-rating">
-                            <span>⭐️⭐️⭐️⭐️⭐️</span>
-                        </div>
-                        <a href="cart.html" className="add-to-cart-button">Add to Cart</a>
-                    </div>
-
-
-
-
-                    {/* Additional product cards */}
-                    <div className="product-card">
-                        <img src="resimler/6.jpeg" alt="Product 2" className="product-image" />
-                        <h3 className="product-name">Iphone 11 Pro</h3>
-                        <p className="product-price">$999</p>
-                        <div className="product-rating">
-                            <span>⭐️⭐️⭐️⭐️⭐️</span>
-                        </div>
-                        <a href="cart.html" className="add-to-cart-button">Add to Cart</a>
-                    </div>
-
-
-                    {/* Additional product cards */}
-                    <div className="product-card">
-                        <img src="resimler/3.jpeg" alt="Product 2" className="product-image" />
-                        <h3 className="product-name">Iphone 11 Pro</h3>
-                        <p className="product-price">$999</p>
-                        <div className="product-rating">
-                            <span>⭐️⭐️⭐️⭐️⭐️</span>
-                        </div>
-                        <a href="cart.html" className="add-to-cart-button">Add to Cart</a>
-                    </div>
-
-
-
-                    {/* Additional product cards */}
-                    <div className="product-card">
-                        <img src="resimler/1-big.jpeg" alt="Product 2" className="product-image" />
-                        <h3 className="product-name">Iphone 11 Pro</h3>
-                        <p className="product-price">$999</p>
-                        <div className="product-rating">
-                            <span>⭐️⭐️⭐️⭐️⭐️</span>
-                        </div>
-                        <a href="cart.html" className="add-to-cart-button">Add to Cart</a>
-                    </div>
-
-
-
-                    {/* Additional product cards */}
-                    <div className="product-card">
-                        <img src="resimler/8.jpeg" alt="Product 2" className="product-image" />
-                        <h3 className="product-name">Iphone 11 Pro</h3>
-                        <p className="product-price">$999</p>
-                        <div className="product-rating">
-                            <span>⭐️⭐️⭐️⭐️⭐️</span>
-                        </div>
-                        <a href="cart.html" className="add-to-cart-button">Add to Cart</a>
-                    </div>
-
-
-
-
-                    {/* Repeat similar blocks for other products */}
+                    ))}
                 </div>
             </div>
-
             {/* About Section */}
             <div id="about-section" className="section about-section">
                 <div className="about-content">
@@ -393,5 +299,3 @@ const MainPage = () => {
 };
 
 export default MainPage;
-
-

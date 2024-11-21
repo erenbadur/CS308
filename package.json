@@ -4,7 +4,7 @@
   "description": "CS 308",
   "main": "index.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "node routers/server.js",
     "test": "mocha"
   },
   "keywords": [],

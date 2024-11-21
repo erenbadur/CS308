@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const Product = require('./models/product'); // Adjust path for Product model
-const User = require('./models/user'); // Adjust path for User model
-const Order = require('./models/order'); // Adjust path for Order model
+const Product = require('../models/product'); // Adjust path for Product model
+const User = require('../models/user'); // Adjust path for User model
+const Order = require('../models/order'); // Adjust path for Order model
 
 // Place an order and track delivery
 router.post('/order', async (req, res) => {

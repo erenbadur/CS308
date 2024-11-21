@@ -552,3 +552,20 @@ i {
 #backToTopBtn i {
     font-size: 1.2em;
 }
+
+.pagination-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+  }
+  
+  .pagination-controls button {
+    padding: 10px 20px;
+    margin: 0 10px;
+    font-size: 16px;
+  }
+  
+  .pagination-controls span {
+    font-size: 16px;
+  }

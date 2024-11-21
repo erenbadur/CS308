@@ -4,6 +4,9 @@ import axios from 'axios';
 const MainPage = () => {
     const [activeCategory, setActiveCategory] = useState(""); // State to track the active category
     const [products, setProducts] = useState([]); 
+    const [currentPage, setCurrentPage] = useState(1); 
+    const [totalPages, setTotalPages] = useState(1);
+    const [pageSize] = useState(12); 
     useEffect(() => {
         const handleScroll = () => {
             const backToTopBtn = document.getElementById("backToTopBtn");
@@ -16,20 +19,27 @@ const MainPage = () => {
 
         const fetchProducts = async () => {
             try {
-                const response = await axios.get('/api/products'); 
-                setProducts(response.data); 
+                const response = await axios.get('/api/products', {
+                    params: {
+                        page: currentPage,
+                        limit: pageSize,
+                        category: activeCategory, // Kategori filtresi ekledik
+                    },
+                });
+                setProducts(response.data.products);
+                setTotalPages(response.data.pagination.totalPages);
             } catch (error) {
-                console.error('Ürünler alınırken hata oluştu:', error);
+                console.error('Error Occurs', error);
             }
         };
         fetchProducts();
 
-        window.addEventListener("scroll", handleScroll);
+        window.addEventListener('scroll', handleScroll);
 
         return () => {
-            window.removeEventListener("scroll", handleScroll);
+            window.removeEventListener('scroll', handleScroll);
         };
-    }, []);
+    }, [currentPage, activeCategory]);
 
     const scrollToTop = () => {
         window.scrollTo({
@@ -40,8 +50,19 @@ const MainPage = () => {
 
     const handleButtonClick = (category) => {
         setActiveCategory(category); // Set the clicked category as active
+        setCurrentPage(1);  
+    };
+    const goToNextPage = () => {
+        if (currentPage < totalPages) {
+            setCurrentPage(currentPage + 1);
+        }
     };
 
+    const goToPrevPage = () => {
+        if (currentPage > 1) {
+            setCurrentPage(currentPage - 1);
+        }
+    };
     return (
         <div>
             <div id="home-section"></div>
@@ -209,6 +230,17 @@ const MainPage = () => {
                             <a href="cart.html" className="add-to-cart-button">Add to Cart</a>
                         </div>
                     ))}
+                </div>
+            <div className="pagination-controls">
+                    <button onClick={goToPrevPage} disabled={currentPage === 1}>
+                        &laquo; Prev
+                    </button>
+                    <span>
+                        Page {currentPage} of {totalPages}
+                    </span>
+                    <button onClick={goToNextPage} disabled={currentPage === totalPages}>
+                        Next &raquo;
+                    </button>
                 </div>
             </div>
             {/* About Section */}

@@ -2,11 +2,10 @@ const mongoose = require('mongoose');
 const { Schema, model } = mongoose;
 
 const commentSchema = new Schema({
-    user: { type: Schema.Types.ObjectId, ref: 'User', required: true }, // Reference to the User who made the comment
+    user: { type: String, required: true }, // Use custom userId (String)
     content: { type: String, required: true, maxlength: 500 }, // Comment text, max length 500
     approved: { type: Boolean, default: false }, // Indicates if the comment is approved
     createdAt: { type: Date, default: Date.now } // Automatically sets the creation date
-    // IMPORTANT: Ensure in backend logic that the user can only comment if they have purchased the product
 });
 
 const productSchema = new Schema({
@@ -25,17 +24,20 @@ const productSchema = new Schema({
     category: {
         type: String,
         required: true, // Makes the category mandatory
-        enum: ['mobile phone', 'laptop', 'tablet', 'electronic accessory', 'earphone'], // Define allowed categories
+        enum: ['mobile phone', 'computer', 'tablet', 'accessories', 'headphone','smartwatch','television','camera'], // Define allowed categories
         default: 'accessory', // Default value if not specified
     },
     quantityInStock: { type: Number, required: true, min: 0, default: 100 }, // Stock quantity cannot go below 0
     price: { type: Number, required: true, min: 0 }, // Price of the product
     warrantyStatus: { type: Boolean, default: true }, // Indicates if the product is under warranty
     distributor: { type: String, required: true }, // Distributor information
-    ratings: [{
-        user: { type: Schema.Types.ObjectId, ref: 'User', required: true }, // Reference to the User who gave the rating
-        rating: { type: Number, required: true, min: 1, max: 5 } // Rating between 1 and 5
-    }],
+    ratings: [
+        {
+            user: { type: String, required: true }, // Use custom userId (String) instead of ObjectId
+            rating: { type: Number, required: true, min: 1, max: 5 },
+        },
+    ],
+    
     averageRating: { type: Number, default: 0 }, // Automatically calculated average rating
     comments: [commentSchema], // Array of comments
     popularity: { type: Number, default: 0 }, // Popularity score (optional)

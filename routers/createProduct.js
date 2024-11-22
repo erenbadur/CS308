@@ -2,13 +2,13 @@ const express = require('express');
 const router = express.Router();
 const Product = require('../models/product'); // Adjust path for Product model
 
-// Create a new product
 router.post('/product', async (req, res) => {
     const {
         name,
         model,
         serialNumber,
         description,
+        category, // Add category field
         quantityInStock,
         price,
         distributor,
@@ -18,9 +18,17 @@ router.post('/product', async (req, res) => {
 
     try {
         // Validate required fields
-        if (!name || !model || !serialNumber || quantityInStock === undefined || price === undefined || !distributor) {
+        if (!name || !model || !serialNumber || !category || quantityInStock === undefined || price === undefined || !distributor) {
             return res.status(400).json({
-                error: 'Fields name, model, serialNumber, quantityInStock, price, and distributor are required.',
+                error: 'Fields name, model, serialNumber, category, quantityInStock, price, and distributor are required.',
+            });
+        }
+
+        // Validate category
+        const allowedCategories = ['mobile phone', 'computer', 'tablet', 'accessories', 'headphone', 'smartwatch', 'television', 'camera'];
+        if (!allowedCategories.includes(category)) {
+            return res.status(400).json({
+                error: `Invalid category. Allowed categories are: ${allowedCategories.join(', ')}.`,
             });
         }
 
@@ -46,6 +54,7 @@ router.post('/product', async (req, res) => {
             model,
             serialNumber,
             description,
+            category, // Add category field
             quantityInStock,
             price,
             distributor,
@@ -65,5 +74,6 @@ router.post('/product', async (req, res) => {
         res.status(500).json({ error: 'An error occurred while creating the product.' });
     }
 });
+
 
 module.exports = router;

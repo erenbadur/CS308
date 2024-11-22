@@ -2,12 +2,10 @@ const mongoose = require('mongoose');
 const { Schema, model } = mongoose;
 
 const purchaseHistorySchema = new Schema({
-    user: { type: Schema.Types.ObjectId, ref: 'User', required: true }, // Reference to the User
-    product: { type: Schema.Types.ObjectId, ref: 'Product', required: true }, // Reference to the Product
-    quantity: { type: Number, required: true, min: 1 }, // Quantity of the product purchased
-    purchaseDate: { type: Date, default: Date.now } // Date of purchase
-}, { timestamps: true }); // Automatically adds createdAt and updatedAt fields
+    user: { type: String, required: true }, // Use custom userId instead of ObjectId
+    product: { type: String, required: true }, // Use custom productId instead of ObjectId
+    quantity: { type: Number, required: true, min: 1 }, // Quantity purchased
+    purchaseDate: { type: Date, default: Date.now }, // Purchase date
+}, { timestamps: true });
 
-const PurchaseHistory = model('PurchaseHistory', purchaseHistorySchema);
-
-module.exports = PurchaseHistory;
+module.exports = model('PurchaseHistory', purchaseHistorySchema);

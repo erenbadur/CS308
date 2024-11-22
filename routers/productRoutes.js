@@ -3,6 +3,8 @@ const router = express.Router();
 const Product = require('../models/product'); // Import Product model
 const PurchaseHistory = require('../models/PurchaseHistory');
 
+
+// Middleware to check if the user purchased the product
 const canCommentOrRate = async (req, res, next) => {
   const { userId } = req.body; // Extract userId from the request body
   const { productId } = req.params; // Extract productId from the URL
@@ -118,5 +120,6 @@ router.get('/', async (req, res) => {
     } catch (error) {
       res.status(500).json({ message: 'Server Error' });
     }
-  });
+});
+
 module.exports = router;

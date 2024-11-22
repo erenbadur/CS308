@@ -6,7 +6,10 @@ const MainPage = () => {
     const [products, setProducts] = useState([]); 
     const [currentPage, setCurrentPage] = useState(1); 
     const [totalPages, setTotalPages] = useState(1);
-    const [pageSize] = useState(12); 
+    const [pageSize] = useState(12);
+    const [cartOpen, setCartOpen] = useState(false); // Track cart visibility
+    const [cartItems, setCartItems] = useState([]); // Track items in the cart
+ 
     useEffect(() => {
         const handleScroll = () => {
             const backToTopBtn = document.getElementById("backToTopBtn");
@@ -48,6 +51,18 @@ const MainPage = () => {
         });
     };
 
+    const toggleCart = () => {
+        setCartOpen(!cartOpen); // Toggle cart visibility
+    };
+    
+    const closeCart = () => {
+        setCartOpen(false); // Close cart
+    };
+    
+    const handleAddToCart = (product) => {
+        setCartItems((prevItems) => [...prevItems, product]); // Add product to cart
+    };
+    
     const handleButtonClick = (category) => {
         setActiveCategory(category); // Set the clicked category as active
         setCurrentPage(1);  
@@ -169,9 +184,31 @@ const MainPage = () => {
                         </button>
                     </div>
                 </div>
-                <a href="cart.html" className="cart">🛒 Cart</a>
+                <button onClick={toggleCart} className="cart">
+                    🛒 Cart
+                </button>
                 <a href="login.html" className="login">👤 Log In</a>
             </div>
+
+            {/* Cart Panel */}
+            {cartOpen && (
+                <div className="cart-panel">
+                    <button className="close-cart" onClick={closeCart}>X</button>
+                    <h3>Your Cart</h3>
+                    {cartItems.length > 0 ? (
+                        <ul>
+                            {cartItems.map((item, index) => (
+                                <li key={index}>
+                                    <p>{item.name}</p>
+                                    <p>${item.price}</p>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p>Your cart is empty.</p>
+                    )}
+                </div>
+            )}
 
             {/* Carousel */}
             <div id="carouselIndicator" className="carousel slide" data-ride="carousel" data-interval="3000">
@@ -227,7 +264,10 @@ const MainPage = () => {
                             <div className="product-rating">
                                 <span>{'⭐️'.repeat(Math.round(product.averageRating || 0))}</span>
                             </div>
-                            <a href="cart.html" className="add-to-cart-button">Add to Cart</a>
+                            <button onClick={() => handleAddToCart(product)} className="add-to-cart-button">
+                                Add to Cart
+                            </button>
+
                         </div>
                     ))}
                 </div>

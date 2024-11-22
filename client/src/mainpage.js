@@ -92,22 +92,18 @@ const MainPage = () => {
     const handleAddToCart = (product) => {
         setCartItems((prevCart) => {
             // Check if the product is already in the cart
-            const existingItemIndex = prevCart.findIndex((item) => item._id === product._id);
+            const isProductInCart = prevCart.some((item) => item._id === product._id);
     
-            if (existingItemIndex !== -1) {
-                // Product exists in the cart, increment its quantity
-                const updatedCart = [...prevCart];
-                if (updatedCart[existingItemIndex].quantity < updatedCart[existingItemIndex].stock) {
-                    updatedCart[existingItemIndex].quantity += 1; // Increment the quantity
-                }
-                return updatedCart;
+            if (isProductInCart) {
+                // Product is already in the cart, do nothing
+                return prevCart;
             } else {
-                // Product does not exist in the cart, add it with initial quantity 1
+                // Product is not in the cart, add it with initial quantity 1
                 return [...prevCart, { ...product, quantity: 1 }];
             }
         });
     };
-    
+        
     const handleButtonClick = (category) => {
         setActiveCategory(category); // Set the clicked category as active
         setCurrentPage(1);  

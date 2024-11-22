@@ -124,7 +124,7 @@ router.get('/', async (req, res) => {
           pagination,
       });
   } catch (error) {
-      res.status(500).json({ message: 'Sunucu hatası' });
+      res.status(500).json({ message: 'Server Error' });
   }
 });
-
+module.exports = router;

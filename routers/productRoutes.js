@@ -92,34 +92,39 @@ router.post('/:productId/rate', canCommentOrRate, async (req, res) => {
 
 
 router.get('/', async (req, res) => {
-    try {
-      const page = parseInt(req.query.page) || 1; 
-      const limit = parseInt(req.query.limit) || 12; 
-  
+  try {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 12;
+      const category = req.query.category;
+
       const startIndex = (page - 1) * limit;
-  
-      const totalProducts = await Product.countDocuments();
-  
-      const products = await Product.find()
-        .skip(startIndex)
-        .limit(limit);
-  
+
+      let query = {};
+      if (category) {
+          query.category = category;
+      }
+
+      const totalProducts = await Product.countDocuments(query);
+
+      const products = await Product.find(query)
+          .skip(startIndex)
+          .limit(limit);
+
       const pagination = {
-        currentPage: page,
-        totalPages: Math.ceil(totalProducts / limit),
-        pageSize: limit,
-        totalProducts: totalProducts,
-        hasPrevPage: page > 1,
-        hasNextPage: page < Math.ceil(totalProducts / limit),
+          currentPage: page,
+          totalPages: Math.ceil(totalProducts / limit),
+          pageSize: limit,
+          totalProducts: totalProducts,
+          hasPrevPage: page > 1,
+          hasNextPage: page < Math.ceil(totalProducts / limit),
       };
-  
+
       res.json({
-        products,
-        pagination,
+          products,
+          pagination,
       });
-    } catch (error) {
-      res.status(500).json({ message: 'Server Error' });
-    }
+  } catch (error) {
+      res.status(500).json({ message: 'Sunucu hatası' });
+  }
 });
 
-module.exports = router;

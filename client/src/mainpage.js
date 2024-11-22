@@ -58,11 +58,52 @@ const MainPage = () => {
     const closeCart = () => {
         setCartOpen(false); // Close cart
     };
+
+    const handleIncreaseQuantity = (index) => {
+        setCartItems((prevCart) => {
+            return prevCart.map((item, i) =>
+                i === index
+                    ? { ...item, quantity: item.quantity + 1 }
+                    : item
+            );
+        });
+    };    
+    
+    const handleDecreaseQuantity = (index) => {
+        setCartItems((prevCart) => {
+            const updatedCart = prevCart.map((item, i) =>
+                i === index
+                    ? { ...item, quantity: item.quantity - 1 }
+                    : item
+            ).filter((item) => item.quantity > 0); // Remove items with quantity <= 0
+            return updatedCart;
+        });
+    };    
+    
+    const handleCheckout = () => {
+        const user = localStorage.getItem('user'); // Check if the user is logged in
+        if (user) {
+            window.location.href = '/checkout'; // Redirect to the checkout page
+        } else {
+            window.location.href = '/login'; // Redirect to the login page
+        }
+    };    
     
     const handleAddToCart = (product) => {
-        setCartItems((prevItems) => [...prevItems, product]); // Add product to cart
+        setCartItems((prevCart) => {
+            const existingProduct = prevCart.find((item) => item._id === product._id);
+            if (existingProduct) {
+                return prevCart.map((item) =>
+                    item._id === product._id
+                        ? { ...item, quantity: Math.min(item.quantity + 1, item.stock) }
+                        : item
+                );
+            } else {
+                return [...prevCart, { ...product, quantity: 1 }];
+            }
+        });
     };
-    
+        
     const handleButtonClick = (category) => {
         setActiveCategory(category); // Set the clicked category as active
         setCurrentPage(1);  
@@ -198,14 +239,40 @@ const MainPage = () => {
                     {cartItems.length > 0 ? (
                         <ul>
                             {cartItems.map((item, index) => (
-                                <li key={index}>
-                                    <p>{item.name}</p>
-                                    <p>${item.price}</p>
+                                <li key={index} className="cart-item">
+                                    <div className="cart-item-details">
+                                        <p>{item.name}</p>
+                                        <p>${item.price}</p>
+                                    </div>
+                                    <div className="quantity-controls">
+                                        <button 
+                                            onClick={() => handleDecreaseQuantity(index)} 
+                                            className="quantity-btn"
+                                        >
+                                            -
+                                        </button>
+                                        <span className="quantity">{item.quantity}</span>
+                                        <button 
+                                            onClick={() => handleIncreaseQuantity(index)} 
+                                            className="quantity-btn"
+                                            disabled={item.quantity >= item.stock}
+                                        >
+                                            +
+                                        </button>
+                                    </div>
                                 </li>
                             ))}
                         </ul>
                     ) : (
                         <p>Your cart is empty.</p>
+                    )}
+                    {cartItems.length > 0 && (
+                        <button 
+                            className="checkout-btn" 
+                            onClick={handleCheckout}
+                        >
+                            Proceed to Checkout
+                        </button>
                     )}
                 </div>
             )}

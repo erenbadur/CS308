@@ -222,6 +222,51 @@ html {
     overflow-y: auto;
 }
 
+/* Quantity Control Buttons */
+.cart-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 10px;
+}
+
+.cart-item-details p {
+    margin: 0;
+}
+
+.quantity-controls {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.quantity-btn {
+    background-color: #f3a847;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s;
+}
+
+.quantity-btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+.quantity-btn:hover:enabled {
+    background-color: #ec9c33;
+}
+
+.quantity {
+    font-size: 16px;
+    font-weight: bold;
+}
+
 .close-cart {
     align-self: flex-end;
     background-color: #721c24;
@@ -246,6 +291,23 @@ html {
     justify-content: space-between;
     padding: 5px 0;
     border-bottom: 1px solid #ccc;
+}
+
+/* Checkout Button */
+.checkout-btn {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 20px;
+    align-self: center;
+}
+
+.checkout-btn:hover {
+    background-color: #218838;
 }
 
 .cart-panel h3 {

@@ -12,12 +12,9 @@ import ProductPage from './ProductPage';
 
 function App() {
     return (
-        <Router>
-            <Routes>
-                <Route path="/" element={<MainPage />} />
-                <Route path="/product/:productId" element={<ProductPage />} />
-            </Routes>
-        </Router>
+        <div className="App">
+        <MainPage />
+    </div>
     );
 }
 

@@ -134,6 +134,13 @@ const MainPage = () => {
         navigate(`/product/${productId}`);
     };
 
+    const [selectedProduct, setSelectedProduct] = useState(null); // Track the selected product
+
+    // Show all products if no product is selected, else show details of the selected product
+    const handleBackToProducts = () => {
+        setSelectedProduct(null); // Reset view to all products
+    };
+
     return (
         <div>
             <div id="home-section"></div>
@@ -353,12 +360,12 @@ const MainPage = () => {
                 <h2>Popular Products</h2>
                 <p style={{ fontSize: "1.5em" }}>Check out some of our most popular items. Get the best deals and hottest products in our store!</p>
 
-                <div className="product-grid">
+                {!selectedProduct ? (   <div className="product-grid">
                     {products.map((product) => (
                         <div 
                             className="product-card" 
                             key={product._id}
-                            onClick={() => handleCardClick(product._id)}
+                            onClick={() => setSelectedProduct(product)}
                             style={{ cursor: "pointer" }} // Add a pointer cursor for better UX
                         >
                             <img src={product.imageUrl} alt={product.name} className="product-image" />
@@ -373,7 +380,29 @@ const MainPage = () => {
 
                         </div>
                     ))}
-                </div>
+                </div>):(<div className="product-details-page">
+                    <button onClick={handleBackToProducts} className="back-button">
+                        &larr; Back to Products
+                    </button>
+                        <img
+                            src={selectedProduct.imageUrl}
+                            alt={selectedProduct.name}
+                            className="product-image"
+                        />
+                        <h2 className="product-name">{selectedProduct.name}</h2>
+                        <p className="product-description">{selectedProduct.description}</p>
+                        <h3 className="product-price">Price: ${selectedProduct.price}</h3>
+                        <div className="product-rating">
+                            <span>Rating: {'⭐️'.repeat(Math.round(selectedProduct.averageRating || 0))}</span>
+                        </div>
+                        <button
+                            onClick={() => handleAddToCart(selectedProduct)} // Add to cart
+                            className="add-to-cart-button"
+                        >
+                            Add to Cart
+                        </button>
+                </div>)}
+             
             <div className="pagination-controls">
                     <button onClick={goToPrevPage} disabled={currentPage === 1}>
                         &laquo; Prev

@@ -678,3 +678,22 @@ i {
   .pagination-controls span {
     font-size: 16px;
   }
+
+  .product-details-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+}
+
+.back-button {
+    align-self: flex-start;
+    margin-bottom: 20px;
+    padding: 10px 15px;
+    background-color: #f3a847;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    text-decoration: none;
+}

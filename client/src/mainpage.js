@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect} from 'react';
+import { useNavigate } from "react-router-dom";
 import './mainpage.css';
 import axios from 'axios';
 const MainPage = () => {
@@ -126,6 +127,13 @@ const MainPage = () => {
             setCurrentPage(currentPage - 1);
         }
     };
+
+    const navigate = useNavigate();
+
+    const handleCardClick = (productId) => {
+        navigate(`/product/${productId}`);
+    };
+
     return (
         <div>
             <div id="home-section"></div>
@@ -347,7 +355,12 @@ const MainPage = () => {
 
                 <div className="product-grid">
                     {products.map((product) => (
-                        <div className="product-card" key={product._id}>
+                        <div 
+                            className="product-card" 
+                            key={product._id}
+                            onClick={() => handleCardClick(product._id)}
+                            style={{ cursor: "pointer" }} // Add a pointer cursor for better UX
+                        >
                             <img src={product.imageUrl} alt={product.name} className="product-image" />
                             <h3 className="product-name">{product.name}</h3>
                             <p className="product-price">${product.price}</p>

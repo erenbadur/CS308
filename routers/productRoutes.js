@@ -128,25 +128,21 @@ router.get('/', async (req, res) => {
 
 // Sorting products by price or popularity
 router.get('/sort', async (req, res) => {
-  const { sortBy = 'price', order = 'asc' } = req.query; // Get sorting criteria and order from query parameters
+    const { sortBy = 'price', order = 'asc' } = req.query;
 
-  // Validate the sorting field
-  const validSortFields = ['price', 'popularity', 'averageRating'];
-  if (!validSortFields.includes(sortBy)) {
-      return res.status(400).json({ error: 'Invalid sort field. Choose price, popularity, or averageRating.' });
-  }
+    const validSortFields = ['price', 'popularity', 'averageRating'];
+    if (!validSortFields.includes(sortBy)) {
+        return res.status(400).json({ error: 'Invalid sort field.' });
+    }
 
-  try {
-      const sortOrder = order === 'asc' ? 1 : -1; // Ascending or Descending
-      const products = await Product.find({})
-          .sort({ [sortBy]: sortOrder }) // Sort based on the field and order
-          .select('-__v'); // Exclude unnecessary fields
-
-      res.status(200).json({ products });
-  } catch (error) {
-      console.error('Error sorting products:', error);
-      res.status(500).json({ error: 'An error occurred while sorting products.' });
-  }
+    try {
+        const sortOrder = order === 'asc' ? 1 : -1;
+        const products = await Product.find({}).sort({ [sortBy]: sortOrder });
+        res.status(200).json({ products });
+    } catch (error) {
+        console.error('Error sorting products:', error);
+        res.status(500).json({ error: 'Sorting failed.' });
+    }
 });
 
 module.exports = router;

@@ -128,7 +128,7 @@ router.get('/', async (req, res) => {
 
 // Sorting products by price or popularity
 router.get('/sort', async (req, res) => {
-    const { sortBy = 'price', order = 'asc' } = req.query;
+    const { sortBy = 'price', order = 'asc', page = 1, limit = 9 } = req.query;
 
     const validSortFields = ['price', 'popularity', 'averageRating'];
     if (!validSortFields.includes(sortBy)) {
@@ -137,8 +137,25 @@ router.get('/sort', async (req, res) => {
 
     try {
         const sortOrder = order === 'asc' ? 1 : -1;
-        const products = await Product.find({}).sort({ [sortBy]: sortOrder });
-        res.status(200).json({ products });
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        const products = await Product.find({})
+            .sort({ [sortBy]: sortOrder })
+            .skip(skip)
+            .limit(parseInt(limit));
+
+        const totalProducts = await Product.countDocuments();
+
+        const pagination = {
+            currentPage: parseInt(page),
+            totalPages: Math.ceil(totalProducts / parseInt(limit)),
+            pageSize: parseInt(limit),
+            totalProducts: totalProducts,
+            hasPrevPage: parseInt(page) > 1,
+            hasNextPage: parseInt(page) < Math.ceil(totalProducts / parseInt(limit)),
+        };
+
+        res.status(200).json({ products, pagination });
     } catch (error) {
         console.error('Error sorting products:', error);
         res.status(500).json({ error: 'Sorting failed.' });

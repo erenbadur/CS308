@@ -1,5 +1,4 @@
 import React, { useState, useEffect} from 'react';
-import { useNavigate } from "react-router-dom";
 import './mainpage.css';
 import axios from 'axios';
 const MainPage = () => {
@@ -126,12 +125,6 @@ const MainPage = () => {
         if (currentPage > 1) {
             setCurrentPage(currentPage - 1);
         }
-    };
-
-    const navigate = useNavigate();
-
-    const handleCardClick = (productId) => {
-        navigate(`/product/${productId}`);
     };
 
     const [selectedProduct, setSelectedProduct] = useState(null); // Track the selected product
@@ -374,7 +367,9 @@ const MainPage = () => {
                             <div className="product-rating">
                                 <span>{'⭐️'.repeat(Math.round(product.averageRating || 0))}</span>
                             </div>
-                            <button onClick={() => handleAddToCart(product)} className="add-to-cart-button">
+                            <button onClick={(e) => {
+                                e.stopPropagation();
+                                handleAddToCart(product)}} className="add-to-cart-button">
                                 Add to Cart
                             </button>
 

@@ -532,6 +532,56 @@ i {
     color: #ffcc00; /* Gold color for stars */
 }
 
+.product-details {
+    display: grid; /* Enable Grid layout */
+    grid-template-columns: 1fr; /* Single column layout */
+    justify-items: center; /* Center items horizontally */
+    align-items: center; /* Center items vertically */
+    width: 100%; /* Ensures it covers the full width */
+    padding: 20px; /* Adds some space inside */
+    background-color: #f9f9f9; /* Light background for readability */
+    box-shadow: 4px 4px 8px 6px rgba(0, 0, 0, 0.3); /* Subtle shadow for depth */
+    border-radius: 8px; /* Slightly rounded corners */
+    margin: 20px auto; /* Centers the content horizontally */
+    gap: 20px; /* Adds space between grid items */
+}
+
+.product-details img {
+    max-width: 100%; /* Ensures the image is responsive */
+    height: auto;
+    border-radius: 8px; /* Matches the container's rounded corners */
+}
+
+.product-details h2 {
+    font-size: 2em;
+    color: #333; /* Darker color for contrast */
+    margin: 0; /* Remove margin for better alignment */
+    text-align: center; /* Center-align the text */
+}
+
+.product-details p {
+    font-size: 1.2em;
+    color: #666; /* Muted text color */
+    text-align: center; /* Center-align the text */
+    margin: 0; /* Remove margin for consistency */
+}
+
+.product-details-back-button {
+    padding: 10px 15px;
+    font-size: 1em;
+    color: #fff;
+    background-color: #f3a847; /* Bootstrap-like orange */
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.product-details-back-button:hover {
+    background-color: #ec9c33; /* Darker orange on hover */
+}
+
+
 
 /* About Section Styling with Image Background */
 .about-section {

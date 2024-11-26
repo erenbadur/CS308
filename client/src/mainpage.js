@@ -9,7 +9,10 @@ const MainPage = () => {
     const [pageSize] = useState(12);
     const [cartOpen, setCartOpen] = useState(false); // Track cart visibility
     const [cartItems, setCartItems] = useState([]); // Track items in the cart
- 
+    const [selectedProduct, setSelectedProduct] = useState(null); // Track selected product for detailed view
+
+
+
     useEffect(() => {
         const handleScroll = () => {
             const backToTopBtn = document.getElementById("backToTopBtn");
@@ -188,6 +191,22 @@ const MainPage = () => {
             setCurrentPage(currentPage - 1);
         }
     };
+
+
+
+
+    const handleProductClick = (product) => {
+        setSelectedProduct(product);
+    };
+
+    
+
+    const handleBackToProducts = () => {
+        setSelectedProduct(null);
+    };
+
+    
+
     return (
         <div>
             <div id="home-section"></div>
@@ -403,37 +422,67 @@ const MainPage = () => {
 
             {/* Popular Section */}
             <div id="popular-section" className="section">
-                <h2>Popular Products</h2>
-                <p style={{ fontSize: "1.5em" }}>Check out some of our most popular items. Get the best deals and hottest products in our store!</p>
-
-                <div className="product-grid">
-                    {products.map((product) => (
-                        <div className="product-card" key={product._id}>
-                            <img src={product.imageUrl} alt={product.name} className="product-image" />
-                            <h3 className="product-name">{product.name}</h3>
-                            <p className="product-price">${product.price}</p>
-                            <div className="product-rating">
-                                <span>{'⭐️'.repeat(Math.round(product.averageRating || 0))}</span>
-                            </div>
-                            <button onClick={() => handleAddToCart(product)} className="add-to-cart-button">
-                                Add to Cart
-                            </button>
-
+                {!selectedProduct ? (
+                    <>
+                        <h2>Popular Products</h2>
+                        <p style={{ fontSize: "1.5em" }}>Check out some of our most popular items.</p>
+                        <div className="product-grid">
+                            {products.map((product) => (
+                                <div
+                                    className="product-card"
+                                    key={product._id}
+                                    onClick={() => handleProductClick(product)} // Handle product click
+                                >
+                                    <img src={product.imageUrl} alt={product.name} className="product-image" />
+                                    <h3 className="product-name">{product.name}</h3>
+                                    <p className="product-price">${product.price}</p>
+                                    <div className="product-rating">
+                                        <span>{'⭐️'.repeat(Math.round(product.averageRating || 0))}</span>
+                                    </div>
+                                    <button
+                                        className='add-to-cart-button '
+                                        onClick={(e) => {
+                                            e.stopPropagation(); // Prevent triggering product click
+                                            handleAddToCart(product);
+                                        }}
+                                    >
+                                        Add to Cart
+                                    </button>
+                                </div>
+                            ))}
                         </div>
-                    ))}
-                </div>
-            <div className="pagination-controls">
-                    <button onClick={goToPrevPage} disabled={currentPage === 1}>
-                        &laquo; Prev
-                    </button>
-                    <span>
-                        Page {currentPage} of {totalPages}
-                    </span>
-                    <button onClick={goToNextPage} disabled={currentPage === totalPages}>
-                        Next &raquo;
-                    </button>
-                </div>
+                        <div className="pagination-controls">
+                            <button onClick={goToPrevPage} disabled={currentPage === 1}>
+                                &laquo; Prev
+                            </button>
+                            <span>
+                                Page {currentPage} of {totalPages}
+                            </span>
+                            <button onClick={goToNextPage} disabled={currentPage === totalPages}>
+                                Next &raquo;
+                            </button>
+                        </div>
+                    </>
+                ) : (
+
+                    <div className="product-details">
+                        <button className="product-details-back-button" onClick={handleBackToProducts}>
+                            &larr; Back to Products
+                        </button>                    
+                        <img src={selectedProduct.imageUrl} alt={selectedProduct.name} />
+                        <h2>{selectedProduct.name}</h2>
+                        <p>{selectedProduct.description}</p>
+                        <p>${selectedProduct.price}</p>
+
+
+                    </div>
+
+
+
+                )}
             </div>
+
+
             {/* About Section */}
             <div id="about-section" className="section about-section">
                 <div className="about-content">

@@ -12,6 +12,7 @@ const MainPage = () => {
     const [selectedProduct, setSelectedProduct] = useState(null); // Track selected product for detailed view
 
 
+    
 
     useEffect(() => {
         const handleScroll = () => {

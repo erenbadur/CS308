@@ -388,6 +388,7 @@ html {
     overflow: hidden;
 }
 
+
 .footer-top {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));

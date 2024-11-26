@@ -9,8 +9,11 @@ const MainPage = () => {
     const [pageSize] = useState(12);
     const [cartOpen, setCartOpen] = useState(false); // Track cart visibility
     const [cartItems, setCartItems] = useState([]); // Track items in the cart
-    const [sortBy, setSortBy] = useState("price"); // Default sorting field
-    const [sortOrder, setSortOrder] = useState("asc"); // Default sorting order
+    const [sortBy, setSortBy] = useState('price');
+    const [sortOrder, setSortOrder] = useState('asc');
+    const [selectedProduct, setSelectedProduct] = useState(null); // Track selected product for detailed view
+
+
 
     useEffect(() => {
         const handleScroll = () => {
@@ -21,35 +24,55 @@ const MainPage = () => {
                 backToTopBtn.style.display = "none";
             }
         };
-
+    
         const fetchProducts = async () => {
             try {
                 const params = {
                     page: currentPage,
                     limit: pageSize,
-                    sortBy, // Include sorting field
-                    order: sortOrder, // Include sorting order
                 };
-        
+    
                 if (activeCategory) {
                     params.category = activeCategory;
                 }
-        
+    
                 const response = await axios.get('/api/products', { params });
                 setProducts(response.data.products);
                 setTotalPages(response.data.pagination.totalPages);
             } catch (error) {
-                console.error('Error fetching products:', error);
+                console.error('Error Occurs:', error);
             }
-        };              
-        fetchProducts();
-
+        };
+    
+        const fetchCart = async () => {
+            const sessionId = localStorage.getItem('sessionId');
+            const userId = localStorage.getItem('user'); // Optional for logged-in users
+    
+            try {
+                const response = await axios.get('/api/cart/get', {
+                    params: { sessionId, userId },
+                });
+                if (response.status === 200) {
+                    setCartItems(response.data.items || []);
+                }
+            } catch (error) {
+                console.error('Error fetching cart:', error.response?.data || error.message);
+            }
+        };
+    
+        // Attach the scroll event listener
         window.addEventListener('scroll', handleScroll);
-
+    
+        // Fetch products and cart when the component mounts
+        fetchProducts();
+        fetchCart();
+    
+        // Cleanup: remove the scroll event listener on unmount
         return () => {
             window.removeEventListener('scroll', handleScroll);
         };
     }, [currentPage, activeCategory]);
+    
 
     const scrollToTop = () => {
         window.scrollTo({
@@ -66,42 +89,52 @@ const MainPage = () => {
         setCartOpen(false); // Close cart
     };
 
-    const handleSort = async (sortField) => {
-        const newOrder = sortOrder === 'asc' ? 'desc' : 'asc';
-        setSortBy(sortField);
-        setSortOrder(newOrder);
+    const handleIncreaseQuantity = async (index) => {
+        const cartItem = cartItems[index];
+        const sessionId = localStorage.getItem('sessionId');
+        const userId = localStorage.getItem('user'); // Optional
     
         try {
-            const response = await axios.get('/api/products/sort', {
-                params: { sortBy: sortField, order: newOrder },
+            const response = await axios.put('/api/cart/update', {
+                sessionId,
+                userId,
+                productId: cartItem.productId,
+                quantity: cartItem.quantity + 1, // Increment quantity
             });
-            setProducts(response.data.products); // Update products state with sorted data
-            console.log('Sorted Products:', response.data.products); // Debug sorted data
+    
+            if (response.status === 200) {
+                setCartItems(response.data.cart.items); // Update the cart state
+            } else {
+                console.error('Error updating cart:', response.data.error);
+            }
         } catch (error) {
-            console.error('Error sorting products:', error);
+            console.error('Error in handleIncreaseQuantity:', error.response?.data || error.message);
         }
     };
-                
-    const handleIncreaseQuantity = (index) => {
-        setCartItems((prevCart) => {
-            return prevCart.map((item, i) =>
-                i === index
-                    ? { ...item, quantity: item.quantity + 1 }
-                    : item
-            );
-        });
-    };    
     
-    const handleDecreaseQuantity = (index) => {
-        setCartItems((prevCart) => {
-            const updatedCart = prevCart.map((item, i) =>
-                i === index
-                    ? { ...item, quantity: item.quantity - 1 }
-                    : item
-            ).filter((item) => item.quantity > 0); // Remove items with quantity <= 0
-            return updatedCart;
-        });
-    };    
+    
+    const handleDecreaseQuantity = async (index) => {
+        const cartItem = cartItems[index];
+        const sessionId = localStorage.getItem('sessionId');
+        const userId = localStorage.getItem('user'); // Optional
+    
+        try {
+            const response = await axios.put('/api/cart/update', {
+                sessionId,
+                userId,
+                productId: cartItem.productId,
+                quantity: cartItem.quantity - 1, // Decrement quantity
+            });
+    
+            if (response.status === 200) {
+                setCartItems(response.data.cart.items); // Update the cart state
+            } else {
+                console.error('Error updating cart:', response.data.error);
+            }
+        } catch (error) {
+            console.error('Error in handleDecreaseQuantity:', error.response?.data || error.message);
+        }
+    };
     
     const handleCheckout = () => {
         const user = localStorage.getItem('user'); // Check if the user is logged in
@@ -112,20 +145,34 @@ const MainPage = () => {
         }
     };    
     
-    const handleAddToCart = (product) => {
-        setCartItems((prevCart) => {
-            // Check if the product is already in the cart
-            const isProductInCart = prevCart.some((item) => item._id === product._id);
+    const handleAddToCart = async (product) => {
+        let sessionId = localStorage.getItem('sessionId');
+        if (!sessionId) {
+            sessionId = `session_${Date.now()}`;
+            localStorage.setItem('sessionId', sessionId); // Save a new sessionId in localStorage
+        }
     
-            if (isProductInCart) {
-                // Product is already in the cart, do nothing
-                return prevCart;
+        const userId = localStorage.getItem('user'); // Optional for logged-in users
+    
+        try {
+            const response = await axios.post('/api/cart/add', {
+                sessionId,
+                userId,
+                productId: product.productId, // Ensure product.productId is sent, not product._id
+                quantity: 1, // Add 1 item by default
+            });
+    
+            if (response.status === 200) {
+                console.log('Item added to cart:', response.data.cart);
+                setCartItems(response.data.cart.items); // Update the cart state with the new data
             } else {
-                // Product is not in the cart, add it with initial quantity 1
-                return [...prevCart, { ...product, quantity: 1 }];
+                console.error('Error adding item to cart:', response.data.error);
             }
-        });
+        } catch (error) {
+            console.error('Error in handleAddToCart:', error.response?.data || error.message);
+        }
     };
+    
         
     const handleButtonClick = (category) => {
         if (activeCategory === category) {
@@ -146,6 +193,43 @@ const MainPage = () => {
             setCurrentPage(currentPage - 1);
         }
     };
+
+
+
+
+    const handleProductClick = (product) => {
+        setSelectedProduct(product);
+    };
+
+    
+
+    const handleBackToProducts = () => {
+        setSelectedProduct(null);
+    };
+
+
+    const handleSortChange = async (field) => {
+        const newOrder = sortBy === field && sortOrder === 'asc' ? 'desc' : 'asc';
+        setSortBy(field);
+        setSortOrder(newOrder);
+    
+        try {
+            const response = await axios.get(`/api/products/sort`, {
+                params: {
+                    sortBy: field,
+                    order: newOrder,
+                    page: 1, // Reset to the first page on sort change
+                    limit: 9, // Enforce the 9-products-per-page rule
+                },
+            });
+            setProducts(response.data.products);
+            setCurrentPage(1); // Reset the current page to 1
+            setTotalPages(response.data.pagination.totalPages); // Update total pages from the backend response
+        } catch (error) {
+            console.error('Error sorting products:', error.response?.data || error.message);
+        }
+    };
+    
     return (
         <div>
             <div id="home-section"></div>
@@ -282,29 +366,28 @@ const MainPage = () => {
                     {cartItems.length > 0 ? (
                         <ul>
                             {cartItems.map((item, index) => (
-                                <li key={index} className="cart-item">
-                                    <div className="cart-item-details">
-                                        <p>{item.name}</p>
-                                        <p>${item.price}</p>
-                                    </div>
-                                    <div className="quantity-controls">
-                                        <button 
-                                            onClick={() => handleDecreaseQuantity(index)} 
-                                            className="quantity-btn"
-                                        >
-                                            -
-                                        </button>
-                                        <span className="quantity">{item.quantity}</span>
-                                        <button 
-                                            onClick={() => handleIncreaseQuantity(index)} 
-                                            className="quantity-btn"
-                                            disabled={item.quantity >= item.stock}
-                                        >
-                                            +
-                                        </button>
-                                    </div>
-                                </li>
-                            ))}
+    <li key={index} className="cart-item">
+        <div className="cart-item-details">
+            <p>{item.name || 'Unknown Product'}</p> {/* Fallback for missing name */}
+            <p>${(item.price || 0).toFixed(2)}</p> {/* Fallback for missing price */}
+        </div>
+        <div className="quantity-controls">
+            <button onClick={() => handleDecreaseQuantity(index)} className="quantity-btn">
+                -
+            </button>
+            <span className="quantity">{item.quantity}</span>
+            <button 
+                onClick={() => handleIncreaseQuantity(index)} 
+                className="quantity-btn"
+                disabled={item.quantity >= item.stock}
+            >
+                +
+            </button>
+        </div>
+    </li>
+))}
+
+
                         </ul>
                     ) : (
                         <p>Your cart is empty.</p>
@@ -362,51 +445,84 @@ const MainPage = () => {
 
             {/* Popular Section */}
             <div id="popular-section" className="section">
-                <h2>Popular Products</h2>
-                <div className="sort-container">
-                    <button className="sort-button">Sort By</button>
-                    <div className="sort-options">
-                        <div className="sort-option" onClick={() => handleSort("price")}>
-                            Price <span className="sort-arrow">{sortBy === "price" && sortOrder === "asc" ? "↑" : "↓"}</span>
-                        </div>
-                        <div className="sort-option" onClick={() => handleSort("popularity")}>
-                            Popularity <span className="sort-arrow">{sortBy === "popularity" && sortOrder === "asc" ? "↑" : "↓"}</span>
-                        </div>
-                        <div className="sort-option" onClick={() => handleSort("averageRating")}>
-                            Rating <span className="sort-arrow">{sortBy === "averageRating" && sortOrder === "asc" ? "↑" : "↓"}</span>
-                        </div>
-                    </div>
-                </div>
-                <p style={{ fontSize: "1.5em" }}>Check out some of our most popular items. Get the best deals and hottest products in our store!</p>
+                {!selectedProduct ? (
+                    <>
+                        <h2>Popular Products</h2>
 
-                <div className="product-grid">
-                    {products.map((product) => (
-                        <div className="product-card" key={product._id}>
-                            <img src={product.imageUrl} alt={product.name} className="product-image" />
-                            <h3 className="product-name">{product.name}</h3>
-                            <p className="product-price">${product.price}</p>
-                            <div className="product-rating">
-                                <span>{'⭐️'.repeat(Math.round(product.averageRating || 0))}</span>
+                        {/* Sort By Dropdown */}
+                        <div className="sort-by-dropdown">
+                            <button className="sort-by-button">Sort By</button>
+                            <div className="sort-options">
+                                <div onClick={() => handleSortChange('price')}>
+                                    Price {sortBy === 'price' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                                </div>
+                                <div onClick={() => handleSortChange('popularity')}>
+                                    Popularity {sortBy === 'popularity' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                                </div>
+                                <div onClick={() => handleSortChange('averageRating')}>
+                                    Rating {sortBy === 'averageRating' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                                </div>
                             </div>
-                            <button onClick={() => handleAddToCart(product)} className="add-to-cart-button">
-                                Add to Cart
-                            </button>
-
                         </div>
-                    ))}
-                </div>
-            <div className="pagination-controls">
-                    <button onClick={goToPrevPage} disabled={currentPage === 1}>
-                        &laquo; Prev
-                    </button>
-                    <span>
-                        Page {currentPage} of {totalPages}
-                    </span>
-                    <button onClick={goToNextPage} disabled={currentPage === totalPages}>
-                        Next &raquo;
-                    </button>
-                </div>
+
+                        <p style={{ fontSize: "1.5em" }}>Check out some of our most popular items.</p>
+                        <div className="product-grid">
+                            {products.map((product) => (
+                                <div
+                                    className="product-card"
+                                    key={product._id}
+                                    onClick={() => handleProductClick(product)} // Handle product click
+                                >
+                                    <img src={product.imageUrl} alt={product.name} className="product-image" />
+                                    <h3 className="product-name">{product.name}</h3>
+                                    <p className="product-price">${product.price}</p>
+                                    <div className="product-rating">
+                                        <span>{'⭐️'.repeat(Math.round(product.averageRating || 0))}</span>
+                                    </div>
+                                    <button
+                                        className='add-to-cart-button '
+                                        onClick={(e) => {
+                                            e.stopPropagation(); // Prevent triggering product click
+                                            handleAddToCart(product);
+                                        }}
+                                    >
+                                        Add to Cart
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="pagination-controls">
+                            <button onClick={goToPrevPage} disabled={currentPage === 1}>
+                                &laquo; Prev
+                            </button>
+                            <span>
+                                Page {currentPage} of {totalPages}
+                            </span>
+                            <button onClick={goToNextPage} disabled={currentPage === totalPages}>
+                                Next &raquo;
+                            </button>
+                        </div>
+                    </>
+                ) : (
+
+                    <div className="product-details">
+                        <button className="product-details-back-button" onClick={handleBackToProducts}>
+                            &larr; Back to Products
+                        </button>                    
+                        <img src={selectedProduct.imageUrl} alt={selectedProduct.name} />
+                        <h2>{selectedProduct.name}</h2>
+                        <p>{selectedProduct.description}</p>
+                        <p>${selectedProduct.price}</p>
+
+
+                    </div>
+
+
+
+                )}
             </div>
+
+
             {/* About Section */}
             <div id="about-section" className="section about-section">
                 <div className="about-content">

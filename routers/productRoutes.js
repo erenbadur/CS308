@@ -3,7 +3,6 @@ const router = express.Router();
 const Product = require('../models/product'); // Import Product model
 const PurchaseHistory = require('../models/PurchaseHistory');
 
-
 // Middleware to check if the user purchased the product
 const canCommentOrRate = async (req, res, next) => {
   const { userId } = req.body; // Extract userId from the request body
@@ -25,7 +24,7 @@ const canCommentOrRate = async (req, res, next) => {
   }
 };
 
-
+// Add a comment to a product
 router.post('/:productId/comment', canCommentOrRate, async (req, res) => {
   const { productId } = req.params; // Extract productId from the URL
   const { userId, content } = req.body; // Extract userId and content from the body
@@ -46,6 +45,7 @@ router.post('/:productId/comment', canCommentOrRate, async (req, res) => {
   }
 });
 
+// Add a rating to a product
 router.post('/:productId/rate', canCommentOrRate, async (req, res) => {
   const { productId } = req.params; // Extract productId from the URL
   const { userId, rating } = req.body; // Extract userId and rating from the body
@@ -88,9 +88,7 @@ router.post('/:productId/rate', canCommentOrRate, async (req, res) => {
   }
 });
 
-
-
-
+// Get paginated list of products
 router.get('/', async (req, res) => {
   try {
       const page = parseInt(req.query.page) || 1;
@@ -127,4 +125,28 @@ router.get('/', async (req, res) => {
       res.status(500).json({ message: 'Server Error' });
   }
 });
+
+// Sorting products by price or popularity
+router.get('/sort', async (req, res) => {
+  const { sortBy = 'price', order = 'asc' } = req.query; // Get sorting criteria and order from query parameters
+
+  // Validate the sorting field
+  const validSortFields = ['price', 'popularity', 'averageRating'];
+  if (!validSortFields.includes(sortBy)) {
+      return res.status(400).json({ error: 'Invalid sort field. Choose price, popularity, or averageRating.' });
+  }
+
+  try {
+      const sortOrder = order === 'asc' ? 1 : -1; // Ascending or Descending
+      const products = await Product.find({})
+          .sort({ [sortBy]: sortOrder }) // Sort based on the field and order
+          .select('-__v'); // Exclude unnecessary fields
+
+      res.status(200).json({ products });
+  } catch (error) {
+      console.error('Error sorting products:', error);
+      res.status(500).json({ error: 'An error occurred while sorting products.' });
+  }
+});
+
 module.exports = router;

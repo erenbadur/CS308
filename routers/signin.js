@@ -1,7 +1,52 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const User = require('../models/user');
+const Cart = require('../models/cartModel');
 const router = express.Router();
+
+
+// Function to merge guest and user carts
+const mergeCarts = async (sessionId, userId) => {
+    try {
+        // Find both carts
+        const guestCart = await Cart.findOne({ sessionId });
+        let userCart = await Cart.findOne({ userId });
+
+        if (guestCart) {
+            if (!userCart) {
+                // If user cart does not exist, create it with guest items
+                userCart = new Cart({
+                    userId,
+                    items: guestCart.items,
+                });
+            } else {
+                // Merge items into user cart
+                guestCart.items.forEach((guestItem) => {
+                    const existingItem = userCart.items.find(
+                        (item) => item.productId === guestItem.productId
+                    );
+                    if (existingItem) {
+                        // If item already exists in user cart, increase the quantity
+                        existingItem.quantity += guestItem.quantity;
+                    } else {
+                        // Otherwise, add the new item
+                        userCart.items.push(guestItem);
+                    }
+                });
+            }
+
+            // Save the merged cart
+            await userCart.save();
+
+            // Delete the guest cart after merging
+            await Cart.deleteOne({ sessionId });
+        }
+    } catch (error) {
+        console.error('Error merging carts:', error);
+        throw error;
+    }
+};
+
 
 // Sign-Up Route
 router.post('/signin', async (req, res) => {
@@ -43,14 +88,9 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Username or password is incorrect' });
     }
 
-    // 3. Login successful: Update or create a cart associated with the user
+    // 3. Login successful: Merge the guest cart with the user's cart
     if (sessionId) {
-      // Find the cart associated with the sessionId and update it with userId
-      await Cart.updateOne(
-        { sessionId },
-        { userId: user._id },
-        { upsert: true } // If no cart exists for this sessionId, create one
-      );
+      await mergeCarts(sessionId, user._id);
     }
 
     // 4. Send a response with the userId and a success message
@@ -63,6 +103,9 @@ router.post('/login', async (req, res) => {
     console.error('Error during login:', error);
     res.status(500).json({ message: 'Server error' });
   }
+
+
+
 });
 
 

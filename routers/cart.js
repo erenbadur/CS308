@@ -40,6 +40,11 @@ router.post('/add', async (req, res) => {
             cart = new Cart({ sessionId, userId, items: [] });
         }
 
+        if (userId && !cart.userId) {
+            cart.userId = userId; // If user has logged in, connect the userID to them
+            
+        }
+
         // Check if the product exists
         const product = await Product.findOne({ productId });
         if (!product) {

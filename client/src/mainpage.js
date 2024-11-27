@@ -35,7 +35,7 @@ const MainPage = () => {
     const [newRating, setNewRating] = useState(''); // New rating value
     const [newComment, setNewComment] = useState(''); // New comment content
     const [userId, setUserId] = useState(localStorage.getItem('user')); // Logged-in user's ID
-
+    const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('user'));
 
 
     useEffect(() => {
@@ -67,9 +67,8 @@ const MainPage = () => {
             }
         };
     
-
-    
-
+        
+        
          // Updated fetchCart function
          const fetchCart = async () => {
             const sessionId = getSessionId(); // Ensure session ID exists
@@ -86,6 +85,9 @@ const MainPage = () => {
                 console.error('Error fetching cart:', error.response?.data || error.message);
             }
             };
+
+
+            
     
         // Attach the scroll event listener
         window.addEventListener('scroll', handleScroll);
@@ -98,7 +100,7 @@ const MainPage = () => {
         return () => {
             window.removeEventListener('scroll', handleScroll);
         };
-    }, [currentPage, activeCategory]);
+    }, [currentPage, activeCategory, isLoggedIn]);
     
 
     const scrollToTop = () => {
@@ -258,6 +260,9 @@ const MainPage = () => {
           if (response.status === 200) {
             console.log('Login successful:', response.data);
             localStorage.setItem('user', response.data.userId); // Save the user ID to localStorage
+            setIsLoggedIn(true);
+
+            fetchCart({ userId: response.data.userId }); 
           }
         } catch (error) {
           console.error('Error during login:', error.response?.data || error.message);
@@ -399,6 +404,15 @@ const MainPage = () => {
         } catch (error) {
             console.error('Error sorting products:', error.response?.data || error.message);
         }
+    };
+
+    const handleLogout = () => {
+        localStorage.removeItem('user');
+        setIsLoggedIn(false);
+    };
+
+    const handleLoginRedirect = () => {
+        window.location.href = '/login'; // Redirect to login page
     };
     
     return (
@@ -548,7 +562,17 @@ const MainPage = () => {
                 <button onClick={toggleCart} className="cart">
                     🛒 Cart
                 </button>
-                <a href="login.html" className="login">👤 Log In</a>
+                {/* Login/Logout Button */}
+                {isLoggedIn ? (
+                    <button onClick={handleLogout} className="login">
+                        👤 Log Out
+                    </button>
+                ) : (
+                    <button onClick={handleLoginRedirect} className="login">
+                        👤 Log In
+                    </button>
+                )}
+
             </div>
 
             {/* Cart Panel */}

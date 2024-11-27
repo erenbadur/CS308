@@ -47,6 +47,11 @@ const MainPage = () => {
         const fetchCart = async () => {
             const sessionId = localStorage.getItem('sessionId');
             const userId = localStorage.getItem('user'); // Optional for logged-in users
+            if (sessionId) {
+                console.log('Retrieved session ID:', sessionId);
+            } else {
+                console.log('No session ID found in localStorage.');
+            }
     
             try {
                 const response = await axios.get('/api/cart/get', {

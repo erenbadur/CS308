@@ -161,7 +161,31 @@ router.put('/update', getOrCreateCart, async (req, res) => {
     }
 });
 
+// Clear the cart
+router.delete('/clear', async (req, res) => {
+    const { sessionId } = req.body;
 
+    if (!sessionId) {
+        return res.status(400).json({ error: 'Session ID is required.' });
+    }
+
+    try {
+        const cart = await Cart.findOne({ sessionId });
+
+        if (!cart) {
+            return res.status(404).json({ error: 'Cart not found.' });
+        }
+
+        // Clear the cart items
+        cart.items = [];
+        await cart.save();
+
+        res.status(200).json({ message: 'Cart cleared successfully.' });
+    } catch (error) {
+        console.error('Error clearing cart:', error);
+        res.status(500).json({ error: 'An error occurred while clearing the cart.' });
+    }
+});
 
 
 

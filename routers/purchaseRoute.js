@@ -55,6 +55,8 @@ router.post('/add', async (req, res) => {
     }
 });
 
+
+
 router.get('/orders', async (req, res) => {
     try {
         // Fetch all purchase histories

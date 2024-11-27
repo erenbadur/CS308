@@ -13,10 +13,11 @@ router.post('/order', async (req, res) => {
             return res.status(400).json({ error: 'All fields (userId, productId, quantity) are required.' });
         }
 
+        /*
         if (quantity <= 0) {
             return res.status(400).json({ error: 'Quantity must be greater than 0.' });
         }
-
+*/
         console.log('Product ID:', productId);
 
         // Find the product by productId
@@ -31,6 +32,7 @@ router.post('/order', async (req, res) => {
             return res.status(404).json({ error: 'User not found.' });
         }
 
+        /* checking stock and decrementing the product if checkout, is handeled by purchaseRoute endpoints
         // Check stock
         if (product.quantityInStock < quantity) {
             return res.status(400).json({ error: 'Not enough items in stock.' });
@@ -39,7 +41,7 @@ router.post('/order', async (req, res) => {
         // Reduce stock and save
         product.quantityInStock -= quantity;
         await product.save();
-
+*/
         // Create the order
         const order = await Order.create({
             user: user._id,

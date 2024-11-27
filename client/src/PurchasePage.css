@@ -22,28 +22,38 @@ div {
 html {
     scroll-behavior: smooth;
 }
-
-.section-header {
-    cursor: pointer;
-    padding: 10px;
-    background-color: #f9f9f9;
-    border-bottom: 1px solid #ccc;
-}
   
 .section-header h2 {
     margin: 0;
 }
   
-.section-header:hover {
-    background-color: #e0e0e0;
-}
-
 
 .header {
-    background-color: darkgrey;
-    text-align: center;
+    background-color: rgb(237, 237, 237);
     padding: 20px;
+    height: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative; /* To allow precise positioning within the header */
 }
+
+.header h1 {
+    margin: 0;
+    color: #020202;
+}
+
+.logo img {
+    width: 100px;
+    height: 100px;
+    margin-bottom: 30px;
+    margin-left: 20px;
+    border-radius: 20%;
+    position: absolute; /* Ensures it is fixed to the top-left */
+    left: 20px; /* Adjust spacing from the left */
+    top: 50%; /* Center vertically relative to the header */
+    transform: translateY(-50%); /* Offset by 50% of its height */
+  }
 
 .row {
     display: -ms-flexbox; /* IE10 */
@@ -61,14 +71,20 @@ html {
   }  
 
 .container {
-background-color: #f2f2f2;
+background-color: rgb(255, 255, 255);
 padding: 5px 20px 15px 20px;
-border: 1px solid lightgrey;
-border-radius: 3px;
+border: 3px solid lightgrey;
+border-radius: 20px; 
+margin: 20px auto;
+}
+
+.centered {
+    text-align: center; /* Centers the text horizontally */
 }
 
 .column {
     float: left;
+    padding: 30px;
 }
 
 .column.main{
@@ -121,4 +137,62 @@ span.price {
 
 .finish-payment-btn:hover {
     background-color: #218838; /* Darker green on hover */
+}
+
+.section-header {
+    cursor: pointer;
+    padding: 10px;
+    background-color: #ffffff; /* Keep the background fixed */
+    border-bottom: 1px solid #ccc;
+    transition: color 0.3s ease; /* Smooth transition for text color */
+    color: inherit; /* Default text color */
+}
+
+.section-header:hover {
+    color: #d35400; /* Dark orange on hover */
+    background-color: #ffffff; /* Prevent background color change */
+}
+
+.section-header.active {
+    color: #d35400; /* Orange when selected */
+}
+
+/* The overlay background for the modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+/* The modal content box */
+.modal-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    max-width: 400px;
+    width: 100%;
+}
+
+/* Close button */
+.close-btn {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 20px;
+}
+
+.close-btn:hover {
+    background-color: #45a049;
 }

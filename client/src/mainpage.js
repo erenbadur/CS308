@@ -28,6 +28,13 @@ const MainPage = () => {
     const [selectedProduct, setSelectedProduct] = useState(null); // Track selected product for detailed view
     const [searchTerm, setSearchTerm] = useState(""); // Search term
     const [isSearching, setIsSearching] = useState(false); // Track search status
+    const [comments, setComments] = useState([]); // Comments for the selected product
+    const [commentsPage, setCommentsPage] = useState(1); // Current page of comments
+    const [commentsTotalPages, setCommentsTotalPages] = useState(1); // Total pages of comments
+    const [isAddingComment, setIsAddingComment] = useState(false); // Whether the user is adding a comment
+    const [newRating, setNewRating] = useState(''); // New rating value
+    const [newComment, setNewComment] = useState(''); // New comment content
+    const [userId, setUserId] = useState(localStorage.getItem('user')); // Logged-in user's ID
 
 
 
@@ -263,32 +270,114 @@ const MainPage = () => {
 
       const handleProductClick = async (product) => {
         setSelectedProduct(product);
-      
+
         const userId = localStorage.getItem('user'); // Get logged-in user ID
         if (userId) {
-          try {
-            const response = await axios.get('/api/purchase-history/check', {
-              params: {
-                userId,
-                productId: product.productId,
-              },
-            });
-            setHasPurchased(response.data.hasPurchased);
-          } catch (error) {
-            console.error('Error checking purchase history:', error.response?.data || error.message);
-          }
+            try {
+                const response = await axios.get('/api/purchase-history/check', {
+                    params: {
+                        userId,
+                        productId: product.productId,
+                    },
+                });
+                setHasPurchased(response.data.hasPurchased);
+            } catch (error) {
+                console.error('Error checking purchase history:', error.response?.data || error.message);
+            }
         } else {
-          setHasPurchased(false); // User not logged in
+            setHasPurchased(false); // User not logged in
         }
-      };
 
-    
+        // Fetch comments for the product
+        fetchComments(product.productId, 1); // Fetch first page of comments
+    };
+    const fetchComments = async (productId, page) => {
+        try {
+            const response = await axios.get(`/api/products/${productId}/comments`, {
+                params: { page },
+            });
+
+            setComments(response.data.comments);
+            setCommentsPage(response.data.pagination.currentPage);
+            setCommentsTotalPages(response.data.pagination.totalPages);
+        } catch (error) {
+            console.error('Error fetching comments:', error.response?.data || error.message);
+        }
+    };
+
+    const handlePrevCommentsPage = () => {
+        if (commentsPage > 1) {
+            fetchComments(selectedProduct.productId, commentsPage - 1);
+        }
+    };
+
+    const handleNextCommentsPage = () => {
+        if (commentsPage < commentsTotalPages) {
+            fetchComments(selectedProduct.productId, commentsPage + 1);
+        }
+    };
+
+    const handleAddCommentClick = () => {
+        setIsAddingComment(true);
+    };
+
+    const handleSubmitComment = async () => {
+        if (!newRating && !newComment.trim()) {
+            alert('You must enter a rating or a comment');
+            return;
+        }
+
+        if (!userId) {
+            alert('You must be logged in to submit a comment');
+            return;
+        }
+
+        const productId = selectedProduct.productId;
+
+        try {
+            // If rating is given, submit rating
+            if (newRating) {
+                const ratingResponse = await axios.post(`/api/products/${productId}/rate`, {
+                    userId,
+                    rating: parseFloat(newRating),
+                });
+                console.log('Rating submitted:', ratingResponse.data);
+            }
+
+            // If comment is given, submit comment
+            if (newComment.trim()) {
+                const commentResponse = await axios.post(`/api/products/${productId}/comment`, {
+                    userId,
+                    content: newComment.trim(),
+                });
+                console.log('Comment submitted:', commentResponse.data);
+            }
+
+            // After submission, reset form and go back to product page
+            setNewRating('');
+            setNewComment('');
+            setIsAddingComment(false);
+
+            // Refresh comments
+            fetchComments(productId, 1);
+
+            // Update product rating
+            // Fetch the updated product details
+            const productResponse = await axios.get(`/api/products/${productId}`);
+            setSelectedProduct(productResponse.data.product);
+        } catch (error) {
+            console.error('Error submitting comment/rating:', error.response?.data || error.message);
+            alert(error.response?.data?.error || 'An error occurred while submitting your comment.');
+        }
+    };
 
     const handleBackToProducts = () => {
         setSelectedProduct(null);
         setHasPurchased(false);
+        setComments([]);
+        setCommentsPage(1);
+        setCommentsTotalPages(1);
     };
-
 
     const handleSortChange = async (field) => {
         const newOrder = sortBy === field && sortOrder === 'asc' ? 'desc' : 'asc';
@@ -609,6 +698,7 @@ const MainPage = () => {
                     </>
                 ) : (
 
+
                     <div className="product-details">
                         <button className="product-details-back-button" onClick={handleBackToProducts}>
                          &larr; Back to Products
@@ -652,7 +742,67 @@ const MainPage = () => {
                                 </button>
                         </div>
                         </div>
+                            {/* Comments Section */}
+                        {isAddingComment ? (
+                            <div className="comment-form">
+                                <button onClick={() => setIsAddingComment(false)}>Back</button>
+                                {/* Rating Input */}
+                                <div>
+                                    <label>Rating:</label>
+                                    <select value={newRating} onChange={(e) => setNewRating(e.target.value)}>
+                                        <option value="">Select Rating</option>
+                                        {['0', '0.5', '1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5'].map((value) => (
+                                            <option key={value} value={value}>{value}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                 {/* Comment Input */}
+                                 <div>
+                                    <label>Comment:</label>
+                                    <textarea value={newComment} onChange={(e) => setNewComment(e.target.value)} />
+                                </div>
+                                {/* Submit Button */}
+                                <button onClick={handleSubmitComment}>Submit</button>
+                            </div>
+                        ) : (
+                            <div className="comments-section">
+                                {/* Add Comment/Rating Button */}
+                                <button
+                                    className="add-comment-button"
+                                    onClick={handleAddCommentClick}
+                                    disabled={!hasPurchased || !userId}
+                                    title={!userId ? 'Please log in' : !hasPurchased ? 'You have not purchased this product, you cannot comment on it' : ''}
+                                >
+                                    Add Comment/Rating
+                                </button>
+                                {/* Comments List */}
+                                {comments.map((comment, index) => (
+                                    <div key={index} className="comment">
+                                        <p>
+                                            <strong>{comment.username}</strong> - Purchased on {comment.purchaseDate ? new Date(comment.purchaseDate).toLocaleDateString() : 'N/A'}
+                                        </p>
+                                        {comment.rating && <p>Rating: {'⭐️'.repeat(Math.round(comment.rating))}</p>}
+                                        {comment.content && <p>{comment.content}</p>}
+                                    </div>
+                                ))}
+                                    {/* Comments Pagination */}
+                                    <div className="comments-pagination">
+                                    <button onClick={handlePrevCommentsPage} disabled={commentsPage <= 1}>
+                                        &laquo; Prev
+                                    </button>
+                                    <span>
+                                        Page {commentsPage} of {commentsTotalPages}
+                                    </span>
+                                    <button onClick={handleNextCommentsPage} disabled={commentsPage >= commentsTotalPages}>
+                                        Next &raquo;
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
+
+
+                    
                         )}
             </div>
 

@@ -20,6 +20,7 @@ const MainPage = () => {
     const [currentPage, setCurrentPage] = useState(1); 
     const [totalPages, setTotalPages] = useState(1);
     const [pageSize] = useState(12);
+    const [hasPurchased, setHasPurchased] = useState(false);
     const [cartOpen, setCartOpen] = useState(false); // Track cart visibility
     const [cartItems, setCartItems] = useState([]); // Track items in the cart
     const [sortBy, setSortBy] = useState('price');
@@ -260,14 +261,32 @@ const MainPage = () => {
       
 
 
-    const handleProductClick = (product) => {
+      const handleProductClick = async (product) => {
         setSelectedProduct(product);
-    };
+      
+        const userId = localStorage.getItem('user'); // Get logged-in user ID
+        if (userId) {
+          try {
+            const response = await axios.get('/api/purchase-history/check', {
+              params: {
+                userId,
+                productId: product.productId,
+              },
+            });
+            setHasPurchased(response.data.hasPurchased);
+          } catch (error) {
+            console.error('Error checking purchase history:', error.response?.data || error.message);
+          }
+        } else {
+          setHasPurchased(false); // User not logged in
+        }
+      };
 
     
 
     const handleBackToProducts = () => {
         setSelectedProduct(null);
+        setHasPurchased(false);
     };
 
 
@@ -592,19 +611,49 @@ const MainPage = () => {
 
                     <div className="product-details">
                         <button className="product-details-back-button" onClick={handleBackToProducts}>
-                            &larr; Back to Products
-                        </button>                    
-                        <img src={selectedProduct.imageUrl} alt={selectedProduct.name} />
-                        <h2>{selectedProduct.name}</h2>
-                        <p>{selectedProduct.description}</p>
-                        <p>${selectedProduct.price}</p>
+                         &larr; Back to Products
+                        </button>
+
+                        <div className="product-details-container">
+                            {/* Left Side: Product Image */}
+                            <div className="product-image-container">
+                                {hasPurchased && (
+                                <div className="purchased-banner">You have purchased this product</div>
+                                )}
+                                <img src={selectedProduct.imageUrl} alt={selectedProduct.name} className="product-detail-image" />
+                            </div>
 
 
+                        {/* Right Side: Product Information */}
+                        <div className="product-info">
+                                <h2>{selectedProduct.name}</h2>
+                                <p className="product-description">{selectedProduct.description}</p>
+
+                                {/* Rating */}
+                                <div className="product-rating-detail">
+                                <span>{'⭐️'.repeat(Math.round(selectedProduct.averageRating || 0))}</span>
+                                <span className="average-rating">({Math.round(selectedProduct.averageRating || 0)})</span>
+                                </div>
+
+                                {/* Price */}
+                                <p className="product-price-detail">${selectedProduct.price}</p>
+
+                                {/* Stock Quantity */}
+                                <p className="product-stock" style={{ color: 'red' }}>
+                                {selectedProduct.quantityInStock} items left in stock
+                                </p>
+
+                                {/* Add to Cart Button */}
+                                <button
+                                onClick={() => handleAddToCart(selectedProduct)}
+                                className="add-to-cart-button-detail"
+                                >
+                                Add to Cart
+                                </button>
+                        </div>
+                        </div>
                     </div>
-
-
-
-                )}
+                        )}
             </div>
 
 

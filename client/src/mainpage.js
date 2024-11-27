@@ -1,6 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import './mainpage.css';
 import axios from 'axios';
+import { v4 as uuidv4 } from 'uuid';
+
+// Utility to get or create a session ID
+const getSessionId = () => {
+    let sessionId = localStorage.getItem('sessionId');
+    if (!sessionId) {
+        sessionId = uuidv4();
+        localStorage.setItem('sessionId', sessionId);
+    }
+    return sessionId;
+};
+
+
 const MainPage = () => {
     const [activeCategory, setActiveCategory] = useState(""); // State to track the active category
     const [products, setProducts] = useState([]); 
@@ -12,6 +25,8 @@ const MainPage = () => {
     const [sortBy, setSortBy] = useState('price');
     const [sortOrder, setSortOrder] = useState('asc');
     const [selectedProduct, setSelectedProduct] = useState(null); // Track selected product for detailed view
+    const [searchTerm, setSearchTerm] = useState(""); // Search term
+    const [isSearching, setIsSearching] = useState(false); // Track search status
 
 
 
@@ -44,26 +59,25 @@ const MainPage = () => {
             }
         };
     
-        const fetchCart = async () => {
-            const sessionId = localStorage.getItem('sessionId');
-            const userId = localStorage.getItem('user'); // Optional for logged-in users
-            if (sessionId) {
-                console.log('Retrieved session ID:', sessionId);
-            } else {
-                console.log('No session ID found in localStorage.');
-            }
+
     
+
+         // Updated fetchCart function
+         const fetchCart = async () => {
+            const sessionId = getSessionId(); // Ensure session ID exists
+            const userId = localStorage.getItem('user'); // Optional for logged-in users
+
             try {
                 const response = await axios.get('/api/cart/get', {
                     params: { sessionId, userId },
                 });
                 if (response.status === 200) {
-                    setCartItems(response.data.items || []);
+                    setCartItems(response.data.items || []); // Update cart items state
                 }
             } catch (error) {
                 console.error('Error fetching cart:', error.response?.data || error.message);
             }
-        };
+            };
     
         // Attach the scroll event listener
         window.addEventListener('scroll', handleScroll);
@@ -92,6 +106,31 @@ const MainPage = () => {
     
     const closeCart = () => {
         setCartOpen(false); // Close cart
+    };
+    const handleSearch = async () => {
+        if (!searchTerm.trim()) {
+            alert("Please enter a search term.");
+            return;
+        }
+    
+        console.log("Search initiated");
+        console.log("Search Term:", searchTerm);
+        console.log("Active Category:", activeCategory);
+    
+        setIsSearching(true); // Start search indicator
+        try {
+            const response = await axios.get('/api/searchBar/search', {
+                params: { term: searchTerm, category: activeCategory },
+            });
+    
+            console.log("Search Results:", response.data);
+            setProducts(response.data.results || []); // Update product list
+        } catch (error) {
+            console.error("Error during search:", error.response?.data || error.message);
+            alert("An error occurred during the search. Please try again.");
+        } finally {
+            setIsSearching(false); // End search indicator
+        }
     };
 
     const handleIncreaseQuantity = async (index) => {
@@ -153,7 +192,7 @@ const MainPage = () => {
     const handleAddToCart = async (product) => {
         let sessionId = localStorage.getItem('sessionId');
         if (!sessionId) {
-            sessionId = `session_${Date.now()}`;
+            sessionId = uuidv4();
             localStorage.setItem('sessionId', sessionId); // Save a new sessionId in localStorage
         }
     
@@ -163,13 +202,12 @@ const MainPage = () => {
             const response = await axios.post('/api/cart/add', {
                 sessionId,
                 userId,
-                productId: product.productId, // Ensure product.productId is sent, not product._id
+                productId: product.productId, // Ensure product.productId is sent
                 quantity: 1, // Add 1 item by default
             });
     
             if (response.status === 200) {
-                console.log('Item added to cart:', response.data.cart);
-                setCartItems(response.data.cart.items); // Update the cart state with the new data
+                setCartItems(response.data.cart.items); // Update the cart state with populated items
             } else {
                 console.error('Error adding item to cart:', response.data.error);
             }
@@ -199,7 +237,27 @@ const MainPage = () => {
         }
     };
 
+    const handleLogin = async (username, password) => {
+        const sessionId = localStorage.getItem('sessionId');
+      
+        try {
+          const response = await axios.post('/api/login', {
+            username,
+            password,
+            sessionId,
+          });
+      
+          if (response.status === 200) {
+            console.log('Login successful:', response.data);
+            localStorage.setItem('user', response.data.userId); // Save the user ID to localStorage
+          }
+        } catch (error) {
+          console.error('Error during login:', error.response?.data || error.message);
+          alert(error.response?.data?.message || 'Login failed. Please try again.');
+        }
+      };
 
+      
 
 
     const handleProductClick = (product) => {
@@ -350,12 +408,34 @@ const MainPage = () => {
                             </div>
                         </div>
                     </div>
-                    <div className="search-bar-container">
-                        <input type="text" className="search-input" placeholder="Search www.N308.com.tr" />
-                        <button className="search-button">
-                            <span className="icon">🔍</span>
-                        </button>
-                    </div>
+ {/* Search Bar */}
+{/* Search Bar */}
+<div className="search-bar-container">
+    <input
+        type="text"
+        className="search-input"
+        placeholder="Search www.N308.com.tr"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)} // Update state
+        onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+                console.log("Enter pressed. Executing search.");
+                handleSearch();
+            }
+        }}
+    />
+    <button
+        className="search-button"
+        onClick={() => {
+            console.log("Search button clicked. Executing search.");
+            handleSearch();
+        }}
+    >
+        <span className="icon">🔍</span>
+    </button>
+</div>
+
+
                 </div>
                 <button onClick={toggleCart} className="cart">
                     🛒 Cart

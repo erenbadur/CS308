@@ -7,7 +7,6 @@ const Product = require('../models/product');
 // Middleware to get or create a cart
 async function getOrCreateCart(req, res, next) {
     const { userId, sessionId } = req.body || req.query;
-    
 
     if (!sessionId) {
         return res.status(400).json({ error: 'Session ID is required.' });
@@ -26,43 +25,66 @@ async function getOrCreateCart(req, res, next) {
     }
 }
 
-// Add item to cart
-router.post('/add', getOrCreateCart, async (req, res) => {
-    const { productId, quantity } = req.body;
-    const cart = req.cart;
+
+router.post('/add', async (req, res) => {
+    const { productId, quantity, sessionId, userId } = req.body;
+
+    if (!sessionId) {
+        return res.status(400).json({ error: 'Session ID is required.' });
+    }
 
     try {
-        // Validate product existence
+        // Find or create the cart
+        let cart = await Cart.findOne({ $or: [{ sessionId }, { userId }] });
+        if (!cart) {
+            cart = new Cart({ sessionId, userId, items: [] });
+        }
+
+        // Check if the product exists
         const product = await Product.findOne({ productId });
         if (!product) {
             return res.status(404).json({ error: `Product with ID ${productId} not found.` });
         }
 
-        // Check if the requested quantity is available
-        if (quantity > product.quantityInStock) {
-            return res.status(400).json({ error: `Only ${product.quantityInStock} units available.` });
-        }
-
-        // Check if the product already exists in the cart
+        // Check if the product is already in the cart
         const existingItem = cart.items.find((item) => item.productId === productId);
 
         if (existingItem) {
-            existingItem.quantity += quantity; // Update quantity
+            existingItem.quantity += quantity; // Update the quantity
         } else {
-            // Add product to the cart
+            // Add a new item to the cart
             cart.items.push({ productId, quantity });
         }
 
-        // Save the cart
-        cart.updatedAt = new Date();
         await cart.save();
 
-        res.status(200).json({ message: 'Item added to cart.', cart });
+        // Fetch updated product details
+        const productIds = cart.items.map((item) => item.productId);
+        const products = await Product.find({ productId: { $in: productIds } });
+
+        const productMap = products.reduce((map, product) => {
+            map[product.productId] = product;
+            return map;
+        }, {});
+
+        // Populate cart items with product details
+        const populatedItems = cart.items.map((item) => {
+            const product = productMap[item.productId];
+            return {
+                productId: item.productId,
+                name: product ? product.name : 'Unknown Product',
+                price: product ? product.price : 0,
+                quantity: item.quantity,
+            };
+        });
+
+        res.status(200).json({ message: 'Item added to cart.', cart: { items: populatedItems } });
     } catch (error) {
         console.error('Error adding item to cart:', error);
-        res.status(500).json({ error: 'Error adding item to cart.' });
+        res.status(500).json({ error: 'Internal server error.' });
     }
 });
+
 
 
 // Get cart details
@@ -161,32 +183,9 @@ router.put('/update', getOrCreateCart, async (req, res) => {
     }
 });
 
-// Clear the cart
-router.delete('/clear', async (req, res) => {
-    const { sessionId } = req.body;
 
-    if (!sessionId) {
-        return res.status(400).json({ error: 'Session ID is required.' });
-    }
-
-    try {
-        const cart = await Cart.findOne({ sessionId });
-
-        if (!cart) {
-            return res.status(404).json({ error: 'Cart not found.' });
-        }
-
-        // Clear the cart items
-        cart.items = [];
-        await cart.save();
-
-        res.status(200).json({ message: 'Cart cleared successfully.' });
-    } catch (error) {
-        console.error('Error clearing cart:', error);
-        res.status(500).json({ error: 'An error occurred while clearing the cart.' });
-    }
-});
 
 
 
 module.exports = router;
+

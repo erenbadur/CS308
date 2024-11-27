@@ -28,29 +28,44 @@ router.post('/signin', async (req, res) => {
 
 
 router.post('/login', async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, sessionId } = req.body;
 
   try {
-    // Find the user by username
+    // 1. Find the user by username
     const user = await User.findOne({ username }).select('+password'); // Ensure password is selected
     if (!user) {
       return res.status(400).json({ message: 'Username is incorrect' });
     }
 
-    // Uncomment password comparison
+    // 2. Compare the provided password with the hashed password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: 'Username or password is incorrect' });
     }
 
-    // If login is successful
-    res.status(200).json({ message: 'Welcome' });
+    // 3. Login successful: Update or create a cart associated with the user
+    if (sessionId) {
+      // Find the cart associated with the sessionId and update it with userId
+      await Cart.updateOne(
+        { sessionId },
+        { userId: user._id },
+        { upsert: true } // If no cart exists for this sessionId, create one
+      );
+    }
+
+    // 4. Send a response with the userId and a success message
+    res.status(200).json({
+      message: 'Welcome',
+      userId: user._id,
+      username: user.username,
+    });
   } catch (error) {
     console.error('Error during login:', error);
     res.status(500).json({ message: 'Server error' });
   }
-
 });
+
+
   // Get All Users
 router.get('/users', async (req, res) => {
   try {
@@ -68,3 +83,4 @@ router.get('/users', async (req, res) => {
 
 
 module.exports = router;
+

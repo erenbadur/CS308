@@ -63,5 +63,7 @@ productSchema.methods.decreaseStock = function (quantity) {
     return this.save(); // Save the updated product
 };
 
+productSchema.index({ name: 'text', description: 'text', model: 'text' });
+
 const Product = model('Product', productSchema);
 module.exports = Product;

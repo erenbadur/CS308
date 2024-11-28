@@ -6,45 +6,35 @@ const PurchaseHistory = require('../models/PurchaseHistory'); // Adjust path as 
 
 
 router.post('/add', async (req, res) => {
-    const { userId, productId, quantity } = req.body;
-    console.log('Adding purchase with userId:', userId, 'productId:', productId, 'quantity:', quantity);
-    console.log('Request body:', req.body); // Debugging log
+    const { userId, sessionId, productId, quantity } = req.body;
 
     try {
-        // Validate input
-        if (!userId || !productId || quantity === undefined) {
-            return res.status(400).json({ error: 'All fields (userId, productId, quantity) are required.' });
+        if (!userId && !sessionId) {
+            return res.status(400).json({ error: 'userId or sessionId is required.' });
         }
 
-        if (quantity <= 0) {
-            return res.status(400).json({ error: 'Quantity must be greater than 0.' });
+        const user = userId ? await User.findById(userId) : null;
+        if (userId && !user) {
+            return res.status(404).json({ error: 'User not found.' });
         }
 
-        // Find the product using productId (custom field)
         const product = await Product.findOne({ productId });
         if (!product) {
             return res.status(404).json({ error: 'Product not found.' });
         }
 
-        // Find the user using userId (custom field)
-        const user = await User.findOne({ userId });
-        if (!user) {
-            return res.status(404).json({ error: 'User not found.' });
-        }
-
-        // Check stock
         if (product.quantityInStock < quantity) {
             return res.status(400).json({ error: 'Not enough items in stock.' });
         }
 
-        // Decrease stock
         product.quantityInStock -= quantity;
         await product.save();
 
-        // Create purchase history using custom userId and productId
+        // Save purchase history
         const purchase = await PurchaseHistory.create({
-            user: userId, // Use custom userId
-            product: productId, // Use custom productId
+            user: userId || null,
+            sessionId: sessionId || null,
+            product: productId,
             quantity,
         });
 
@@ -54,6 +44,7 @@ router.post('/add', async (req, res) => {
         res.status(500).json({ error: 'An error occurred while adding the purchase.' });
     }
 });
+
 
 
 

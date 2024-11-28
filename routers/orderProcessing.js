@@ -53,11 +53,11 @@ router.post('/order', validateSessionOrUser, async (req, res) => {
         };
 
         if (userId) {
-            const user = await User.findById(userId);
+            const user = await User.findOne({ userId });
             if (!user) {
                 return res.status(404).json({ error: 'User not found.' });
             }
-            orderData.user = user._id;
+            orderData.user = userId;
         } else {
             orderData.sessionId = sessionId; // Associate with sessionId for guest
         }

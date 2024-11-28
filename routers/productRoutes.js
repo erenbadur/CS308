@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Product = require('../models/product'); // Import Product model
 const PurchaseHistory = require('../models/PurchaseHistory');
-
+const User = require('../models/user'); // Import Product model
 // Middleware to check if the user purchased the product
 const canCommentOrRate = async (req, res, next) => {
   const { userId } = req.body; // Extract userId from the request body
@@ -26,26 +26,36 @@ const canCommentOrRate = async (req, res, next) => {
 
 // Add a comment to a product
 router.post('/:productId/comment', canCommentOrRate, async (req, res) => {
-  const { productId } = req.params; // Extract productId from the URL
-  const { userId, content } = req.body; // Extract userId and content from the body
+    const { productId } = req.params;
+    const { userId, content } = req.body;
 
-  try {
-      // Find the product using productId
-      const product = await Product.findOne({ productId });
-      if (!product) return res.status(404).json({ error: 'Product not found.' });
+    try {
+        // Find the product
+        const product = await Product.findOne({ productId });
+        if (!product) return res.status(404).json({ error: 'Product not found.' });
 
-      // Add the comment
-      product.comments.push({ user: userId, content });
-      await product.save();
+        // Fetch the username from the User model
+        const user = await user.findOne( { userId });
+        const username = user?.username || 'Anonymous'; // Fallback to "Anonymous" if user not found
 
-      res.status(201).json({ message: 'Comment added successfully.' });
-  } catch (error) {
-      console.error('Error adding comment:', error);
-      res.status(500).json({ error: 'An error occurred while adding the comment.' });
-  }
+        // Add the comment with username and timestamp
+        product.comments.push({
+            user: userId,
+            username: username || 'Anonymous', // Use provided username or default to Anonymous
+            content,
+            createdAt: new Date(), // Add current timestamp
+        });
+        await product.save();
+
+        res.status(201).json({ message: 'Comment added successfully.' });
+    } catch (error) {
+        console.error('Error adding comment:', error);
+        res.status(500).json({ error: 'An error occurred while adding the comment.' });
+    }
 });
 
-router.get('/:productId/comment', async (req, res) => {
+
+router.get('/:productId/comments', async (req, res) => {
     const { productId } = req.params;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 5; // Default to 5 comments per page
@@ -60,8 +70,21 @@ router.get('/:productId/comment', async (req, res) => {
         const endIndex = page * limit;
         const totalComments = product.comments.length;
 
-        const comments = product.comments.slice(startIndex, endIndex);
+        const paginatedComments = product.comments.slice(startIndex, endIndex);
 
+        // Enrich comments with username and format response
+        const comments = await Promise.all(
+            paginatedComments.map(async (comment) => {
+                const user = await User.findOne({ userId: comment.user }); // Fetch username using userId
+
+              return {
+                username: user?.username || 'Anonymous',
+                content: comment.content,
+                date: comment.createdAt || new Date(),
+              };
+            })
+          );
+      
         res.status(200).json({
             comments,
             pagination: {
@@ -177,6 +200,29 @@ router.get('/sort', async (req, res) => {
     } catch (error) {
         console.error('Error sorting products:', error);
         res.status(500).json({ error: 'Sorting failed.' });
+    }
+});
+
+
+// Endpoint to get product details by productId
+router.get('/:productId', async (req, res) => {
+    const { productId } = req.params; // Extract productId from the URL
+
+    try {
+        // Find the product by productId or _id (depending on your schema)
+        const product = await Product.findOne({ productId }); // If `productId` is a custom field
+        // const product = await Product.findById(productId); // If you're querying by MongoDB _id
+
+        // If the product doesn't exist
+        if (!product) {
+            return res.status(404).json({ error: 'Product not found.' });
+        }
+
+        // Return the product details
+        res.status(200).json({ product });
+    } catch (error) {
+        console.error('Error fetching product:', error);
+        res.status(500).json({ error: 'An error occurred while fetching the product.' });
     }
 });
 

@@ -51,9 +51,8 @@ const LoginPage = () => {
   return (
     <div className="main-container">
       <div className="info-section">
-        <div className="logo">
-          <img src={logo} alt="Site Logo" />
-        </div>
+
+
         <h1>Welcome to the Online Store 308</h1>
         <p>Shop your favorite products with ease and convenience. We bring the best online trading experience right to your doorstep.</p>
         <ul>

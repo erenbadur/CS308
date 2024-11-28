@@ -24,19 +24,6 @@ html {
 }
 
 
-/* Navbar */
-.navbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background-color: rgba(51, 51, 51, 0.9);
-    padding: 10px 20px;
-    color: #fff;
-    position: fixed;
-    width: 100%;
-    top: 0;
-    z-index: 10;
-}
 
 .navbar .nav-items {
     display: flex;
@@ -261,6 +248,8 @@ html {
     transition: color 0.3s;
     margin-right: 50px;
     text-decoration: none; /* Remove underline */
+    background-color: rgba(51, 51, 51, 1);
+    border: none;
 }
 
 /* Cart Panel Styles */
@@ -894,3 +883,62 @@ i {
   .pagination-controls span {
     font-size: 16px;
   }
+
+/* Navbar */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: rgba(51, 51, 51, 1);
+    padding: 10px 20px;
+    color: #fff;
+    position: fixed; /* Ensure the navbar stays at the top */
+    width: 100%; /* Full width */
+    top: 0;
+    z-index: 10;
+    height: 90px; /* Explicit height to calculate offset */
+}
+
+/* Hero Section */
+.hero-section {
+    position: relative;
+    width: 100vw;
+    height: calc(100vh - 180px); /* Subtract the navbar height */
+    margin-top: 70px; /* Push the hero section down by navbar height */
+    overflow: hidden;
+}
+
+.hero-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Ensures the image fills the section */
+    object-position: center;
+}
+
+
+.hero-caption {
+    width: 900px;
+    position: absolute;
+    top: 70%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.7); /* Semi-transparent background */
+    padding: 20px;
+    border-radius: 10px;
+    border: 3px solid #f3a847; /* Add a border with your desired color */
+    
+}
+
+
+.hero-caption h1 {
+    font-size: 3rem;
+    margin-bottom: 10px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8); /* Add shadow for readability */
+}
+
+.hero-caption p {
+    font-size: 1.5rem;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+}

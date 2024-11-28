@@ -45,48 +45,66 @@ router.post('/:productId/comment', canCommentOrRate, async (req, res) => {
   }
 });
 
-// Add a rating to a product
-router.post('/:productId/rate', canCommentOrRate, async (req, res) => {
-  const { productId } = req.params; // Extract productId from the URL
-  const { userId, rating } = req.body; // Extract userId and rating from the body
+router.get('/:productId/comment', async (req, res) => {
+    const { productId } = req.params;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 5; // Default to 5 comments per page
 
-  try {
-      // Validate the rating value
-      if (rating < 1 || rating > 5) {
-          return res.status(400).json({ error: 'Rating must be between 1 and 5.' });
-      }
+    try {
+        // Find product and validate existence
+        const product = await Product.findOne({ productId });
+        if (!product) return res.status(404).json({ error: 'Product not found.' });
 
-      // Find the product using the custom productId
-      const product = await Product.findOne({ productId });
-      if (!product) {
-          return res.status(404).json({ error: 'Product not found.' });
-      }
+        // Paginate comments
+        const startIndex = (page - 1) * limit;
+        const endIndex = page * limit;
+        const totalComments = product.comments.length;
 
-      // Check if the user has already rated this product
-      const existingRating = product.ratings.find((r) => r.user === userId);
-      if (existingRating) {
-          return res.status(400).json({ error: 'You have already rated this product.' });
-      }
+        const comments = product.comments.slice(startIndex, endIndex);
 
-      // Add the rating
-      product.ratings.push({ user: userId, rating });
-
-      // Recalculate the average rating
-      const totalRatings = product.ratings.reduce((sum, r) => sum + r.rating, 0);
-      product.averageRating = totalRatings / product.ratings.length;
-
-      // Save the updated product
-      await product.save();
-
-      res.status(201).json({
-          message: 'Rating added successfully.',
-          averageRating: product.averageRating,
-      });
-  } catch (error) {
-      console.error('Error adding rating:', error);
-      res.status(500).json({ error: 'An error occurred while adding the rating.' });
-  }
+        res.status(200).json({
+            comments,
+            pagination: {
+                currentPage: page,
+                totalPages: Math.ceil(totalComments / limit),
+                totalComments,
+            },
+        });
+    } catch (error) {
+        console.error('Error fetching comments:', error);
+        res.status(500).json({ error: 'An error occurred while fetching comments.' });
+    }
 });
+
+
+router.post('/:productId/rate', canCommentOrRate, async (req, res) => {
+    const { productId } = req.params;
+    const { userId, rating } = req.body;
+
+    try {
+        if (rating < 1 || rating > 5) {
+            return res.status(400).json({ error: 'Rating must be between 1 and 5.' });
+        }
+
+        const product = await Product.findOne({ productId });
+        if (!product) {
+            return res.status(404).json({ error: 'Product not found.' });
+        }
+
+        // Add the rating
+        product.ratings.push({ user: userId, rating });
+
+        // Recalculate average rating
+        const totalRatings = product.ratings.reduce((sum, r) => sum + r.rating, 0);
+        product.averageRating = totalRatings / product.ratings.length;
+
+        await product.save();
+        res.status(201).json({ message: 'Rating added successfully.', averageRating: product.averageRating });
+    } catch (error) {
+        res.status(500).json({ error: 'An error occurred while adding the rating.' });
+    }
+});
+
 
 // Get paginated list of products
 router.get('/', async (req, res) => {

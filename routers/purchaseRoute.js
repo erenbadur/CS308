@@ -134,39 +134,22 @@ router.post('/add', async (req, res) => {
 
 
 
-
-
 router.get('/orders', async (req, res) => {
+    const { userId, productId } = req.query;
+
     try {
-        // Fetch all purchase histories
-        const orders = await PurchaseHistory.find();
+        // Check if the user has purchased the product
+        const purchase = await PurchaseHistory.findOne({ user: userId, product: productId });
 
-        // If no orders exist
-        if (orders.length === 0) {
-            return res.status(404).json({ message: 'No orders found.' });
-        }
-
-        // Enrich orders with related product and user details
-        const enrichedOrders = await Promise.all(
-            orders.map(async (order) => {
-                const product = await Product.findOne({ productId: order.product });
-                const user = await User.findOne({ userId: order.user });
-
-                return {
-                    ...order.toObject(), // Convert Mongoose document to plain object
-                    product: product || { error: 'Product not found' },
-                    user: user || { error: 'User not found' },
-                };
-            })
-        );
-
-        // Return the enriched orders
-        res.status(200).json({ orders: enrichedOrders });
+        // Send the response with hasPurchased field
+        res.status(200).json({ hasPurchased: !!purchase });
     } catch (error) {
-        console.error('Error fetching all orders:', error);
-        res.status(500).json({ error: 'An error occurred while fetching all orders.' });
+        console.error('Error checking purchase history:', error);
+        res.status(500).json({ error: 'An error occurred while checking purchase history.' });
     }
 });
+
+
 
 
 router.get('/test', (req, res) => {

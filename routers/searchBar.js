@@ -72,6 +72,17 @@ router.get('/search', async (req, res) => {
             }
         }
 
+        const totalResults = products.length;
+        const totalPages = Math.ceil(totalResults / limit);
+        const startIndex = (page - 1) * limit;
+        const paginatedResults = products.slice(startIndex, startIndex + limit);
+        res.status(200).json({
+            message: 'Search successful',
+            results: paginatedResults,
+            totalResults,
+            totalPages,
+            currentPage: parseInt(page),
+        });
         // Fallback: Suggest popular products in the category or globally
         console.log("No matches. Fetching fallback products...");
         const fallbackQuery = category ? { category } : {};

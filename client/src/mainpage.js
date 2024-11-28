@@ -15,6 +15,8 @@ const getSessionId = () => {
 
 
 const MainPage = () => {
+    const [searchTotalPages, setSearchTotalPages] = useState(1); // Total pages for search results
+    const [searchCurrentPage, setSearchCurrentPage] = useState(1); // Current page in search results
     const [activeCategory, setActiveCategory] = useState(""); // State to track the active category
     const [products, setProducts] = useState([]); 
     const [currentPage, setCurrentPage] = useState(1); 
@@ -36,7 +38,7 @@ const MainPage = () => {
     const [newComment, setNewComment] = useState(''); // New comment content
     const [userId, setUserId] = useState(localStorage.getItem('user')); // Logged-in user's ID
     const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('user'));
-
+    
 
     useEffect(() => {
         const handleScroll = () => {
@@ -47,25 +49,7 @@ const MainPage = () => {
                 backToTopBtn.style.display = "none";
             }
         };
-    
-        const fetchProducts = async () => {
-            try {
-                const params = {
-                    page: currentPage,
-                    limit: pageSize,
-                };
-    
-                if (activeCategory) {
-                    params.category = activeCategory;
-                }
-    
-                const response = await axios.get('/api/products', { params });
-                setProducts(response.data.products);
-                setTotalPages(response.data.pagination.totalPages);
-            } catch (error) {
-                console.error('Error Occurs:', error);
-            }
-        };
+       
     
         
 
@@ -76,8 +60,13 @@ const MainPage = () => {
         window.addEventListener('scroll', handleScroll);
     
         // Fetch products and cart when the component mounts
-        fetchProducts();
-        fetchCart();
+        if (!isSearching) {
+            // Wrap in an async function to use await properly
+            const fetchData = async () => {
+                await fetchProducts();
+            };
+            fetchData();
+        }
     
         // Cleanup: remove the scroll event listener on unmount
         return () => {
@@ -85,6 +74,24 @@ const MainPage = () => {
         };
     }, [currentPage, activeCategory, isLoggedIn]);
     
+    const fetchProducts = async () => {
+        try {
+            const params = {
+                page: currentPage,
+                limit: pageSize,
+            };
+
+            if (activeCategory) {
+                params.category = activeCategory;
+            }
+
+            const response = await axios.get('/api/products', { params });
+            setProducts(response.data.products);
+            setTotalPages(response.data.pagination.totalPages);
+        } catch (error) {
+            console.error('Error Occurs:', error);
+        }
+    };
 
     const scrollToTop = () => {
         window.scrollTo({
@@ -93,6 +100,16 @@ const MainPage = () => {
         });
     };
 
+    const resetSearch = () => {
+        setIsSearching(false);
+        setSearchTerm('');
+        setSearchTotalPages(1);
+        setSearchCurrentPage(1);
+        setCurrentPage(1);
+        setTotalPages(1);
+        fetchProducts(); // Fetch regular products
+    };
+    
     // Fetch Cart Function
 const fetchCart = async () => {
     const sessionId = getSessionId(); // Ensure session ID exists
@@ -118,11 +135,34 @@ const fetchCart = async () => {
     const closeCart = () => {
         setCartOpen(false); // Close cart
     };
-    const handleSearch = async () => {
+    const handleSearch = async (page = 1) => {
         if (!searchTerm.trim()) {
-            alert("Please enter a search term.");
+            resetSearch();
             return;
         }
+    
+        setIsSearching(true);
+        try {
+            const response = await axios.get('/api/searchBar/search', {
+                params: {
+                    term: searchTerm,
+                    category: activeCategory,
+                    page,
+                    limit: pageSize,
+                },
+            });
+    
+            setProducts(response.data.results || []);
+            setSearchTotalPages(response.data.totalPages || 1);
+            setSearchCurrentPage(response.data.currentPage || 1);
+            setTotalPages(response.data.totalPages || 1); // Update totalPages for pagination controls
+            setCurrentPage(response.data.currentPage || 1);
+        } catch (error) {
+            console.error("Error during search:", error.response?.data || error.message);
+            alert("An error occurred during the search. Please try again.");
+            setIsSearching(false);
+        } 
+    
     
         console.log("Search initiated");
         console.log("Search Term:", searchTerm);
@@ -237,14 +277,26 @@ const fetchCart = async () => {
         setCurrentPage(1);  
     };
     const goToNextPage = () => {
-        if (currentPage < totalPages) {
-            setCurrentPage(currentPage + 1);
+        if (isSearching) {
+            if (searchCurrentPage < searchTotalPages) {
+                handleSearch(searchCurrentPage + 1);
+            }
+        } else {
+            if (currentPage < totalPages) {
+                setCurrentPage(currentPage + 1);
+            }
         }
     };
-
+    
     const goToPrevPage = () => {
-        if (currentPage > 1) {
-            setCurrentPage(currentPage - 1);
+        if (isSearching) {
+            if (searchCurrentPage > 1) {
+                handleSearch(searchCurrentPage - 1);
+            }
+        } else {
+            if (currentPage > 1) {
+                setCurrentPage(currentPage - 1);
+            }
         }
     };
 
@@ -654,6 +706,7 @@ const fetchCart = async () => {
                         </div>
 
                         <p style={{ fontSize: "1.5em" }}>Check out some of our most popular items.</p>
+
                         <div className="product-grid">
                             {products.map((product) => (
                                 <div
@@ -680,11 +733,11 @@ const fetchCart = async () => {
                             ))}
                         </div>
                         <div className="pagination-controls">
-                            <button onClick={goToPrevPage} disabled={currentPage === 1}>
-                                &laquo; Prev
+                        <button onClick={goToPrevPage} disabled={isSearching ? searchCurrentPage === 1 : currentPage === 1}>
+                        &laquo; Prev
                             </button>
                             <span>
-                                Page {currentPage} of {totalPages}
+                            Page {isSearching ? searchCurrentPage : currentPage} of {isSearching ? searchTotalPages : totalPages}
                             </span>
                             <button onClick={goToNextPage} disabled={currentPage === totalPages}>
                                 Next &raquo;

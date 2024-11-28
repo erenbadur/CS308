@@ -213,6 +213,12 @@ html {
     overflow: hidden;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
+.back-button {
+    margin-bottom: 20px;
+    padding: 10px 20px;
+    font-size: 1em;
+    cursor: pointer;
+}
 
 .search-input {
     flex-grow: 1;

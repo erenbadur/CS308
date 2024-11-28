@@ -1,6 +1,8 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const User = require('../models/user');
+const Cart = require('../models/cartModel');
+const { v4: uuidv4 } = require('uuid'); // Import uuidv4
 const router = express.Router();
 
 // Sign-Up Route
@@ -27,43 +29,49 @@ router.post('/signin', async (req, res) => {
 
 
 
+// Login Route
 router.post('/login', async (req, res) => {
-  const { username, password, sessionId } = req.body;
+  let { username, password, sessionId } = req.body;
 
   try {
-    // 1. Find the user by username
-    const user = await User.findOne({ username }).select('+password'); // Ensure password is selected
-    if (!user) {
-      return res.status(400).json({ message: 'Username is incorrect' });
-    }
+      // Auto-generate sessionId if not provided
+      if (!sessionId) {
+          sessionId = uuidv4(); // Generate a new sessionId
+      }
 
-    // 2. Compare the provided password with the hashed password
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ message: 'Username or password is incorrect' });
-    }
+      // Find the user by username
+      const user = await User.findOne({ username }).select('+password');
+      if (!user) {
+          return res.status(400).json({ message: 'Username or password is incorrect' });
+      }
 
-    // 3. Login successful: Update or create a cart associated with the user
-    if (sessionId) {
-      // Find the cart associated with the sessionId and update it with userId
-      await Cart.updateOne(
-        { sessionId },
-        { userId: user._id },
-        { upsert: true } // If no cart exists for this sessionId, create one
-      );
-    }
+      // Compare the provided password with the hashed password
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+          return res.status(400).json({ message: 'Username or password is incorrect' });
+      }
 
-    // 4. Send a response with the userId and a success message
-    res.status(200).json({
-      message: 'Welcome',
-      userId: user._id,
-      username: user.username,
-    });
+      // Link the session-based cart to the logged-in user
+      const sessionCart = await Cart.findOne({ sessionId });
+      if (sessionCart) {
+          sessionCart.userId = user._id;
+          await sessionCart.save();
+      }
+
+      // Respond with user details and the sessionId
+      res.status(200).json({
+          message: 'Login successful',
+          userId: user._id,
+          username: user.username,
+          sessionId, // Return the session ID to the frontend
+      });
   } catch (error) {
-    console.error('Error during login:', error);
-    res.status(500).json({ message: 'Server error' });
+      console.error('Error during login:', error);
+      res.status(500).json({ message: 'Server error' });
   }
 });
+
+
 
 
   // Get All Users

@@ -36,9 +36,11 @@ const LoginPage = () => {
       if (!response.ok) {
         setError(data.message || 'Username or password is incorrect');
       } else {
+        localStorage.setItem('user', data.userId); // Save user Id into localStorage
         setSuccess('Welcome');
         setUsername(''); // Clear the username field
         setPassword(''); // Clear the password field
+        window.location.href = '/'; // Redirect to main page after successful login
       }
     } catch (error) {
       console.error('Error during login:', error);

@@ -1,3 +1,15 @@
+/* Ensure full height for the root and body elements */
+html, body {
+    height: 100%; /* Make the page take up the full viewport height */
+    margin: 0;    /* Remove default margin */
+}
+
+#root {
+    height: 100%; /* Ensure the app container also takes full height */
+    display: flex;
+    flex-direction: column; /* Allow the content to expand and fill the space */
+}
+
 /* General Styling */
 body {
     font-family: Arial, sans-serif;

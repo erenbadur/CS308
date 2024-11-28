@@ -69,23 +69,6 @@ const MainPage = () => {
     
         
 
-         // Updated fetchCart function
-         const fetchCart = async () => {
-            const sessionId = getSessionId(); // Ensure session ID exists
-            const userId = localStorage.getItem('user'); // Optional for logged-in users
-
-            try {
-                const response = await axios.get('/api/cart/get', {
-                    params: { sessionId, userId },
-                });
-                if (response.status === 200) {
-                    setCartItems(response.data.items || []); // Update cart items state
-                }
-            } catch (error) {
-                console.error('Error fetching cart:', error.response?.data || error.message);
-            }
-            };
-
 
             
     
@@ -109,6 +92,24 @@ const MainPage = () => {
             behavior: "smooth",
         });
     };
+
+    // Fetch Cart Function
+const fetchCart = async () => {
+    const sessionId = getSessionId(); // Ensure session ID exists
+    const userId = localStorage.getItem('user'); // Optional for logged-in users
+
+    try {
+        const response = await axios.get('/api/cart/get', {
+            params: { sessionId, userId },
+        });
+        if (response.status === 200) {
+            setCartItems(response.data.items || []); // Update cart items state
+        }
+    } catch (error) {
+        console.error('Error fetching cart:', error.response?.data || error.message);
+    }
+};
+
 
     const toggleCart = () => {
         setCartOpen(!cartOpen); // Toggle cart visibility

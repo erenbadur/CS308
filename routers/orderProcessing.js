@@ -1,54 +1,68 @@
 const express = require('express');
 const router = express.Router();
-const Product = require('../models/product'); // Adjust path for Product model
-const User = require('../models/user'); // Adjust path for User model
-const Order = require('../models/order'); // Adjust path for Order model
+const Product = require('../models/product');
+const User = require('../models/user');
+const Order = require('../models/order');
+
+// Middleware to check session or user
+async function validateSessionOrUser(req, res, next) {
+    const { userId, sessionId } = req.body;
+
+    if (!userId && !sessionId) {
+        return res.status(400).json({ error: 'Either userId or sessionId is required.' });
+    }
+
+    req.context = { userId, sessionId }; // Attach user or session info to the request
+    next();
+}
 
 // Place an order and track delivery
-router.post('/order', async (req, res) => {
-    const { userId, productId, quantity } = req.body;
+router.post('/order', validateSessionOrUser, async (req, res) => {
+    const { productId, quantity } = req.body;
+    const { userId, sessionId } = req.context;
 
     try {
-        if (!userId || !productId || quantity === undefined) {
-            return res.status(400).json({ error: 'All fields (userId, productId, quantity) are required.' });
+        if (!productId || quantity === undefined) {
+            return res.status(400).json({ error: 'Product ID and quantity are required.' });
         }
 
-        /*
         if (quantity <= 0) {
             return res.status(400).json({ error: 'Quantity must be greater than 0.' });
         }
-*/
-        console.log('Product ID:', productId);
 
-        // Find the product by productId
+        // Find the product
         const product = await Product.findOne({ productId });
         if (!product) {
             return res.status(404).json({ error: 'Product not found.' });
         }
 
-        // Find the user by userId
-        const user = await User.findOne({ userId });
-        if (!user) {
-            return res.status(404).json({ error: 'User not found.' });
-        }
-
-        /* checking stock and decrementing the product if checkout, is handeled by purchaseRoute endpoints
         // Check stock
         if (product.quantityInStock < quantity) {
             return res.status(400).json({ error: 'Not enough items in stock.' });
         }
 
-        // Reduce stock and save
+        // Decrease stock
         product.quantityInStock -= quantity;
         await product.save();
-*/
+
         // Create the order
-        const order = await Order.create({
-            user: user._id,
+        const orderData = {
             product: product._id,
             quantity,
             status: 'Processing',
-        });
+        };
+
+        if (userId) {
+            const user = await User.findOne({ userId });
+            if (!user) {
+                return res.status(404).json({ error: 'User not found.' });
+            }
+            orderData.user = userId;
+        } else {
+            orderData.sessionId = sessionId; // Associate with sessionId for guest
+        }
+
+        const order = await Order.create(orderData);
 
         // Simulate delivery status updates
         const deliveryStatuses = ['Processing', 'In-Transit', 'Delivered'];
@@ -79,11 +93,6 @@ router.post('/order', async (req, res) => {
         console.error('Error placing order:', error);
         res.status(500).json({ error: 'An error occurred while placing the order.' });
     }
-});
-
-
-router.get('/test', (req, res) => {
-    res.status(200).json({ message: 'Test route works!' });
 });
 
 module.exports = router;

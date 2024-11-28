@@ -621,44 +621,14 @@ const fetchCart = async () => {
                 </div>
             )}
 
-            {/* Carousel */}
-            <div id="carouselIndicator" className="carousel slide" data-ride="carousel" data-interval="3000">
-                <ol className="carousel-indicators">
-                    <li data-target="#carouselIndicator" data-slide-to="0" className="active"></li>
-                    <li data-target="#carouselIndicator" data-slide-to="1"></li>
-                    <li data-target="#carouselIndicator" data-slide-to="2"></li>
-                </ol>
-
-                <div className="carousel-inner">
-                    <div className="carousel-item active">
-                        <img src="resimler/mainimage.jpg" className="d-block w-100" alt="Slide 1" />
-                        <div className="carousel-caption">
-                            <h5>Latest Arrivals</h5>
-                            <p>Discover the newest products in our collection.</p>
-                        </div>
-                    </div>
-                    <div className="carousel-item">
-                        <img src="resimler/mainimage2.jpg" className="d-block w-100" alt="Slide 2" />
-                        <div className="carousel-caption">
-                            <h5>Exclusive Offers</h5>
-                            <p>Grab the best deals on top brands.</p>
-                        </div>
-                    </div>
-                    <div className="carousel-item">
-                        <img src="resimler/mainimage3.png" className="d-block w-100" alt="Slide 3" />
-                        <div className="carousel-caption">
-                            <h5>Top Categories</h5>
-                            <p>Explore a wide range of categories.</p>
-                        </div>
-                    </div>
+            
+            {/* Fixed Hero Section */}
+            <div className="hero-section">
+                <img src="resimler/mainimage.jpg" alt="Hero Banner" className="hero-image" />
+                <div className="hero-caption">
+                    <h1>Welcome to N308</h1>
+                    <p>Your one-stop shop for exclusive products.</p>
                 </div>
-
-                <a className="carousel-control-prev" href="#carouselIndicator" role="button" data-slide="prev">
-                    <span className="carousel-control-prev-icon"></span>
-                </a>
-                <a className="carousel-control-next" href="#carouselIndicator" role="button" data-slide="next">
-                    <span className="carousel-control-next-icon"></span>
-                </a>
             </div>
 
             {/* Popular Section */}

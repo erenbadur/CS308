@@ -71,6 +71,7 @@
 }
 /* Main Layout */
 body, html {
+
   height: 100%;
   display: flex;
   justify-content: center;
@@ -79,6 +80,7 @@ body, html {
 }
 
 .main-container {
+  margin-top: 90px;
   display: flex;
   max-width: 1000px;
   width: 100%;

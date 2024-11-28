@@ -357,7 +357,7 @@ const fetchCart = async () => {
     };
     const fetchComments = async (productId, page) => {
         try {
-            const response = await axios.get(`/api/products/${productId}/comment`, {
+            const response = await axios.get(`/api/products/${productId}/comments`, {
                 params: { page },
             });
             console.log('Fetching comments for productId:', productId, 'on page:', page);
@@ -398,12 +398,14 @@ const fetchCart = async () => {
 
         const productId = selectedProduct.productId;
         console.log('Current userId:', userId);
+        const username = localStorage.getItem('username') || 'Anonymous'; // Fetch username from storage or use default
 
         try {
             // If rating is given, submit rating
             if (newRating) {
                 const ratingResponse = await axios.post(`/api/products/${productId}/rate`, {
                     userId,
+                    username,
                     rating: parseFloat(newRating),
                 });
                 console.log('Rating submitted:', ratingResponse.data);
@@ -838,20 +840,23 @@ const fetchCart = async () => {
 </button>
 
                                 {/* Comments List */}
-        {comments.length > 0 ? (
-            comments.map((comment, index) => (
-                <div key={index} className="comment">
-                    <p>
-                        <strong>{comment.username || 'Anonymous'}</strong> - Purchased on{' '}
-                        {comment.purchaseDate ? new Date(comment.purchaseDate).toLocaleDateString() : 'N/A'}
-                    </p>
-                    {comment.rating && <p>Rating: {'⭐️'.repeat(Math.round(comment.rating))}</p>}
-                    {comment.content && <p>{comment.content}</p>}
-                </div>
-            ))
-        ) : (
-            <p>No comments available for this product yet.</p>
-        )}
+                                <div className="comments-section">
+    {comments.length > 0 ? (
+        comments.map((comment, index) => (
+            <div key={index} className="comment">
+                <p>
+                    <strong>{comment.username || 'Anonymous'}</strong> - 
+                    {comment.date ? new Date(comment.date).toLocaleDateString() : 'Unknown Date'}
+                </p>
+                {comment.rating && <p>Rating: {'⭐️'.repeat(Math.round(comment.rating))}</p>}
+                {comment.content && <p>{comment.content}</p>}
+            </div>
+        ))
+    ) : (
+        <p>No comments available for this product yet.</p>
+    )}
+</div>
+
                                     {/* Comments Pagination */}
                                     <div className="comments-pagination">
                                     <button onClick={handlePrevCommentsPage} disabled={commentsPage <= 1}>

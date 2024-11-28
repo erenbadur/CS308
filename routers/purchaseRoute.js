@@ -7,7 +7,7 @@ const PurchaseHistory = require('../models/PurchaseHistory'); // Adjust path as 
 
 router.post('/add', async (req, res) => {
     const { userId, sessionId, productId, quantity } = req.body;
-
+    console.log('Adding purchase with userId:', userId, 'productId:', productId, 'quantity:', quantity);
     try {
         if (!userId && !sessionId) {
             return res.status(400).json({ error: 'userId or sessionId is required.' });

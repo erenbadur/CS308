@@ -100,7 +100,7 @@ const PurchasePage = () => {
 
     const handlePayment = async () => {
         const userId = localStorage.getItem("user");
-    
+        console.log('Adding purchase with userId:', userId);
         if (!userId) {
             alert("You must be logged in to complete the purchase.");
             return;
@@ -114,14 +114,14 @@ const PurchasePage = () => {
             for (const item of cartItems) {
                 // Add purchase with userId
                 await axios.post("/api/purchases/add", {
-                    userId,
+                    userId: localStorage.getItem("user"),
                     productId: item.productId,
                     quantity: item.quantity,
                 });
     
                 // Process order
                 await axios.post("/api/processing/order", {
-                    userId,
+                    userId: localStorage.getItem("user"),
                     productId: item.productId,
                     quantity: item.quantity,
                 });
@@ -131,7 +131,7 @@ const PurchasePage = () => {
             setModalMessage("Payment completed successfully.");
             setTimeout(() => {
                 window.location.href = '/order-confirmation';
-            }, 2000);
+            }, 70000);
         } catch (error) {
             console.error("Error during payment processing:", error);
             setModalMessage("Error during payment processing.");

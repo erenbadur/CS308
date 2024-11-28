@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Cart = require('../models/cartModel');
 const Product = require('../models/product');
+const User = require('../models/user');
 
 
 // Middleware to get or create a cart
@@ -41,8 +42,9 @@ router.post('/add', async (req, res) => {
         }
 
         if (userId && !cart.userId) {
+            console.log(cart.userId,userId);
             cart.userId = userId; // If user has logged in, connect the userID to them
-            
+            console.log(cart.userId,userId);
         }
 
         // Check if the product exists
@@ -96,13 +98,19 @@ router.post('/add', async (req, res) => {
 // Backend Cart Retrieval Logic
 router.get('/get', async (req, res) => {
     const { userId, sessionId } = req.query;
-
+    console.log("id:", User.userId);
     if (!sessionId) {
         return res.status(400).json({ error: 'Session ID is required.' });
     }
 
     try {
-        const cart = await Cart.findOne({ $or: [{ userId }, { sessionId }] });
+        const cart = userId
+    ? await Cart.findOne({ userId }) // Prefer userId if provided
+    : await Cart.findOne({ sessionId }); // Fall back to sessionId
+    console.log("User ID provided:", userId);
+    console.log("Session ID provided:", sessionId);
+    
+
         if (!cart) {
             return res.status(404).json({ error: 'Cart not found.' });
         }

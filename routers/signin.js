@@ -31,7 +31,7 @@ router.post('/signin', async (req, res) => {
 
 router.post('/login', async (req, res) => {
   const { username, password, sessionId } = req.body;
-
+  console.log("userid: " ,User.userId );
   try {
       const user = await User.findOne({ username }).select('+password');
       if (!user) {
@@ -47,7 +47,7 @@ router.post('/login', async (req, res) => {
       if (sessionId) {
           const sessionCart = await Cart.findOne({ sessionId });
           if (sessionCart) {
-              const userCart = await Cart.findOne({ userId: user._id });
+              const userCart = await Cart.findOne({ userId: user.userId });
               if (userCart) {
                   // Merge the carts
                   sessionCart.items.forEach((item) => {
@@ -63,14 +63,14 @@ router.post('/login', async (req, res) => {
                   await userCart.save();
                   await sessionCart.deleteOne(); // Remove the session-based cart
               } else {
-                  sessionCart.userId = user._id;
+                  sessionCart.userId = user.userId;
                   sessionCart.sessionId = null; // Clear sessionId
                   await sessionCart.save();
               }
           }
       }
 
-      res.status(200).json({ userId: user._id });
+      res.status(200).json({ userId: user.userId });
   } catch (error) {
       console.error('Error during login:', error);
       res.status(500).json({ message: 'Server error' });

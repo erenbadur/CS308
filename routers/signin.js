@@ -4,49 +4,47 @@ const User = require('../models/user');
 const Cart = require('../models/cartModel');
 const router = express.Router();
 
-
 // Function to merge guest and user carts
 const mergeCarts = async (sessionId, userId) => {
-    try {
-        // Find both carts
-        const guestCart = await Cart.findOne({ sessionId });
-        let userCart = await Cart.findOne({ userId });
+  try {
+      // Find both carts
+      const guestCart = await Cart.findOne({ sessionId });
+      let userCart = await Cart.findOne({ userId });
 
-        if (guestCart) {
-            if (!userCart) {
-                // If user cart does not exist, create it with guest items
-                userCart = new Cart({
-                    userId,
-                    items: guestCart.items,
-                });
-            } else {
-                // Merge items into user cart
-                guestCart.items.forEach((guestItem) => {
-                    const existingItem = userCart.items.find(
-                        (item) => item.productId === guestItem.productId
-                    );
-                    if (existingItem) {
-                        // If item already exists in user cart, increase the quantity
-                        existingItem.quantity += guestItem.quantity;
-                    } else {
-                        // Otherwise, add the new item
-                        userCart.items.push(guestItem);
-                    }
-                });
-            }
+      if (guestCart) {
+          if (!userCart) {
+              // If user cart does not exist, create it with guest items
+              userCart = new Cart({
+                  userId,
+                  items: guestCart.items,
+              });
+          } else {
+              // Merge items into user cart
+              guestCart.items.forEach((guestItem) => {
+                  const existingItem = userCart.items.find(
+                      (item) => item.productId === guestItem.productId
+                  );
+                  if (existingItem) {
+                      // If item already exists in user cart, increase the quantity
+                      existingItem.quantity += guestItem.quantity;
+                  } else {
+                      // Otherwise, add the new item
+                      userCart.items.push(guestItem);
+                  }
+              });
+          }
 
-            // Save the merged cart
-            await userCart.save();
+          // Save the merged cart
+          await userCart.save();
 
-            // Delete the guest cart after merging
-            await Cart.deleteOne({ sessionId });
-        }
-    } catch (error) {
-        console.error('Error merging carts:', error);
-        throw error;
-    }
+          // Delete the guest cart after merging
+          await Cart.deleteOne({ sessionId });
+      }
+  } catch (error) {
+      console.error('Error merging carts:', error);
+      throw error;
+    }
 };
-
 
 // Sign-Up Route
 router.post('/signin', async (req, res) => {
@@ -88,9 +86,37 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Username or password is incorrect' });
     }
 
-    // 3. Login successful: Merge the guest cart with the user's cart
+    // 3. Handle cart merging for logged-in users
     if (sessionId) {
-      await mergeCarts(sessionId, user._id);
+      // Fetch the session-based cart
+      const sessionCart = await Cart.findOne({ sessionId });
+
+      // Fetch or create the user's cart
+      let userCart = await Cart.findOne({ userId: user._id });
+      if (!userCart) {
+        userCart = new Cart({ userId: user._id, items: [] });
+      }
+
+      // Merge session-based cart items into the user's cart
+      if (sessionCart) {
+        sessionCart.items.forEach((sessionItem) => {
+          const existingItem = userCart.items.find(
+            (userItem) => userItem.productId.toString() === sessionItem.productId.toString()
+          );
+
+          if (existingItem) {
+            // Increment the quantity if the item already exists in the user's cart
+            existingItem.quantity += sessionItem.quantity;
+          } else {
+            // Add new item to the user's cart
+            userCart.items.push(sessionItem);
+          }
+        });
+
+        // Save the updated user cart and delete the session cart
+        await userCart.save();
+        await sessionCart.deleteOne();
+      }
     }
 
     // 4. Send a response with the userId and a success message
@@ -101,12 +127,11 @@ router.post('/login', async (req, res) => {
     });
   } catch (error) {
     console.error('Error during login:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-
-
-
+    res.status(500).json({ message: 'Server error' });
+  }
 });
+
+
 
 
   // Get All Users

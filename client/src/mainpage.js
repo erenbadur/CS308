@@ -68,7 +68,7 @@ const MainPage = () => {
         };
     
         
-        
+
          // Updated fetchCart function
          const fetchCart = async () => {
             const sessionId = getSessionId(); // Ensure session ID exists
@@ -251,7 +251,7 @@ const MainPage = () => {
         const sessionId = localStorage.getItem('sessionId');
       
         try {
-          const response = await axios.post('/api/login', {
+          const response = await axios.post('/api/auth/login', {
             username,
             password,
             sessionId,

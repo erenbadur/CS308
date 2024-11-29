@@ -27,55 +27,67 @@ router.post('/signin', async (req, res) => {
   }
 });
 
-
-
 router.post('/login', async (req, res) => {
   const { username, password, sessionId } = req.body;
-  console.log("userid: " ,User.userId );
+
+  console.log('Login request received:', { username, sessionId }); // Debug
+
   try {
       const user = await User.findOne({ username }).select('+password');
       if (!user) {
+          console.warn('Login failed: User not found', { username });
           return res.status(400).json({ message: 'Invalid credentials' });
       }
 
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
+          console.warn('Login failed: Invalid password', { username });
           return res.status(400).json({ message: 'Invalid credentials' });
       }
 
-      // Merge session-based cart with user-based cart
+      console.log('User authenticated successfully:', { userId: user._id, username });
+
+      // Handle cart merging
       if (sessionId) {
+          console.log('Checking for session cart:', { sessionId });
           const sessionCart = await Cart.findOne({ sessionId });
+          let userCart = await Cart.findOne({ userId: user._id });
+
           if (sessionCart) {
-              const userCart = await Cart.findOne({ userId: user.userId });
-              if (userCart) {
-                  // Merge the carts
-                  sessionCart.items.forEach((item) => {
+              if (!userCart) {
+                  console.log('Assigning session cart to user.');
+                  sessionCart.userId = user._id;
+                  sessionCart.sessionId = null;
+                  await sessionCart.save();
+              } else {
+                  console.log('Merging session cart into user cart...');
+                  sessionCart.items.forEach((sessionItem) => {
                       const existingItem = userCart.items.find(
-                          (cartItem) => cartItem.productId.toString() === item.productId.toString()
+                          (userItem) => userItem.productId === sessionItem.productId
                       );
                       if (existingItem) {
-                          existingItem.quantity += item.quantity;
+                          existingItem.quantity += sessionItem.quantity;
                       } else {
-                          userCart.items.push(item);
+                          userCart.items.push(sessionItem);
                       }
                   });
+
                   await userCart.save();
-                  await sessionCart.deleteOne(); // Remove the session-based cart
-              } else {
-                  sessionCart.userId = user.userId;
-                  sessionCart.sessionId = null; // Clear sessionId
-                  await sessionCart.save();
+                  await sessionCart.deleteOne();
               }
           }
+      } else {
+          console.log('No session cart provided.');
       }
 
-      res.status(200).json({ userId: user.userId });
+      res.status(200).json({ userId: user._id, message: 'Login successful' });
   } catch (error) {
       console.error('Error during login:', error);
-      res.status(500).json({ message: 'Server error' });
+      res.status(500).json({ message: 'Internal server error' });
   }
 });
+
+
 
 
 

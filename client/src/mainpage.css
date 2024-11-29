@@ -260,11 +260,12 @@ html {
 
 .add-to-cart-button.disabled {
     background-color: gray;
-    color: white;
+    color: #ffffff;
     cursor: not-allowed;
-    pointer-events: none; /* Prevents all interaction */
-    border: 1px solid gray;
+    pointer-events: none; /* Ensures the button is fully non-interactive */
+    opacity: 0.6; /* Optional: dim the button for a disabled look */
 }
+
 
 
 /* Cart Panel Styles */

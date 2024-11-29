@@ -8,7 +8,7 @@ const cartItemSchema = new Schema({
 
 const cartSchema = new Schema({
     userId: { type: String, required: false }, // Optional for logged-in users
-    sessionId: { type: String, required: true }, // Session ID for guest users
+    sessionId: { type: String, required: function () { return !this.userId; } }, // Required if no userId
     items: [cartItemSchema], // Array of cart items
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },

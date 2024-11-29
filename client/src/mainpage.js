@@ -241,6 +241,12 @@ const fetchCart = async () => {
     };    
     
     const handleAddToCart = async (product) => {
+
+        if (product.quantityInStock === 0) {
+            console.warn(`Product ${product.productId} is out of stock and cannot be added to the cart.`);
+            return; // Exit the function
+        }
+
         let sessionId = localStorage.getItem('sessionId');
         if (!sessionId) {
             sessionId = uuidv4();
@@ -730,14 +736,19 @@ const fetchCart = async () => {
                                         <span>{'⭐️'.repeat(Math.round(product.averageRating || 0))}</span>
                                     </div>
                                     <button
-                                        className='add-to-cart-button '
-                                        onClick={(e) => {
-                                            e.stopPropagation(); // Prevent triggering product click
-                                            handleAddToCart(product);
-                                        }}
-                                    >
-                                        Add to Cart
-                                    </button>
+    className={`add-to-cart-button ${product.quantityInStock === 0 ? 'disabled' : ''}`}
+    onClick={(e) => {
+        e.stopPropagation(); // Prevent triggering product click
+        if (product.quantityInStock > 0) {
+            handleAddToCart(product); // Call only if stock > 0
+        }
+    }}
+    disabled={product.quantityInStock === 0} // Properly disable the button
+>
+    {product.quantityInStock === 0 ? 'Out of Stock' : 'Add to Cart'}
+</button>
+
+
                                 </div>
                             ))}
                         </div>

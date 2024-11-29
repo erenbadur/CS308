@@ -258,6 +258,15 @@ html {
     border: none;
 }
 
+.add-to-cart-button.disabled {
+    background-color: gray;
+    color: white;
+    cursor: not-allowed;
+    pointer-events: none; /* Prevents all interaction */
+    border: 1px solid gray;
+}
+
+
 /* Cart Panel Styles */
 .cart-panel {
     position: fixed;

@@ -49,7 +49,7 @@ router.post('/add', async (req, res) => {
 
         // Check if the product exists
         const product = await Product.findOne({ productId });
-        if (!product) {
+        if (!product || product.quantityInStock == 0) {
             return res.status(404).json({ error: `Product with ID ${productId} not found.` });
         }
 

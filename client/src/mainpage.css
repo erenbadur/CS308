@@ -258,6 +258,16 @@ html {
     border: none;
 }
 
+.add-to-cart-button.disabled {
+    background-color: gray;
+    color: #ffffff;
+    cursor: not-allowed;
+    pointer-events: none; /* Ensures the button is fully non-interactive */
+    opacity: 0.6; /* Optional: dim the button for a disabled look */
+}
+
+
+
 /* Cart Panel Styles */
 .cart-panel {
     position: fixed;

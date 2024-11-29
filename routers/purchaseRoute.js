@@ -24,7 +24,7 @@ const transporter = nodemailer.createTransport({
 const sendEmailWithInvoice = async (to, subject, htmlContent, attachmentPath) => {
     try {
         await transporter.sendMail({
-            from: `"Your Store Name" <${process.env.EMAIL_USER}>`, // Replace with your email
+            from: `"N308" <${process.env.EMAIL_USER}>`, // Replace with your email
             to,
             subject,
             html: htmlContent,

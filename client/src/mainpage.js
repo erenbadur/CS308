@@ -49,11 +49,13 @@ const MainPage = () => {
                 backToTopBtn.style.display = "none";
             }
         };
-       
-    
-        
 
+        console.log('useEffect triggered:', { currentPage, activeCategory, isLoggedIn }); // Debug log
+        const fetchData = async () => {
+            await fetchCart(); // Ensure the cart is fetched on page load
+        };
 
+        fetchData();
             
     
         // Attach the scroll event listener
@@ -110,22 +112,36 @@ const MainPage = () => {
         fetchProducts(); // Fetch regular products
     };
     
-    // Fetch Cart Function
-const fetchCart = async () => {
-    const sessionId = getSessionId(); // Ensure session ID exists
-    const userId = localStorage.getItem('user'); // Optional for logged-in users
-
-    try {
-        const response = await axios.get('/api/cart/get', {
-            params: { sessionId, userId },
-        });
-        if (response.status === 200) {
-            setCartItems(response.data.items || []); // Update cart items state
+    const fetchCart = async () => {
+        const sessionId = localStorage.getItem('sessionId');
+        const userId = localStorage.getItem('userId'); // Ensure correct retrieval of userId
+    
+        console.log('Fetching cart with:', { sessionId, userId }); // Debug log
+    
+        if (!sessionId && !userId) {
+            console.error('Neither sessionId nor userId is available.');
+            return; // Exit early
         }
-    } catch (error) {
-        console.error('Error fetching cart:', error.response?.data || error.message);
-    }
-};
+    
+        try {
+            const response = await axios.get('/api/cart/get', {
+                params: { sessionId, userId },
+            });
+    
+            if (response.status === 200) {
+                console.log('Cart fetched successfully:', response.data);
+                setCartItems(response.data.items || []);
+            } else {
+                console.error('Error fetching cart:', response.data.error);
+            }
+        } catch (error) {
+            console.error('Error fetching cart:', error.response?.data || error.message);
+        }
+    };
+    
+    
+    
+    
 
 
     const toggleCart = () => {
@@ -241,6 +257,12 @@ const fetchCart = async () => {
     };    
     
     const handleAddToCart = async (product) => {
+
+        if (product.quantityInStock === 0) {
+            console.warn(`Product ${product.productId} is out of stock and cannot be added to the cart.`);
+            return; // Exit the function
+        }
+
         let sessionId = localStorage.getItem('sessionId');
         if (!sessionId) {
             sessionId = uuidv4();
@@ -299,29 +321,29 @@ const fetchCart = async () => {
             }
         }
     };
-
     const handleLogin = async (username, password) => {
-        const sessionId = localStorage.getItem('sessionId');
-      
+        const sessionId = getSessionId(); // Get the session ID
+    
         try {
-          const response = await axios.post('/api/auth/login', {
-            username,
-            password,
-            sessionId,
-          });
-      
-          if (response.status === 200) {
-            console.log('Login successful:', response.data);
-            localStorage.setItem('user', response.data.userId); // Save the user ID to localStorage
-            setIsLoggedIn(true);
-
-            fetchCart({ userId: response.data.userId }); 
-          }
+            const response = await axios.post('/api/auth/login', {
+                username,
+                password,
+                sessionId,
+            });
+    
+            if (response.status === 200) {
+                // Save the user ID to localStorage
+                localStorage.setItem('user', response.data.userId);
+    
+                // Fetch the cart to get the merged items
+                fetchCart();
+            }
         } catch (error) {
-          console.error('Error during login:', error.response?.data || error.message);
-          alert(error.response?.data?.message || 'Login failed. Please try again.');
+            console.error('Error during login:', error.response?.data || error.message);
+            alert('Login failed. Please try again.');
         }
-      };
+    };
+    
 
       
 
@@ -474,7 +496,9 @@ const fetchCart = async () => {
     };
 
     const handleLoginRedirect = () => {
-        window.location.href = '/login'; // Redirect to login page
+        const sessionId = getSessionId(); // Ensure sessionId exists
+        getSessionId(); // Ensures sessionId is stored before redirecting
+        window.location.href = `/login?sessionId=${sessionId}`;
     };
     
     return (
@@ -635,6 +659,7 @@ const fetchCart = async () => {
                     </button>
                 )}
 
+
             </div>
 
             {/* Cart Panel */}
@@ -730,14 +755,25 @@ const fetchCart = async () => {
                                         <span>{'⭐️'.repeat(Math.round(product.averageRating || 0))}</span>
                                     </div>
                                     <button
-                                        className='add-to-cart-button '
-                                        onClick={(e) => {
-                                            e.stopPropagation(); // Prevent triggering product click
-                                            handleAddToCart(product);
-                                        }}
-                                    >
-                                        Add to Cart
-                                    </button>
+    className={`add-to-cart-button ${product.quantityInStock === 0 ? 'disabled' : ''}`}
+    onClick={(e) => {
+        e.stopPropagation(); // Prevent triggering product click
+        if (product.quantityInStock > 0) {
+            handleAddToCart(product); // Call only if stock > 0
+        }
+    }}
+    disabled={product.quantityInStock === 0} // Properly disable the button
+    style={{
+        pointerEvents: product.quantityInStock === 0 ? 'none' : 'auto', // Prevent any interaction if out of stock
+        backgroundColor: product.quantityInStock === 0 ? 'gray' : 'orange',
+        cursor: product.quantityInStock === 0 ? 'not-allowed' : 'pointer',
+    }}
+>
+    {product.quantityInStock === 0 ? 'Out of Stock' : 'Add to Cart'}
+</button>
+
+
+
                                 </div>
                             ))}
                         </div>

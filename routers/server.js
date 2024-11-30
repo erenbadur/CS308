@@ -12,6 +12,7 @@ const orderProcessingRoute = require('./orderProcessing');
 const searchBar = require('./searchBar');
 const createProduct = require('./createProduct');
 const cart = require('./cart');
+const track = require('./track');
 
 // Models (all in the `models` folder, one level up)
 const Cart = require('../models/cartModel');
@@ -42,6 +43,7 @@ app.use('/api/createUser', createUser);
 app.use('/api/searchBar', searchBar);
 app.use('/api/cart', cart);
 app.use('/api/processing', orderProcessingRoute);
+app.use('api/track', track)
 
 // Start Server
 app.listen(PORT, () => {

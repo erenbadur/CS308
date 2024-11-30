@@ -1,198 +1,153 @@
-/* General Reset */
-
+/* Global Styles */
 * {
+    box-sizing: border-box;
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
-}
-
-/* General Styling */
-body {
     font-family: Arial, sans-serif;
-    padding: 8px;
-    overflow-x: hidden;
-    background-color: white;
 }
 
-div {
-    padding: 2px;
-}
-
-/* Smooth Scroll */
-html {
-    scroll-behavior: smooth;
-}
-  
-.section-header h2 {
-    margin: 0;
-}
-  
-
-.header {
-    background-color: rgb(237, 237, 237);
-    padding: 20px;
-    height: 150px;
+body {
+    background-color: #f4f4f4;
     display: flex;
-    align-items: center;
     justify-content: center;
-    position: relative; /* To allow precise positioning within the header */
+    padding: 20px;
 }
 
-.header h1 {
-    margin: 0;
-    color: #020202;
-}
-
-.logo img {
-    width: 100px;
-    height: 100px;
-    margin-bottom: 30px;
-    margin-left: 20px;
-    border-radius: 20%;
-    position: absolute; /* Ensures it is fixed to the top-left */
-    left: 20px; /* Adjust spacing from the left */
-    top: 50%; /* Center vertically relative to the header */
-    transform: translateY(-50%); /* Offset by 50% of its height */
-  }
-
-.row {
-    display: -ms-flexbox; /* IE10 */
-    display: flex;
-    -ms-flex-wrap: wrap; /* IE10 */
-    flex-wrap: wrap;
-    margin: 0 -16px;
-  }
-
-/* Clear floats after the columns */
-.row::after {
-    content: "";
-    display: table;
-    clear: both;
-  }  
-
+/* Container to wrap the whole layout */
 .container {
-background-color: rgb(255, 255, 255);
-padding: 5px 20px 15px 20px;
-border: 3px solid lightgrey;
-border-radius: 20px; 
-margin: 20px auto;
-}
-
-.centered {
-    text-align: center; /* Centers the text horizontally */
-}
-
-.column {
-    float: left;
-    padding: 30px;
-}
-
-.column.main{
-    -ms-flex: 70%; /* IE10 */
-    flex: 70%;
-}
-
-.column.side{
-    -ms-flex: 30%; /* IE10 */
-    flex: 30%;
-}
-
-.column.half{
-    -ms-flex: 50%; /* IE10 */
-    flex: 50%;
-}
-
-input[type=text]:focus{
-    width: 100%;
-    padding: 2px;
-    margin: 2px 0;
-    box-sizing: border-box;
-    border: 3px solid #555;
-}
-
-label {
-    margin-bottom: 10px;
-    display: block;
-  }
-
-hr {
-    border: 1px solid rgb(69, 69, 69);
-}
-
-span.price {
-    float: right;
-    color: blue;
-  }
-
-.finish-payment-btn {
-    background-color: #28a745; /* Green color */
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 5px;
-    font-size: 16px;
-    cursor: pointer;
-    margin-top: 20px;
-}
-
-.finish-payment-btn:hover {
-    background-color: #218838; /* Darker green on hover */
-}
-
-.section-header {
-    cursor: pointer;
-    padding: 10px;
-    background-color: #ffffff; /* Keep the background fixed */
-    border-bottom: 1px solid #ccc;
-    transition: color 0.3s ease; /* Smooth transition for text color */
-    color: inherit; /* Default text color */
-}
-
-.section-header:hover {
-    color: #d35400; /* Dark orange on hover */
-    background-color: #ffffff; /* Prevent background color change */
-}
-
-.section-header.active {
-    color: #d35400; /* Orange when selected */
-}
-
-/* The overlay background for the modal */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
     display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-/* The modal content box */
-.modal-content {
-    background-color: white;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    text-align: center;
-    max-width: 400px;
+    justify-content: space-between;
     width: 100%;
+    max-width: 1200px;
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
 }
 
-/* Close button */
-.close-btn {
+/* Section Styles */
+.column {
+    flex: 1;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    margin-right: 20px;
+}
+
+.column:last-child {
+    margin-right: 0;
+}
+
+.side {
+    max-width: 300px;
+    padding: 20px;
+}
+
+h2 {
+    font-size: 1.8rem;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+/* Input Styles */
+.column .section-content input {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #f7f7f7;
+    font-size: 16px;
+}
+
+.column .section-content input::placeholder {
+    color: #aaa;
+    font-style: italic;
+}
+
+/* Button Styles */
+.add-section-btn {
     background-color: #4CAF50;
     color: white;
-    padding: 10px 20px;
     border: none;
+    padding: 10px 15px;
     border-radius: 5px;
     cursor: pointer;
+    font-size: 14px;
     margin-top: 20px;
 }
 
-.close-btn:hover {
+.add-section-btn:hover {
+    background-color: #45a049;
+}
+
+/* Section Header */
+.column .section-content h3 {
+    font-size: 1.5rem;
+    color: #333;
+    margin-bottom: 15px;
+}
+
+/* Toggle Buttons */
+.section-toggle {
+    font-size: 16px;
+    color: #007bff;
+    cursor: pointer;
+    text-decoration: underline;
+    margin-top: 10px;
+}
+
+.section-toggle:hover {
+    color: #0056b3;
+}
+
+/* Placeholder Text */
+input::placeholder {
+    color: #aaa;
+    font-style: italic;
+}
+
+/* Styling the column with padding adjustments */
+.column .section-content p {
+    margin-bottom: 5px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .container {
+        flex-direction: column;
+        padding: 10px;
+    }
+
+    .column, .side {
+        margin-bottom: 20px;
+        max-width: 100%;
+    }
+
+    .column:last-child {
+        margin-bottom: 0;
+    }
+}
+
+/* Style for the Complete Payment button */
+.complete-payment {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.complete-payment button {
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.complete-payment button:hover {
     background-color: #45a049;
 }

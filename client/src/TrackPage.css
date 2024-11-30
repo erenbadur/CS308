@@ -1,0 +1,14 @@
+/* src/TrackPage.css */
+.track-page {
+    background-color: #add8e6; /* light blue */
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+  
+  h1 {
+    font-size: 2.5rem;
+    color: #333;
+  }  

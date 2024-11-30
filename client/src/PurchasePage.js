@@ -24,19 +24,31 @@ const CheckoutForm = () => {
 
     const navigate = useNavigate(); // Initialize navigate
 
-    const handleAddressChange = (e) => {
+    const handleAddressChange = (e, regex) => {
+        const { name, value } = e.target;
+    
+        if (regex && !regex.test(value)) {
+            return; // Prevent invalid input
+        }
+    
         setShippingAddr({
             ...shippingAddr,
-            [e.target.name]: e.target.value
+            [name]: value,
         });
     };
-
-    const handlePaymentChange = (e) => {
+    
+    const handlePaymentChange = (e, regex) => {
+        const { name, value } = e.target;
+    
+        if (regex && !regex.test(value)) {
+            return; // Prevent invalid input
+        }
+    
         setCardInfo({
             ...cardInfo,
-            [e.target.name]: e.target.value
+            [name]: value,
         });
-    };
+    };    
 
     const toggleSection = (section) => {
         if (section === 'address-section') {
@@ -47,12 +59,31 @@ const CheckoutForm = () => {
     };
 
     const handleCompletePayment = () => {
-        // You can add any logic for payment here
-        alert('Payment completed!'); 
-
-        // After payment, navigate to the /track page
-        navigate('/track'); // Navigate to the Track page
-    };
+        // Check if Address Info contains any "" values
+        const isAddressValid = 
+            shippingAddr.fullName !== '' && 
+            shippingAddr.phoneNum !== '' && 
+            shippingAddr.address !== '' && 
+            shippingAddr.country !== '' && 
+            shippingAddr.postalCode !== '';
+    
+        // Check if Payment Info contains any "None" values
+        const isPaymentValid = 
+            cardInfo.cardName !== '' && 
+            cardInfo.cardNum !== '' && 
+            cardInfo.exprDate !== '' && 
+            cardInfo.cvv !== '';
+    
+        // Only proceed with the payment if both Address Info and Payment Info are valid
+        if (isAddressValid && isPaymentValid) {
+            alert('Payment completed!');
+    
+            // After payment, navigate to the /track page
+            navigate('/track'); // Navigate to the Track page
+        } else {
+            alert('Please complete both Address and Payment Information before proceeding.');
+        }
+    };       
 
     return (
         <div className="container">
@@ -86,35 +117,35 @@ const CheckoutForm = () => {
                                 name="fullName"
                                 placeholder="Full Name"
                                 value={shippingAddr.fullName}
-                                onChange={handleAddressChange}
+                                onChange={(e) => handleAddressChange(e, /^[A-Za-z\s]*$/)} // Only letters and spaces
                             />
                             <input
                                 type="text"
                                 name="phoneNum"
                                 placeholder="Phone Number"
                                 value={shippingAddr.phoneNum}
-                                onChange={handleAddressChange}
+                                onChange={(e) => handleAddressChange(e, /^\d{0,11}$/)} // Only numbers, max 11 digits
                             />
                             <input
                                 type="text"
                                 name="address"
                                 placeholder="Address"
                                 value={shippingAddr.address}
-                                onChange={handleAddressChange}
+                                onChange={handleAddressChange} // No validation needed for address itself
                             />
                             <input
                                 type="text"
                                 name="country"
                                 placeholder="Country"
                                 value={shippingAddr.country}
-                                onChange={handleAddressChange}
+                                onChange={(e) => handleAddressChange(e, /^[A-Za-z\s]*$/)} // Only letters and spaces
                             />
                             <input
                                 type="text"
                                 name="postalCode"
                                 placeholder="Postal Code"
                                 value={shippingAddr.postalCode}
-                                onChange={handleAddressChange}
+                                onChange={(e) => handleAddressChange(e, /^\d*$/)} // Only numbers
                             />
                             <span className="section-toggle" onClick={() => toggleSection('address-section')}>
                                 Close
@@ -145,28 +176,28 @@ const CheckoutForm = () => {
                                 name="cardName"
                                 placeholder="Cardholder Name"
                                 value={cardInfo.cardName}
-                                onChange={handlePaymentChange}
+                                onChange={(e) => handlePaymentChange(e, /^[A-Za-z\s]*$/)} // Only letters and spaces
                             />
                             <input
                                 type="text"
                                 name="cardNum"
                                 placeholder="Card Number"
                                 value={cardInfo.cardNum}
-                                onChange={handlePaymentChange}
+                                onChange={(e) => handlePaymentChange(e, /^\d{0,4}(\d{0,4}-){0,3}\d{0,4}$/)} // Format: DDDD-DDDD-DDDD-DDDD
                             />
                             <input
                                 type="text"
                                 name="exprDate"
-                                placeholder="Expiration Date"
+                                placeholder="Expiration Date (DD/DD)"
                                 value={cardInfo.exprDate}
-                                onChange={handlePaymentChange}
+                                onChange={(e) => handlePaymentChange(e, /^\d{0,2}\/{0,1}\d{0,2}$/)} // Format: DD/DD
                             />
                             <input
                                 type="text"
                                 name="cvv"
                                 placeholder="CVV"
                                 value={cardInfo.cvv}
-                                onChange={handlePaymentChange}
+                                onChange={(e) => handlePaymentChange(e, /^\d{0,3}$/)} // Only 3 digits
                             />
                             <span className="section-toggle" onClick={() => toggleSection('payment-section')}>
                                 Close

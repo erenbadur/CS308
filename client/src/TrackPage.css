@@ -1,14 +1,79 @@
-/* src/TrackPage.css */
-.track-page {
-    background-color: #add8e6; /* light blue */
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-  }
-  
-  h1 {
-    font-size: 2.5rem;
-    color: #333;
-  }  
+.trackpage-container {
+  padding: 20px;
+  font-family: Arial, sans-serif;
+  background-color: #f9f9f9;
+  border-radius: 10px;
+}
+
+.trackpage-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.trackpage-header .logo {
+  width: 200px;
+  height: 200px;
+  border-radius: 20%; /* Rounded corners */
+  margin-right: 15px;
+  object-fit: cover;
+}
+
+.trackpage-header .page-title {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #333;
+}
+
+.subtitle {
+  font-size: 1.4rem;
+  font-weight: normal;
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.trackorder-container {
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.order-box {
+  border-bottom: 1px solid #ddd;
+  padding: 15px 0;
+}
+
+.order-box:last-child {
+  border-bottom: none;
+}
+
+.order-info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.order-info span {
+  font-size: 1rem;
+  color: #555;
+}
+
+/*Go Back Button*/
+.go-back-btn {
+  display: inline-block;
+  margin: 20px 0;
+  padding: 10px 15px;
+  font-size: 1rem;
+  color: #ffffff;
+  background-color: #007bff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  text-align: center;
+  transition: background-color 0.3s ease;
+}
+
+.go-back-btn:hover {
+  background-color: #0056b3;
+}

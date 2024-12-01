@@ -1,6 +1,8 @@
 // src/PurchasePage.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom'; // Import useNavigate
+import './PurchasePage.css';
+import axios from 'axios';
 import logo from './logo.png';
 
 const CheckoutForm = () => {
@@ -58,7 +60,38 @@ const CheckoutForm = () => {
         }
     };
 
-    const handleCompletePayment = () => {
+    const [cartItems, setCartItems] = useState([]);
+    const [error, setError] = useState(null);
+
+    // fetch cart
+    useEffect(() => {
+        const fetchCart = async () => {
+            try {
+                // Get sessionId and userId (from localStorage or other state)
+                const sessionId = localStorage.getItem('sessionId');
+                const userId = localStorage.getItem('user');
+                console.log('here is the userId from  localStorage:', userId);
+
+                // Fetch cart data from backend
+                const { data } = await axios.get('/api/cart/get', {
+                    params: { sessionId, userId },
+                });
+
+                setCartItems(data.items);
+            } catch (err) {
+                setError('Failed to fetch cart. Please try again later.');
+                console.error('Error fetching cart:', err);
+            }
+        };
+
+        fetchCart();
+    }, []);
+
+    const calculateTotal = () => {
+        return cartItems.reduce((total, item) => total + item.quantity * item.price, 0).toFixed(2);
+    };
+
+    const handleCompletePayment = async () => {
         // Check if Address Info contains any "" values
         const isAddressValid = 
             shippingAddr.fullName !== '' && 
@@ -67,24 +100,60 @@ const CheckoutForm = () => {
             shippingAddr.country !== '' && 
             shippingAddr.postalCode !== '';
     
-        // Check if Payment Info contains any "None" values
+        // Check if Payment Info contains any "" values
         const isPaymentValid = 
             cardInfo.cardName !== '' && 
             cardInfo.cardNum !== '' && 
             cardInfo.exprDate !== '' && 
             cardInfo.cvv !== '';
     
-        // Only proceed with the payment if both Address Info and Payment Info are valid
-        if (isAddressValid && isPaymentValid) {
-            alert('Payment completed!');
-    
-            // After payment, navigate to the /track page
-            navigate('/track'); // Navigate to the Track page
-        } else {
+        // Only proceed if both Address Info and Payment Info are valid
+        if (!isAddressValid || !isPaymentValid) {
             alert('Please complete both Address and Payment Information before proceeding.');
+            return;
         }
-    };       
+    
+        try {
+            // Process payment for each item in the cart
+            for (const item of cartItems) {
+                await axios.post("/api/purchases/add", {
+                    userId: localStorage.getItem("user"),
+                    productId: item.productId,
+                    quantity: item.quantity,
+                });
+    
+                await axios.post("/api/processing/order", {
+                    userId: localStorage.getItem("user"),
+                    productId: item.productId,
+                    quantity: item.quantity,
+                });
+            }
+    
+            // Clear the cart after successful payment processing
+            await clearCart();
+    
+            // After successful processing, print payment completed message
+            alert('Payment completed!');
+            navigate('/track'); // Navigate to the Track page
+        } catch (error) {
+            console.error("Error during payment processing:", error);
+            alert('Error during payment processing. Please try again.');
+        }
+    };
 
+    const clearCart = async () => {
+        const sessionId = localStorage.getItem("sessionId"); 
+        const userId = localStorage.getItem('user');
+        try {
+            const response = await axios.delete("/api/cart/clear", {
+                data: { sessionId, userId },  // Pass the data in the request body
+            });
+            console.log("Cart cleared:", response.data);
+        } catch (error) {
+            console.error("Error clearing cart:", error.response ? error.response.data : error);
+        }
+    };
+    
     return (
         <div className="container">
             {/* Header Section */}
@@ -209,11 +278,29 @@ const CheckoutForm = () => {
 
             {/* Order Summary Section */}
             <div className="side">
-                <h2>Order Summary</h2>
-                <div className="section-content">
-                    <p>Order Summary content goes here...</p>
+                <div className="order-summary-container">
+                    <h2>Order Summary</h2>
+                    {cartItems.map((item) => (
+                        <div key={item.productId} className="product-summary">
+                            <span>{item.name} × {item.quantity}</span>
+                            <span>${(item.price * item.quantity).toFixed(2)}</span>
+                        </div>
+                    ))}
+                    <div>
+                        <span>Product Total:</span>
+                        <span>${calculateTotal()}</span>
+                    </div>
+                    <div>
+                        <span>Shipping Fee:</span>
+                        <span>$20.00</span>
+                    </div>
+                    <div style={{ fontSize: "1.5rem", fontWeight: "bold" }}>
+                        <span>Order Total:</span>
+                        <span>${(parseFloat(calculateTotal()) + 20).toFixed(2)}</span>
+                    </div>
                 </div>
             </div>
+
 
             {/* Complete Payment Button */}
             <div className="complete-payment">

@@ -6,11 +6,14 @@ const User = require('../models/user');
 const { v4: uuidv4 } = require('uuid'); // Import UUID generator
 
 async function getOrCreateCart(req, res, next) {
-    let { userId, sessionId } = req.body || req.query;
-
+    //console.log("here req start -------------------");
+    //console.log(req.body);
+    let { sessionId, userId } =  req.body || req.query; 
+    console.log("here is your session id:", sessionId);
     // Generate a `sessionId` if it is missing
-    if (!sessionId && !userId) {
-        sessionId = uuidv4();
+    if (!sessionId && !userId){
+        //sessionId = uuidv4();
+        return res.status(400).json({ error: 'Either sessionId or userId must be provided.' });
     }
 
     try {
@@ -32,10 +35,8 @@ async function getOrCreateCart(req, res, next) {
 router.post('/add', async (req, res) => {
     const { productId, quantity, sessionId, userId } = req.body;
 
-    console.log('Adding to cart:', { productId, quantity, sessionId, userId });
-
-    if (!sessionId && !userId) {
-        return res.status(400).json({ error: 'Session ID or User ID is required.' });
+    if (!sessionId) {
+        return res.status(400).json({ error: 'Session ID is required.' });
     }
 
     try {
@@ -46,7 +47,9 @@ router.post('/add', async (req, res) => {
         }
 
         if (userId && !cart.userId) {
-            cart.userId = userId; // Assign userId to the cart
+            console.log(cart.userId,userId);
+            cart.userId = userId; // If user has logged in, connect the userID to them
+            console.log(cart.userId,userId);
         }
 
         // Check if the product exists
@@ -55,15 +58,13 @@ router.post('/add', async (req, res) => {
             return res.status(404).json({ error: `Product with ID ${productId} not found.` });
         }
 
-        if (product.quantityInStock === 0) {
-            return res.status(400).json({ error: `Product ${product.name} is out of stock.` });
-        }
-
         // Check if the product is already in the cart
         const existingItem = cart.items.find((item) => item.productId === productId);
+
         if (existingItem) {
-            existingItem.quantity += quantity; // Update quantity
+            existingItem.quantity += quantity; // Update the quantity
         } else {
+            // Add a new item to the cart
             cart.items.push({ productId, quantity });
         }
 
@@ -73,12 +74,12 @@ router.post('/add', async (req, res) => {
         const productIds = cart.items.map((item) => item.productId);
         const products = await Product.find({ productId: { $in: productIds } });
 
-        // Populate cart items with product details
         const productMap = products.reduce((map, product) => {
             map[product.productId] = product;
             return map;
         }, {});
 
+        // Populate cart items with product details
         const populatedItems = cart.items.map((item) => {
             const product = productMap[item.productId];
             return {
@@ -98,35 +99,34 @@ router.post('/add', async (req, res) => {
 
 
 router.get('/get', async (req, res) => {
-    const { userId, sessionId } = req.query;
+    const { sessionId, userId } = req.query; // Get sessionId and userId from query parameters
 
-    console.log('Fetching cart with:', { userId, sessionId });
+    console.log("Fetching cart with:", { sessionId, userId }); // Debug log
 
+    // If neither sessionId nor userId is provided, return an error
     if (!sessionId && !userId) {
-        return res.status(400).json({ error: 'Session ID or User ID is required.' });
+        return res.status(400).json({ error: 'Either sessionId or userId must be provided.' });
     }
 
     try {
-        // Find the cart based on userId or sessionId
-        const cart = userId
-            ? await Cart.findOne({ userId })
-            : await Cart.findOne({ sessionId });
+        // Find the cart based on sessionId or userId
+        let cart = await Cart.findOne({ $or: [{ userId }, { sessionId }] });
 
         if (!cart) {
-            console.warn('Cart not found for:', { userId, sessionId });
-            return res.status(404).json({ error: 'Cart not found.' });
+            // Create a new cart if it doesn't exist
+            cart = await Cart.create({ userId: userId || null, sessionId, items: [] });
         }
 
         // Fetch and populate product details for cart items
         const productIds = cart.items.map((item) => item.productId);
         const products = await Product.find({ productId: { $in: productIds } }); // Retrieve product details
 
-        // Map product details to cart items
         const productMap = products.reduce((map, product) => {
             map[product.productId] = product; // Create a mapping for easy lookup
             return map;
         }, {});
 
+        // Map cart items with their product details
         const populatedItems = cart.items.map((item) => {
             const product = productMap[item.productId];
             return {
@@ -147,6 +147,8 @@ router.get('/get', async (req, res) => {
         res.status(500).json({ error: 'Error retrieving cart.' });
     }
 });
+
+
 
 
 
@@ -173,6 +175,7 @@ router.put('/update', getOrCreateCart, async (req, res) => {
 
         await cart.save();
 
+
         const populatedItems = await Promise.all(
             cart.items.map(async (item) => {
                 const product = await Product.findOne({ productId: item.productId });
@@ -195,8 +198,31 @@ router.put('/update', getOrCreateCart, async (req, res) => {
 });
 
 
+// Clear the cart
+router.delete('/clear', async (req, res) => {
+    const { sessionId, userId } = req.body;
 
+    if (!sessionId) {
+        return res.status(400).json({ error: 'Session ID is required.' });
+    }
 
+    try {
+        const cart = await Cart.findOne({ sessionId });
+
+        if (!cart) {
+            return res.status(404).json({ error: 'Cart not found.' });
+        }
+
+        // Clear the cart items
+        cart.items = [];
+        await cart.save();
+
+        res.status(200).json({ message: 'Cart cleared successfully.' });
+    } catch (error) {
+        console.error('Error clearing cart:', error);
+        res.status(500).json({ error: 'An error occurred while clearing the cart.' });
+    }
+});
 
 
 

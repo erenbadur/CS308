@@ -45,22 +45,24 @@ router.post('/login', async (req, res) => {
           return res.status(400).json({ message: 'Invalid credentials' });
       }
 
-      console.log('User authenticated successfully:', { userId: user._id, username });
+      console.log('User authenticated successfully:', { userId: user.userId, username });
 
+      console.log('starting to merge carts'); // debug log
       // Handle cart merging
       if (sessionId) {
           console.log('Checking for session cart:', { sessionId });
           const sessionCart = await Cart.findOne({ sessionId });
-          let userCart = await Cart.findOne({ userId: user._id });
+          let userCart = await Cart.findOne({ userId: user.userId });
 
           if (sessionCart) {
               if (!userCart) {
                   console.log('Assigning session cart to user.');
-                  sessionCart.userId = user._id;
+                  sessionCart.userId = user.userId;
                   sessionCart.sessionId = null;
                   await sessionCart.save();
               } else {
                   console.log('Merging session cart into user cart...');
+                  userCart.sessionId = sessionId
                   sessionCart.items.forEach((sessionItem) => {
                       const existingItem = userCart.items.find(
                           (userItem) => userItem.productId === sessionItem.productId
@@ -76,11 +78,15 @@ router.post('/login', async (req, res) => {
                   await sessionCart.deleteOne();
               }
           }
+          else{
+            console.log("couldn't find the session cart"); // debug log
+          }
+          console.log('Merged Cart:', userCart);
       } else {
           console.log('No session cart provided.');
       }
 
-      res.status(200).json({ userId: user._id, message: 'Login successful' });
+      res.status(200).json({ userId: user.userId, message: 'Login successful' });
   } catch (error) {
       console.error('Error during login:', error);
       res.status(500).json({ message: 'Internal server error' });

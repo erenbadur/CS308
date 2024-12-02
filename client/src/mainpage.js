@@ -38,7 +38,7 @@ const MainPage = () => {
     const [newComment, setNewComment] = useState(''); // New comment content
     const [userId, setUserId] = useState(localStorage.getItem('user')); // Logged-in user's ID
     const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('user'));
-    
+    const [stockWarnings, setStockWarnings] = useState({}); // Track stock warnings for cart items
 
     useEffect(() => {
         const handleScroll = () => {
@@ -209,6 +209,31 @@ const MainPage = () => {
         const userId = localStorage.getItem('user'); // Optional
     
         try {
+            console.log(`[Cart] Checking stock for:`, cartItem.productId); // Log productId
+    
+            // Fetch the product details to check stock
+            const productResponse = await axios.get(`/api/products/${cartItem.productId}`);
+            const product = productResponse.data.product;
+    
+            console.log(`[API] Product details fetched:`, {
+                productId: product.productId,
+                quantityInStock: product.quantityInStock,
+            });
+    
+            console.log(`[Cart] Current quantity in cart:`, cartItem.quantity);
+    
+            // Prevent increment if it exceeds stock
+            if (cartItem.quantity + 1 > product.quantityInStock) {
+                setStockWarnings((prev) => ({
+                    ...prev,
+                    [cartItem.productId]: `Only ${product.quantityInStock} in stock.`,
+                }));
+                console.warn(`[Stock] Cannot increase quantity. Stock left: ${product.quantityInStock}`);
+                return;
+            }
+    
+            // Proceed to update the cart
+            console.log(`[Cart] Updating cart with increased quantity.`);
             const response = await axios.put('/api/cart/update', {
                 sessionId,
                 userId,
@@ -217,7 +242,12 @@ const MainPage = () => {
             });
     
             if (response.status === 200) {
+                console.log(`[Cart] Cart updated successfully.`);
                 setCartItems(response.data.cart.items); // Update the cart state
+                setStockWarnings((prev) => ({
+                    ...prev,
+                    [cartItem.productId]: '', // Clear warning after successful update
+                }));
             } else {
                 console.error('Error updating cart:', response.data.error);
             }
@@ -233,6 +263,14 @@ const MainPage = () => {
         const userId = localStorage.getItem('user'); // Optional
     
         try {
+            if (cartItem.quantity === 1) {
+                setStockWarnings((prev) => ({
+                    ...prev,
+                    [cartItem.productId]: '', // Clear warning if decreasing below 1
+                }));
+                return;
+            }
+    
             const response = await axios.put('/api/cart/update', {
                 sessionId,
                 userId,
@@ -242,6 +280,10 @@ const MainPage = () => {
     
             if (response.status === 200) {
                 setCartItems(response.data.cart.items); // Update the cart state
+                setStockWarnings((prev) => ({
+                    ...prev,
+                    [cartItem.productId]: '', // Clear warning after successful update
+                }));
             } else {
                 console.error('Error updating cart:', response.data.error);
             }
@@ -678,27 +720,35 @@ const MainPage = () => {
                     <h3>Your Cart</h3>
                     {cartItems.length > 0 ? (
                         <ul>
-                            {cartItems.map((item, index) => (
+{cartItems.map((item, index) => (
     <li key={index} className="cart-item">
         <div className="cart-item-details">
-            <p>{item.name || 'Unknown Product'}</p> {/* Fallback for missing name */}
-            <p>${(item.price || 0).toFixed(2)}</p> {/* Fallback for missing price */}
+            <p>{item.name}</p>
+            <p>${item.price.toFixed(2)}</p>
         </div>
         <div className="quantity-controls">
-            <button onClick={() => handleDecreaseQuantity(index)} className="quantity-btn">
+            <button
+                onClick={() => handleDecreaseQuantity(index)}
+                className="quantity-btn"
+                disabled={item.quantity <= 1}
+            >
                 -
             </button>
             <span className="quantity">{item.quantity}</span>
-            <button 
-                onClick={() => handleIncreaseQuantity(index)} 
+            <button
+                onClick={() => handleIncreaseQuantity(index)}
                 className="quantity-btn"
-                disabled={item.quantity >= item.stock}
             >
                 +
             </button>
         </div>
+        {/* Display warning if stock limit is reached */}
+        {stockWarnings[item.productId] && (
+            <p className="stock-warning">{stockWarnings[item.productId]}</p>
+        )}
     </li>
 ))}
+
 
 
                         </ul>

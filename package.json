@@ -17,6 +17,7 @@
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
     "express-list-endpoints": "^7.1.0",
+    "js-cookie": "^3.0.5",
     "mongodb": "^6.9.0",
     "mongoose": "^8.8.2",
     "nodemailer": "^6.9.16",

@@ -1,8 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const Order = require('../models/order');
+const Product = require('../models/product');
 
-// Endpoint to get all orders from a user's latest purchase
+// Function to retrieve the product name by ID
+async function getProductName(productId) {
+    try {
+        const product = await Product.findOne({ productId: productId });
+        return product ? product.name : 'Unknown Product';
+    } catch (error) {
+        console.error(`Error retrieving product name for productId ${productId}:`, error);
+        return 'Unknown Product';
+    }
+}
+
+// Endpoint to fetch latest purchase with product names
 router.get('/latest', async (req, res) => {
     const { userId, sessionId } = req.query;
 
@@ -11,24 +23,28 @@ router.get('/latest', async (req, res) => {
     }
 
     try {
-        // Query for the latest purchase based on the userId or sessionId
+        // Fetch the latest order
         const query = userId ? { user: userId } : { sessionId: sessionId };
-        
         const latestOrder = await Order.findOne(query).sort({ createdAt: -1 });
-        
+
         if (!latestOrder) {
             return res.status(404).json({ error: 'No recent purchase found.' });
         }
 
-        // Extract the purchaseId from the latest order's creation time
         const purchaseId = latestOrder.purchaseId;
-
-        // Fetch all orders from the same purchaseId
         const relatedOrders = await Order.find({ purchaseId });
+
+        // Attach product names to each order
+        const enrichedOrders = await Promise.all(
+            relatedOrders.map(async (order) => {
+                const productName = await getProductName(order.product);
+                return { order, productName };
+            })
+        );
 
         res.status(200).json({
             message: 'Latest purchase retrieved successfully.',
-            orders: relatedOrders,
+            orders: enrichedOrders,
         });
     } catch (error) {
         console.error('Error retrieving orders:', error);

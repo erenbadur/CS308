@@ -58,7 +58,7 @@ router.post('/login', async (req, res) => {
               if (!userCart) {
                   console.log('Assigning session cart to user.');
                   sessionCart.userId = user.userId;
-                  sessionCart.sessionId = null;
+                  sessionCart.sessionId = sessionId;
                   await sessionCart.save();
               } else {
                   console.log('Merging session cart into user cart...');

@@ -7,7 +7,7 @@ const PurchasePage = () => {
     const [showModal, setShowModal] = useState(false);
     const [modalMessage, setModalMessage] = useState("");
     const [isProcessing, setIsProcessing] = useState(false);
-
+    const [stockWarnings, setStockWarnings] = useState({}); // Track stock warnings for cart items
     const [shippingAddr, setShippingAddr] = useState({
         fullName: '',
         phoneNum: '',

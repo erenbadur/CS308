@@ -203,40 +203,30 @@ router.get('/sort', async (req, res) => {
     }
 });
 
-
 router.get('/:productId', async (req, res) => {
-    const { productId } = req.params; // Extract productId from the URL
-
-    console.log(`[API] Fetching product details for productId: ${productId}`); // Log for debugging
+    const { productId } = req.params;
 
     try {
-        // Find the product by productId or _id (depending on your schema)
-        const product = await Product.findOne({ productId }); // Adjust field as per schema
-
-        // If the product doesn't exist
+        console.log(`[API] Fetching product with ID: ${productId}`);
+        
+        const product = await Product.findOne({ productId });
         if (!product) {
-            console.warn(`[API] Product with ID ${productId} not found.`);
+            console.warn(`[API] Product not found: ${productId}`);
             return res.status(404).json({ error: 'Product not found.' });
         }
 
-        // Return the product details
-        console.log(`[API] Found product:`, {
+        console.log(`[API] Product found:`, {
             productId: product.productId,
-            name: product.name,
             quantityInStock: product.quantityInStock,
         });
 
-        res.status(200).json({
-            productId: product.productId,
-            name: product.name,
-            price: product.price,
-            quantityInStock: product.quantityInStock,
-        });
+        res.status(200).json({ product });
     } catch (error) {
-        console.error(`[API] Error fetching product with ID ${productId}:`, error);
+        console.error('[API] Error fetching product:', error);
         res.status(500).json({ error: 'An error occurred while fetching the product.' });
     }
 });
+
 
 
 module.exports = router;

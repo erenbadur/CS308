@@ -202,13 +202,37 @@ const MainPage = () => {
             setIsSearching(false); // End search indicator
         }
     };
-
+    
     const handleIncreaseQuantity = async (index) => {
         const cartItem = cartItems[index];
         const sessionId = localStorage.getItem('sessionId');
         const userId = localStorage.getItem('user'); // Optional
     
+        console.log('[Cart] Increasing quantity for:', {
+            productId: cartItem.productId,
+            currentQuantity: cartItem.quantity,
+        });
+    
         try {
+            // Fetch product details from the backend to validate stock
+            const productResponse = await axios.get(`/api/products/${cartItem.productId}`);
+            const product = productResponse.data;
+    
+            console.log('[API] Product details fetched:', {
+                productId: product.productId,
+                quantityInStock: product.quantityInStock,
+                currentQuantity: cartItem.quantity,
+            });
+    
+            // Check if adding one more exceeds the available stock
+            if (cartItem.quantity + 1 > product.quantityInStock) {
+                console.warn(`[Cart] Cannot add more. Stock limit reached: ${product.quantityInStock}`);
+                alert(`Cannot add more. Only ${product.quantityInStock} items in stock.`);
+                return; // Exit the function early
+            }
+    
+            // Proceed to update the cart
+            console.log('[Cart] Updating cart with increased quantity.');
             const response = await axios.put('/api/cart/update', {
                 sessionId,
                 userId,
@@ -217,14 +241,19 @@ const MainPage = () => {
             });
     
             if (response.status === 200) {
+                console.log('[Cart] Cart updated successfully:', response.data.cart.items);
                 setCartItems(response.data.cart.items); // Update the cart state
             } else {
-                console.error('Error updating cart:', response.data.error);
+                console.error('[Cart] Error updating cart:', response.data.error);
             }
         } catch (error) {
-            console.error('Error in handleIncreaseQuantity:', error.response?.data || error.message);
+            console.error('[Cart] Error in handleIncreaseQuantity:', error.response?.data || error.message);
         }
     };
+    
+    
+    
+    
     
     
     const handleDecreaseQuantity = async (index) => {

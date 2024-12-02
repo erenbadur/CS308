@@ -194,7 +194,39 @@ router.put('/update', getOrCreateCart, async (req, res) => {
     }
 });
 
+// Clear Cart Endpoint
+router.delete('/clear', async (req, res) => {
+    const { sessionId, userId } = req.body;
 
+    console.log('Clear cart request received:', { sessionId, userId });
+
+    if (!sessionId && !userId) {
+        return res.status(400).json({ error: 'Session ID or User ID is required.' });
+    }
+
+    try {
+        // Find the cart using sessionId or userId
+        const cart = userId
+            ? await Cart.findOne({ userId })
+            : await Cart.findOne({ sessionId });
+
+        if (!cart) {
+            console.warn('Cart not found for:', { sessionId, userId });
+            return res.status(404).json({ error: 'Cart not found.' });
+        }
+
+        // Clear the items in the cart
+        cart.items = [];
+        await cart.save();
+
+        console.log('Cart cleared successfully:', { sessionId, userId });
+
+        res.status(200).json({ message: 'Cart cleared successfully.' });
+    } catch (error) {
+        console.error('Error clearing cart:', error);
+        res.status(500).json({ error: 'Internal server error.' });
+    }
+});
 
 
 

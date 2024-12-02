@@ -76,24 +76,27 @@ const MainPage = () => {
         };
     }, [currentPage, activeCategory, isLoggedIn]);
     
-    const fetchProducts = async () => {
+    const fetchProducts = async (page = currentPage) => {
         try {
             const params = {
-                page: currentPage,
+                page,
                 limit: pageSize,
+                sortBy,
+                order: sortOrder,
             };
-
+    
             if (activeCategory) {
                 params.category = activeCategory;
             }
-
-            const response = await axios.get('/api/products', { params });
+    
+            const response = await axios.get('/api/products/sort', { params });
             setProducts(response.data.products);
             setTotalPages(response.data.pagination.totalPages);
         } catch (error) {
-            console.error('Error Occurs:', error);
+            console.error('Error fetching products:', error);
         }
     };
+    
 
     const scrollToTop = () => {
         window.scrollTo({
@@ -298,6 +301,7 @@ const MainPage = () => {
         }
         setCurrentPage(1);  
     };
+
     const goToNextPage = () => {
         if (isSearching) {
             if (searchCurrentPage < searchTotalPages) {
@@ -306,6 +310,7 @@ const MainPage = () => {
         } else {
             if (currentPage < totalPages) {
                 setCurrentPage(currentPage + 1);
+                fetchProducts(currentPage + 1);
             }
         }
     };
@@ -318,6 +323,7 @@ const MainPage = () => {
         } else {
             if (currentPage > 1) {
                 setCurrentPage(currentPage - 1);
+                fetchProducts(currentPage - 1);
             }
         }
     };
@@ -473,6 +479,9 @@ const MainPage = () => {
         setSortBy(field);
         setSortOrder(newOrder);
     
+        // Reset to the first page on sorting change
+        setCurrentPage(1);
+
         try {
             const response = await axios.get(`/api/products/sort`, {
                 params: {

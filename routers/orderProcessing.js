@@ -30,6 +30,12 @@ router.post('/order', validateSessionOrUser, async (req, res) => {
             return res.status(400).json({ error: 'Quantity must be greater than 0.' });
         }
 
+        // generate a purchaseId
+        const date = new Date();
+        const formattedDate = date.toISOString().replace(/[-:T.]/g, '').slice(0, 13); // Format as YYYYMMDD-HHMM
+
+        const purchaseId = `PUR-${formattedDate}`;
+
         // Find the product
         const product = await Product.findOne({ productId });
         if (!product) {
@@ -41,13 +47,15 @@ router.post('/order', validateSessionOrUser, async (req, res) => {
             return res.status(400).json({ error: 'Not enough items in stock.' });
         }
 
+        /* this part already handeled in purchaseRoute
         // Decrease stock
         product.quantityInStock -= quantity;
         await product.save();
-
+*/
         // Create the order
         const orderData = {
-            product: product._id,
+            purchaseId: purchaseId,
+            product: product.productId,
             quantity,
             status: 'Processing',
         };
@@ -82,7 +90,7 @@ router.post('/order', validateSessionOrUser, async (req, res) => {
                 console.error('Error updating order status:', error);
                 clearInterval(intervalId);
             }
-        }, 5000);
+        }, 60000); // made it longer for testing purposes
 
         res.status(201).json({
             message: 'Order placed successfully.',

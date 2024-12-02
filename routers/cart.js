@@ -47,9 +47,9 @@ router.post('/add', async (req, res) => {
         }
 
         if (userId && !cart.userId) {
-            console.log(cart.userId,userId);
+            //console.log(cart.userId,userId);
             cart.userId = userId; // If user has logged in, connect the userID to them
-            console.log(cart.userId,userId);
+            //console.log(cart.userId,userId);
         }
 
         // Check if the product exists

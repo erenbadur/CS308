@@ -4,27 +4,15 @@ import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 
 // Utility to get or create a session ID
-/*
 const getSessionId = () => {
     let sessionId = localStorage.getItem('sessionId');
-
     if (!sessionId) {
         sessionId = uuidv4();
         localStorage.setItem('sessionId', sessionId);
     }
     return sessionId;
 };
-*/
 
-const getSessionId = () => {
-    const sessionId = localStorage.getItem('sessionId');
-    
-    if (!sessionId) {
-        throw new Error('Session ID does not exist.');
-    }
-    
-    return sessionId;
-};
 
 const MainPage = () => {
     const [searchTotalPages, setSearchTotalPages] = useState(1); // Total pages for search results
@@ -128,9 +116,7 @@ const MainPage = () => {
     };
     
     const fetchCart = async () => {
-        console.log("this is the fetchcart function in mainpage"); // debug log
         const sessionId = localStorage.getItem('sessionId');
-        console.log("session id is fetched like this:", sessionId);
         const userId = localStorage.getItem('userId'); // Ensure correct retrieval of userId
     
         console.log('Fetching cart with:', { sessionId, userId }); // Debug log
@@ -142,7 +128,7 @@ const MainPage = () => {
     
         try {
             const response = await axios.get('/api/cart/get', {
-                params: { sessionId: sessionId, userId: userId },
+                params: { sessionId, userId },
             });
     
             if (response.status === 200) {
@@ -335,16 +321,12 @@ const MainPage = () => {
             return; // Exit the function
         }
 
-        /*
         let sessionId = localStorage.getItem('sessionId');
         if (!sessionId) {
             sessionId = uuidv4();
             localStorage.setItem('sessionId', sessionId); // Save a new sessionId in localStorage
         }
-        */
-        //get session id
-        const sessionId = localStorage.getItem('sessionId');
-
+    
         const userId = localStorage.getItem('user'); // Optional for logged-in users
     
         try {
@@ -400,7 +382,6 @@ const MainPage = () => {
             }
         }
     };
-    /*
     const handleLogin = async (username, password) => {
         const sessionId = getSessionId(); // Get the session ID
     
@@ -424,7 +405,7 @@ const MainPage = () => {
         }
     };
     
-*/
+
       
 
 

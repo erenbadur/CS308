@@ -130,42 +130,6 @@ input::placeholder {
     }
 }
 
-.order-summary-container {
-    padding: 15px;
-    background: #fff; /* Assuming the other boxes are white */
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Optional: Adjust shadow to align */
-}
-
-.order-summary-container div {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 10px;
-}
-
-.order-summary-container span {
-    font-size: 1.2rem;
-    color: #333; /* Assuming a neutral text color */
-}
-
-.order-summary-container div:last-child span {
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: #222; /* Slightly bolder color for emphasis */
-}
-
-@media (max-width: 768px) {
-    .order-summary-container div {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .order-summary-container span {
-        font-size: 1.1rem;
-    }
-}
-
-
 /* Style for the Complete Payment button */
 .complete-payment {
     display: flex;

@@ -1,13 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import logo from './logo.png';
 import './PurchasePage.css';
 import axios from 'axios';
 
-const PurchasePage = () => {
-    const [showModal, setShowModal] = useState(false);
-    const [modalMessage, setModalMessage] = useState("");
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [stockWarnings, setStockWarnings] = useState({}); // Track stock warnings for cart items
+const UnifiedPurchasePage = () => {
     const [shippingAddr, setShippingAddr] = useState({
         fullName: '',
         phoneNum: '',
@@ -16,31 +13,25 @@ const PurchasePage = () => {
         postalCode: ''
     });
 
-    const [billingAddr, setBillingAddr] = useState({
-        fullName: '',
-        phoneNum: '',
-        address: '',
-        country: '',
-        postalCode: ''
-    });
-
-    const [useDiffAddr, setUseDiffAddr] = useState(false);
-
-    const toggleDiffAddr = () => {
-        setUseDiffAddr(!useDiffAddr);
-    };
-
     const [cardInfo, setCardInfo] = useState({
         cardName: '',
         cardNum: '',
-        exprDate: '',
-        cvv: '',
+        exprDate: '', // MM/YY format
+        cvv: '' // 3-digit format
     });
 
     const [cartItems, setCartItems] = useState([]);
     const [productTotal, setProductTotal] = useState(0);
     const [orderTotal, setOrderTotal] = useState(0);
     const [shippingFee] = useState(20); // Flat shipping fee
+
+    const [showAddress, setShowAddress] = useState(false);
+    const [showPayment, setShowPayment] = useState(false);
+    const [showModal, setShowModal] = useState(false);
+    const [modalMessage, setModalMessage] = useState("");
+    const [isProcessing, setIsProcessing] = useState(false);
+
+    const navigate = useNavigate();
 
     useEffect(() => {
         const fetchCart = async () => {
@@ -70,45 +61,77 @@ const PurchasePage = () => {
         fetchCart();
     }, []);
 
-    const clearCart = async () => {
-        const sessionId = localStorage.getItem("sessionId");
-        try {
-            await axios.delete("/api/cart/clear", { data: { sessionId } });
-        } catch (error) {
-            console.error("Error clearing cart:", error);
+    const handleAddressChange = (e, regex) => {
+        const { name, value } = e.target;
+
+        if (regex && !regex.test(value)) {
+            return; // Prevent invalid input
+        }
+
+        setShippingAddr({
+            ...shippingAddr,
+            [name]: value,
+        });
+    };
+
+    const handlePaymentChange = (e) => {
+        const { name, value } = e.target;
+
+        if (name === 'exprDate') {
+            // Allow only MM/YY format
+            const isValid = /^(\d{0,2})\/?(\d{0,2})$/.test(value);
+            if (!isValid) return;
+        }
+
+        if (name === 'cvv') {
+            // Allow only 3-digit numbers
+            const isValid = /^\d{0,3}$/.test(value);
+            if (!isValid) return;
+        }
+
+        setCardInfo({
+            ...cardInfo,
+            [name]: value,
+        });
+    };
+
+    const toggleSection = (section) => {
+        if (section === 'address-section') {
+            setShowAddress(!showAddress);
+        } else if (section === 'payment-section') {
+            setShowPayment(!showPayment);
         }
     };
 
-    const validateAddrForm = (formData) => {
-        return (
-            formData.fullName &&
-            formData.phoneNum &&
-            formData.address &&
-            formData.country &&
-            formData.postalCode
-        );
-    };
-
-    const validateCardForm = (formData) => {
-        return (
-            formData.cardName &&
-            formData.cardNum &&
-            formData.exprDate &&
-            formData.cvv
-        );
-    };
-
-    const handlePayment = async () => {
+    const handleCompletePayment = async () => {
         const userId = localStorage.getItem("user");
         if (!userId) {
             alert("You must be logged in to complete the purchase.");
             return;
         }
-    
+
+        const isAddressValid =
+            shippingAddr.fullName !== '' &&
+            shippingAddr.phoneNum !== '' &&
+            shippingAddr.address !== '' &&
+            shippingAddr.country !== '' &&
+            shippingAddr.postalCode !== '';
+
+        const isPaymentValid =
+            cardInfo.cardName !== '' &&
+            cardInfo.cardNum !== '' &&
+            /^\d{2}\/\d{2}$/.test(cardInfo.exprDate) && // Validate MM/YY format
+            /^\d{3}$/.test(cardInfo.cvv); // Validate 3-digit CVV
+
+        if (!isAddressValid || !isPaymentValid) {
+            alert('Please complete both Address and Payment Information before proceeding.');
+            return;
+        }
+
         setShowModal(true);
         setModalMessage("Processing order...");
         setIsProcessing(true);
-    
+
         try {
             for (const item of cartItems) {
                 await axios.post("/api/purchases/add", {
@@ -123,11 +146,10 @@ const PurchasePage = () => {
                     quantity: item.quantity,
                 });
             }
-    
-            clearCart();
+
             setModalMessage("Payment completed successfully.");
             setTimeout(() => {
-                window.location.href = '/order-confirmation';
+                navigate('/track');
             }, 3000);
         } catch (error) {
             console.error("Error during payment processing:", error);
@@ -136,129 +158,148 @@ const PurchasePage = () => {
             setIsProcessing(false);
         }
     };
-    
+
     return (
-        <div className="purchase-page">
+        <div className="container">
+            {/* Header Section */}
             <div className="header">
                 <div className="logo">
                     <img src={logo} alt="Logo" />
                 </div>
-                <h1>Checkout</h1>
+                <h1>Payment Page</h1>
             </div>
 
-            <div className="content">
-                {/* Left Column */}
-                <div className="main">
-                    <div className="address-section">
-                        <h2>Shipping Address</h2>
-                        <input
-                            type="text"
-                            placeholder="Full Name"
-                            value={shippingAddr.fullName}
-                            onChange={(e) => setShippingAddr({ ...shippingAddr, fullName: e.target.value })}
-                        />
-                        <input
-                            type="text"
-                            placeholder="Phone Number"
-                            value={shippingAddr.phoneNum}
-                            onChange={(e) => setShippingAddr({ ...shippingAddr, phoneNum: e.target.value })}
-                        />
-                        <input
-                            type="text"
-                            placeholder="Address"
-                            value={shippingAddr.address}
-                            onChange={(e) => setShippingAddr({ ...shippingAddr, address: e.target.value })}
-                        />
-                        <input
-                            type="text"
-                            placeholder="Country"
-                            value={shippingAddr.country}
-                            onChange={(e) => setShippingAddr({ ...shippingAddr, country: e.target.value })}
-                        />
-                        <input
-                            type="text"
-                            placeholder="Postal Code"
-                            value={shippingAddr.postalCode}
-                            onChange={(e) => setShippingAddr({ ...shippingAddr, postalCode: e.target.value })}
-                        />
-                        <div className="checkbox">
-                            <input type="checkbox" checked={useDiffAddr} onChange={toggleDiffAddr} />
-                            <span>Use a different billing address</span>
+            {/* Address Section */}
+            <div className="column">
+                <h2>Address Information</h2>
+                <div className="section-content">
+                    {!showAddress ? (
+                        <div>
+                            <p>{shippingAddr.fullName || 'None'}</p>
+                            <p>{shippingAddr.phoneNum || 'None'}</p>
+                            <p>{shippingAddr.address || 'None'}</p>
+                            <p>{shippingAddr.country || 'None'}</p>
+                            <p>{shippingAddr.postalCode || 'None'}</p>
+                            <span className="section-toggle" onClick={() => toggleSection('address-section')}>
+                                Edit Address
+                            </span>
                         </div>
-                    </div>
-
-                    {useDiffAddr && (
-                        <div className="address-section">
-                            <h2>Billing Address</h2>
+                    ) : (
+                        <div>
                             <input
                                 type="text"
+                                name="fullName"
                                 placeholder="Full Name"
-                                value={billingAddr.fullName}
-                                onChange={(e) => setBillingAddr({ ...billingAddr, fullName: e.target.value })}
+                                value={shippingAddr.fullName}
+                                onChange={(e) => handleAddressChange(e, /^[A-Za-z\s]*$/)}
                             />
                             <input
                                 type="text"
-                                placeholder="Address"
-                                value={billingAddr.address}
-                                onChange={(e) => setBillingAddr({ ...billingAddr, address: e.target.value })}
+                                name="phoneNum"
+                                placeholder="Phone Number"
+                                value={shippingAddr.phoneNum}
+                                onChange={(e) => handleAddressChange(e, /^\d{0,11}$/)}
                             />
+                            <input
+                                type="text"
+                                name="address"
+                                placeholder="Address"
+                                value={shippingAddr.address}
+                                onChange={(e) => handleAddressChange(e)}
+                            />
+                            <input
+                                type="text"
+                                name="country"
+                                placeholder="Country"
+                                value={shippingAddr.country}
+                                onChange={(e) => handleAddressChange(e, /^[A-Za-z\s]*$/)}
+                            />
+                            <input
+                                type="text"
+                                name="postalCode"
+                                placeholder="Postal Code"
+                                value={shippingAddr.postalCode}
+                                onChange={(e) => handleAddressChange(e, /^\d*$/)}
+                            />
+                            <span className="section-toggle" onClick={() => toggleSection('address-section')}>
+                                Close
+                            </span>
                         </div>
                     )}
-
-                    <div className="payment-section">
-                        <h2>Payment Information</h2>
-                        <input
-                            type="text"
-                            placeholder="Cardholder Name"
-                            value={cardInfo.cardName}
-                            onChange={(e) => setCardInfo({ ...cardInfo, cardName: e.target.value })}
-                        />
-                        <input
-                            type="text"
-                            placeholder="Card Number"
-                            value={cardInfo.cardNum}
-                            onChange={(e) => setCardInfo({ ...cardInfo, cardNum: e.target.value })}
-                        />
-                        <input
-                            type="text"
-                            placeholder="Expiration Date (MM/YY)"
-                            value={cardInfo.exprDate}
-                            onChange={(e) => setCardInfo({ ...cardInfo, exprDate: e.target.value })}
-                        />
-                        <input
-                            type="text"
-                            placeholder="CVV"
-                            value={cardInfo.cvv}
-                            onChange={(e) => setCardInfo({ ...cardInfo, cvv: e.target.value })}
-                        />
-                    </div>
                 </div>
+            </div>
 
-                {/* Right Column */}
-                <div className="summary">
-                    <h3>Order Summary</h3>
+            {/* Payment Section */}
+            <div className="column">
+                <h2>Payment Information</h2>
+                <div className="section-content">
+                    {!showPayment ? (
+                        <div>
+                            <p>{cardInfo.cardName || 'None'}</p>
+                            <p>{cardInfo.cardNum || 'None'}</p>
+                            <p>{cardInfo.exprDate || 'None'}</p>
+                            <p>{cardInfo.cvv || 'None'}</p>
+                            <span className="section-toggle" onClick={() => toggleSection('payment-section')}>
+                                Edit Payment
+                            </span>
+                        </div>
+                    ) : (
+                        <div>
+                            <input
+                                type="text"
+                                name="cardName"
+                                placeholder="Cardholder Name"
+                                value={cardInfo.cardName}
+                                onChange={(e) => handlePaymentChange(e)}
+                            />
+                            <input
+                                type="text"
+                                name="cardNum"
+                                placeholder="Card Number"
+                                value={cardInfo.cardNum}
+                                onChange={(e) => handlePaymentChange(e)}
+                            />
+                            <input
+                                type="text"
+                                name="exprDate"
+                                placeholder="Expiration Date (MM/YY)"
+                                value={cardInfo.exprDate}
+                                onChange={(e) => handlePaymentChange(e)}
+                            />
+                            <input
+                                type="text"
+                                name="cvv"
+                                placeholder="CVV"
+                                value={cardInfo.cvv}
+                                onChange={(e) => handlePaymentChange(e)}
+                            />
+                            <span className="section-toggle" onClick={() => toggleSection('payment-section')}>
+                                Close
+                            </span>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Order Summary Section */}
+            <div className="side">
+                <h2>Order Summary</h2>
+                <div className="section-content">
                     {cartItems.map((item) => (
-                        <div key={item.productId} className="summary-item">
-                            <span>{item.name}</span>
-                            <span>{item.quantity} x ${(item.price).toFixed(2)}</span>
+                        <div key={item.productId}>
+                            <p>{item.name}</p>
+                            <p>{item.quantity} x ${(item.price).toFixed(2)}</p>
                         </div>
                     ))}
-                    <div className="summary-total">
-                        <span>Product Total:</span>
-                        <span>${productTotal}</span>
-                    </div>
-                    <div className="summary-total">
-                        <span>Shipping Fee:</span>
-                        <span>${shippingFee}</span>
-                    </div>
-                    <div className="summary-total">
-                        <span>Order Total:</span>
-                        <span>${orderTotal}</span>
-                    </div>
-                    <button className="complete-order-btn" onClick={handlePayment}>
-                        Complete Payment
-                    </button>
+                    <p>Product Total: ${productTotal}</p>
+                    <p>Shipping Fee: ${shippingFee}</p>
+                    <h4>Order Total: ${orderTotal}</h4>
                 </div>
+            </div>
+
+            {/* Complete Payment Button */}
+            <div className="complete-payment">
+                <button onClick={handleCompletePayment}>Complete Payment</button>
             </div>
 
             {showModal && (
@@ -273,4 +314,4 @@ const PurchasePage = () => {
     );
 };
 
-export default PurchasePage;
+export default UnifiedPurchasePage;

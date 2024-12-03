@@ -9,7 +9,8 @@ const TrackPage = () => {
   const [order, setOrder] = useState(null); // Store the latest order
   const [loading, setLoading] = useState(true); // Indicates if data is loading
   const [error, setError] = useState(null); // Stores any error messages
-  const [invoiceUrl, setInvoiceUrl] = useState(''); // URL for the invoice PDF
+  const [invoiceUrl, setInvoiceUrl] = useState(""); // URL for the invoice PDF
+  const [isInvoiceVisible, setIsInvoiceVisible] = useState(false); // Track invoice visibility
 
   // Handle navigation back to the main page
   const handleGoBack = () => {
@@ -43,54 +44,28 @@ const TrackPage = () => {
     fetchLatestOrder();
   }, []);
 
-  // Polling to update order status every 10 seconds
-  useEffect(() => {
-    let pollingInterval;
-
-    const fetchOrderStatus = async () => {
+  const toggleInvoice = async (purchaseId) => {
+    if (isInvoiceVisible) {
+      // Hide the invoice
+      setInvoiceUrl("");
+      setIsInvoiceVisible(false);
+    } else {
+      // Fetch and display the invoice
       try {
-        const response = await axios.get(`/api/track/order-status`, {
-          params: { purchaseId: order.purchaseId },
-        });
-
-        if (response.data.status !== order.status) {
-          setOrder((prevOrder) => ({
-            ...prevOrder,
-            status: response.data.status,
-          }));
+        const response = await axios.get(
+          `api/track/invoice/invoice-${purchaseId}.pdf`,
+          { responseType: "blob" }
+        );
+        if (response.status === 200) {
+          const url = URL.createObjectURL(response.data);
+          setInvoiceUrl(url); // Set the URL for the iframe
+          setIsInvoiceVisible(true);
+        } else {
+          alert("Error: Unable to fetch the invoice.");
         }
-
-        // Stop polling if the order status is "Delivered"
-        if (response.data.status === "Delivered") {
-          clearInterval(pollingInterval);
-        }
-      } catch (err) {
-        console.error("Error fetching order status:", err);
+      } catch (error) {
+        console.error("Error fetching invoice:", error);
       }
-    };
-
-    if (order) {
-      // Start polling if there's an order
-      pollingInterval = setInterval(fetchOrderStatus, 10000); // Poll every 10 seconds
-    }
-
-    return () => {
-      // Clear interval on component unmount or order change
-      clearInterval(pollingInterval);
-    };
-  }, [order]); // Re-run the effect whenever the order changes
-
-  const viewInvoice = async (purchaseId) => {
-    try {
-      const response = await axios.get(`api/track/invoice/invoice-${purchaseId}.pdf`, { responseType: 'blob' });
-      if (response.status === 200) {
-        const url = URL.createObjectURL(response.data);
-        setInvoiceUrl(url); // Set the URL for the iframe
-      } else {
-        alert('Error: Unable to fetch the invoice.');
-      }
-    } catch (error) {
-      console.error('Error fetching invoice:', error);
     }
   };
 
@@ -104,7 +79,7 @@ const TrackPage = () => {
 
       {/* Show loading spinner or message */}
       {loading && <p>Loading...</p>}
-      
+
       {/* Show error message if there's an error */}
       {error && <p className="error-message">{error}</p>}
 
@@ -142,13 +117,16 @@ const TrackPage = () => {
               ))}
             </ul>
 
-            {/* Button to view the invoice */}
-            <button onClick={() => viewInvoice(order.purchaseId)} className="view-invoice-btn">
-              View Invoice
+            {/* Button to toggle the invoice */}
+            <button
+              onClick={() => toggleInvoice(order.purchaseId)}
+              className="view-invoice-btn"
+            >
+              {isInvoiceVisible ? "Close Invoice" : "View Invoice"}
             </button>
 
             {/* Display the invoice PDF in an iframe */}
-            {invoiceUrl && (
+            {isInvoiceVisible && invoiceUrl && (
               <div className="invoice-container">
                 <iframe
                   src={invoiceUrl}

@@ -8,6 +8,7 @@ const orderSchema = new Schema({
     quantity: { type: Number, required: true, min: 1 }, // Quantity ordered
     status: { type: String, enum: ['Processing', 'In-Transit', 'Delivered'], default: 'Processing' }, // Order status
     createdAt: { type: Date, default: Date.now }, // Order creation date
+    status: { type: String, default: 'Processing' }, // Default status
 },{ timestamps: true });
 
 const Order = model('Order', orderSchema);

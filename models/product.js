@@ -5,7 +5,8 @@ const commentSchema = new Schema({
     user: { type: String, required: true }, // Use custom userId (String)
     content: { type: String, required: true, maxlength: 500 }, // Comment text, max length 500
     approved: { type: Boolean, default: false }, // Indicates if the comment is approved
-    createdAt: { type: Date, default: Date.now } // Automatically sets the creation date
+    createdAt: { type: Date, default: Date.now }, // Automatically sets the creation date
+    approved: { type: Boolean, default: false } // New field
 });
 
 const productSchema = new Schema({

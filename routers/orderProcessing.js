@@ -32,77 +32,76 @@ const sendEmailWithInvoice = async (to, subject, htmlContent, attachmentPath) =>
 };
 
 const generateInvoicePDF = async (purchase, products, user) => {
-    const doc = new pdf();
+    try {
+        const doc = new pdf();
 
-    // File path for the invoice
-    const invoicePath = `./invoices/invoice-${purchase.purchaseId}.pdf`;
-    doc.pipe(fs.createWriteStream(invoicePath)); // Saving the file to the local folder
+        // Ensure the directory exists
+        const invoiceDir = './invoices';
+        if (!fs.existsSync(invoiceDir)) {
+            fs.mkdirSync(invoiceDir, { recursive: true });
+        }
 
-    // Add invoice details to the PDF
-    doc.fontSize(20).text('Invoice', { align: 'center' });
-    doc.moveDown();
-    doc.fontSize(12).text(`Invoice ID: ${purchase.purchaseId}`);
-    doc.text(`Date: ${new Date().toLocaleDateString()}`);
-    doc.moveDown();
-    doc.text(`Customer: ${user ? user.name : 'Guest'}`);
-    doc.text(`Email: ${user ? user.email : 'N/A'}`);
-    doc.moveDown();
+        // File path for the invoice
+        const invoicePath = `${invoiceDir}/invoice-${purchase.purchaseId}.pdf`;
+        const writeStream = fs.createWriteStream(invoicePath);
 
-    // Add Products heading
-    doc.fontSize(12).text('Products', { underline: true });
-    doc.moveDown();
-
-    let totalPrice = 0;
-
-    // Add products and total price for the order
-    products.forEach((product) => {
-        const totalProductPrice = product.price * product.quantity;
-        totalPrice += totalProductPrice;
+        // Add content to the PDF
+        doc.pipe(writeStream);
+        doc.fontSize(20).text('Invoice', { align: 'center' });
+        doc.moveDown();
+        doc.fontSize(12).text(`Invoice ID: ${purchase.purchaseId}`);
+        doc.text(`Date: ${new Date().toLocaleDateString()}`);
+        doc.moveDown();
+        doc.text(`Customer: ${user ? user.name : 'Guest'}`);
+        doc.text(`Email: ${user ? user.email : 'N/A'}`);
+        doc.moveDown();
 
         // Add product details
-        doc.fontSize(12).text(
-            `${product.name} x ${product.quantity} - $${totalProductPrice.toFixed(2)}`
-        );
-    });
+        doc.fontSize(12).text('Products', { underline: true });
+        doc.moveDown();
+        let totalPrice = 0;
 
-    // Add total price at the end of the invoice
-    doc.moveDown();
-    doc.fontSize(14).text(`Total Price: $${totalPrice.toFixed(2)}`, { align: 'right' });
+        products.forEach((product) => {
+            const totalProductPrice = product.price * product.quantity;
+            totalPrice += totalProductPrice;
+            doc.text(
+                `${product.name} x ${product.quantity} - $${totalProductPrice.toFixed(2)}`
+            );
+        });
 
-    doc.moveDown();
-    doc.text('Thank you for your purchase!', { align: 'center' });
+        doc.moveDown();
+        doc.fontSize(14).text(`Total Price: $${totalPrice.toFixed(2)}`, { align: 'right' });
+        doc.moveDown();
+        doc.text('Thank you for your purchase!', { align: 'center' });
 
-    // Finalize the PDF
-    doc.end();
+        // Finalize the PDF
+        doc.end();
 
-    // Once PDF is generated, read it and store it in the database
-    doc.on('end', async () => {
-        try {
-            // Read the PDF file into a buffer
-            const pdfData = fs.readFileSync(invoicePath); // Reading the file as binary data
+        // Wait for the file to be fully written
+        await new Promise((resolve, reject) => {
+            writeStream.on('finish', resolve);
+            writeStream.on('error', reject);
+        });
 
-            const invoiceFilename = `invoice-${purchase.purchaseId}.pdf`;
+        // Read the PDF and store it in the database
+        const pdfData = fs.readFileSync(invoicePath);
+        const invoiceFilename = `invoice-${purchase.purchaseId}.pdf`;
 
-            // Store the invoice in the database
-            const invoice = new Invoice({
-                name: invoiceFilename,
-                pdfData: pdfData,  // Store the PDF as binary data
-            });
+        const invoice = new Invoice({
+            name: invoiceFilename,
+            pdfData: pdfData,
+        });
 
-            await invoice.save();  // Save invoice to DB
+        await invoice.save();
+        console.log('Invoice stored in database successfully!');
 
-            // Optionally, associate the invoice with the order
-            purchase.invoices.push(invoice._id);
-            await purchase.save();
-
-            console.log('Invoice stored in database successfully!');
-        } catch (error) {
-            console.error('Error saving invoice to database:', error);
-        }
-    });
-
-    return invoicePath;  // Return the file path where the PDF is saved
+        return invoicePath; // Return the file path for further use
+    } catch (error) {
+        console.error('Error generating and saving invoice:', error);
+        throw error; // Propagate the error to the calling function
+    }
 };
+
 
 
 

@@ -43,9 +43,46 @@ const TrackPage = () => {
     fetchLatestOrder();
   }, []);
 
+  // Polling to update order status every 10 seconds
+  useEffect(() => {
+    let pollingInterval;
+
+    const fetchOrderStatus = async () => {
+      try {
+        const response = await axios.get(`/api/track/order-status`, {
+          params: { purchaseId: order.purchaseId },
+        });
+
+        if (response.data.status !== order.status) {
+          setOrder((prevOrder) => ({
+            ...prevOrder,
+            status: response.data.status,
+          }));
+        }
+
+        // Stop polling if the order status is "Delivered"
+        if (response.data.status === "Delivered") {
+          clearInterval(pollingInterval);
+        }
+      } catch (err) {
+        console.error("Error fetching order status:", err);
+      }
+    };
+
+    if (order) {
+      // Start polling if there's an order
+      pollingInterval = setInterval(fetchOrderStatus, 10000); // Poll every 10 seconds
+    }
+
+    return () => {
+      // Clear interval on component unmount or order change
+      clearInterval(pollingInterval);
+    };
+  }, [order]); // Re-run the effect whenever the order changes
+
   const viewInvoice = async (purchaseId) => {
     try {
-      const response = await axios.get(`/order/invoice/${purchaseId}`, { responseType: 'blob' });
+      const response = await axios.get(`api/track/invoice/invoice-${purchaseId}.pdf`, { responseType: 'blob' });
       if (response.status === 200) {
         const url = URL.createObjectURL(response.data);
         setInvoiceUrl(url); // Set the URL for the iframe

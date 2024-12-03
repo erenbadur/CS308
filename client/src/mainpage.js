@@ -155,53 +155,39 @@ const MainPage = () => {
         setCartOpen(false); // Close cart
     };
     const handleSearch = async (page = 1) => {
-        if (!searchTerm.trim()) {
+        if (!searchTerm.trim() && !activeCategory) {
             resetSearch();
             return;
         }
     
         setIsSearching(true);
         try {
-            const response = await axios.get('/api/searchBar/search', {
-                params: {
-                    term: searchTerm,
-                    category: activeCategory,
-                    page,
-                    limit: pageSize,
-                },
-            });
+            const params = {
+                term: searchTerm.trim() || undefined,
+                category: activeCategory || undefined,
+                sortBy, // Maintain the current sort field
+                order: sortOrder, // Maintain the current sort order
+                page,
+                limit: pageSize,
+            };
+    
+            console.log("Search Params:", params); // Debug log to verify parameters
+    
+            const response = await axios.get('/api/searchBar/search', { params });
     
             setProducts(response.data.results || []);
             setSearchTotalPages(response.data.totalPages || 1);
             setSearchCurrentPage(response.data.currentPage || 1);
-            setTotalPages(response.data.totalPages || 1); // Update totalPages for pagination controls
+            setTotalPages(response.data.totalPages || 1);
             setCurrentPage(response.data.currentPage || 1);
         } catch (error) {
             console.error("Error during search:", error.response?.data || error.message);
-            alert("An error occurred during the search. Please try again.");
-            setIsSearching(false);
-        } 
-    
-    
-        console.log("Search initiated");
-        console.log("Search Term:", searchTerm);
-        console.log("Active Category:", activeCategory);
-    
-        setIsSearching(true); // Start search indicator
-        try {
-            const response = await axios.get('/api/searchBar/search', {
-                params: { term: searchTerm, category: activeCategory },
-            });
-    
-            console.log("Search Results:", response.data);
-            setProducts(response.data.results || []); // Update product list
-        } catch (error) {
-            console.error("Error during search:", error.response?.data || error.message);
-            alert("An error occurred during the search. Please try again.");
+            alert("An error occurred during the search.");
         } finally {
-            setIsSearching(false); // End search indicator
+            setIsSearching(false);
         }
     };
+    
 
     const handleIncreaseQuantity = async (index) => {
         const cartItem = cartItems[index];
@@ -530,29 +516,37 @@ const MainPage = () => {
     };
 
     const handleSortChange = async (field) => {
+        // Toggle the sorting order for the selected field
         const newOrder = sortBy === field && sortOrder === 'asc' ? 'desc' : 'asc';
         setSortBy(field);
         setSortOrder(newOrder);
     
-        // Reset to the first page on sorting change
-        setCurrentPage(1);
-
         try {
-            const response = await axios.get(`/api/products/sort`, {
-                params: {
-                    sortBy: field,
-                    order: newOrder,
-                    page: 1, // Reset to the first page on sort change
-                    limit: 9, // Enforce the 9-products-per-page rule
-                },
-            });
-            setProducts(response.data.products);
-            setCurrentPage(1); // Reset the current page to 1
-            setTotalPages(response.data.pagination.totalPages); // Update total pages from the backend response
+            // Construct parameters for the API request
+            const params = {
+                term: searchTerm.trim() || undefined, // Include search term if present
+                category: activeCategory || undefined, // Include category if selected
+                sortBy: field, // Apply selected sort field
+                order: newOrder, // Apply the new sort order
+                page: 1, // Reset to the first page
+                limit: pageSize, // Maintain the page size
+            };
+    
+            console.log("Sorting Params:", params); // Debug log to verify parameters
+    
+            // Make API call
+            const response = await axios.get('/api/products/sort', { params });
+    
+            // Update the state with the sorted products and updated pagination
+            setProducts(response.data.products || []);
+            setTotalPages(response.data.pagination.totalPages || 1);
+            setCurrentPage(1); // Reset to the first page
         } catch (error) {
-            console.error('Error sorting products:', error.response?.data || error.message);
+            console.error("Error during sorting:", error.response?.data || error.message);
+            alert("An error occurred during sorting. Please try again.");
         }
     };
+    
 
     const handleLogout = () => {
         localStorage.removeItem('user');

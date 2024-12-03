@@ -52,6 +52,19 @@ const generateInvoicePDF = (purchase, product, user) => {
     // Add invoice details to the PDF
     doc.fontSize(20).text('Invoice', { align: 'center' });
     doc.moveDown();
+
+    // Add a PNG image
+    const logoPath = path.join(__dirname, '../src/logo.png'); // Adjust the path to your PNG file
+    try {
+        doc.image(logoPath, {
+            fit: [150, 100], // Specify the size of the image
+            align: 'center',
+        });
+        doc.moveDown();
+    } catch (error) {
+        console.error("Error adding PNG to PDF:", error);
+    }
+
     doc.fontSize(12).text(`Invoice ID: ${purchase._id}`);
     doc.text(`Date: ${new Date().toLocaleDateString()}`);
     doc.moveDown();
@@ -70,6 +83,7 @@ const generateInvoicePDF = (purchase, product, user) => {
 
     return invoicePath;
 };
+
 
 
 router.post('/add', async (req, res) => {

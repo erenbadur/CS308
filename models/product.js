@@ -25,7 +25,7 @@ const productSchema = new Schema({
         type: String,
         required: true, // Makes the category mandatory
         enum: ['mobile phone', 'computer', 'tablet', 'accessories', 'headphone','smartwatch','television','camera'], // Define allowed categories
-        default: 'accessory', // Default value if not specified
+        default: 'accessories', // Default value if not specified
     },
     quantityInStock: { type: Number, required: true, min: 0, default: 100 }, // Stock quantity cannot go below 0
     price: { type: Number, required: true, min: 0 }, // Price of the product

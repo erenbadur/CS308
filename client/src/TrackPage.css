@@ -58,6 +58,51 @@
   font-size: 1rem;
   color: #555;
 }
+.product-header {
+  margin-top: 20px;
+  font-weight: bold;
+  font-size: 18px;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 5px;
+}
+
+.product-list {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+}
+
+.product-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.product-item span:first-child {
+  font-weight: bold;
+}
+
+
+.invoice-container {
+  margin-top: 20px;
+  border: 1px solid #ccc;
+  padding: 10px;
+  background-color: #f9f9f9;
+}
+
+.view-invoice-btn {
+  margin-top: 20px;
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+.view-invoice-btn:hover {
+  background-color: #0056b3;
+}
 
 /*Go Back Button*/
 .go-back-btn {

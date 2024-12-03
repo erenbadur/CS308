@@ -2,19 +2,20 @@ const express = require('express');
 const router = express.Router();
 const Order = require('../models/order');
 const Product = require('../models/product');
+const Invoice = require('../models/invoice');
 
-// Function to retrieve the product name by ID
-async function getProductName(productId) {
+// Function to retrieve product details by ID
+async function getProductDetails(productId) {
     try {
-        const product = await Product.findOne({ productId: productId });
-        return product ? product.name : 'Unknown Product';
+        const product = await Product.findOne({ productId });
+        return product ? { name: product.name, productId: product.productId } : { name: 'Unknown Product', productId };
     } catch (error) {
-        console.error(`Error retrieving product name for productId ${productId}:`, error);
-        return 'Unknown Product';
+        console.error(`Error retrieving product details for productId ${productId}:`, error);
+        return { name: 'Unknown Product', productId };
     }
 }
 
-// Endpoint to fetch latest purchase with product names
+// Endpoint to fetch the latest order with product details
 router.get('/latest', async (req, res) => {
     const { userId, sessionId } = req.query;
 
@@ -23,33 +24,57 @@ router.get('/latest', async (req, res) => {
     }
 
     try {
-        // Fetch the latest order
+        // Fetch the latest order for the user or session
         const query = userId ? { user: userId } : { sessionId: sessionId };
         const latestOrder = await Order.findOne(query).sort({ createdAt: -1 });
 
         if (!latestOrder) {
-            return res.status(404).json({ error: 'No recent purchase found.' });
+            return res.status(404).json({ error: 'No recent order found.' });
         }
 
-        const purchaseId = latestOrder.purchaseId;
-        const relatedOrders = await Order.find({ purchaseId });
-
-        // Attach product names to each order
-        const enrichedOrders = await Promise.all(
-            relatedOrders.map(async (order) => {
-                const productName = await getProductName(order.product);
-                return { order, productName };
+        // Enrich the products in the order with their details
+        const enrichedProducts = await Promise.all(
+            latestOrder.products.map(async (product) => {
+                const productDetails = await getProductDetails(product.productId);
+                return {
+                    ...productDetails,
+                    quantity: product.quantity,
+                };
             })
         );
 
         res.status(200).json({
-            message: 'Latest purchase retrieved successfully.',
-            orders: enrichedOrders,
+            message: 'Latest order retrieved successfully.',
+            order: {
+                orderId: latestOrder._id,
+                purchaseId: latestOrder.purchaseId,
+                status: latestOrder.status,
+                products: enrichedProducts,
+                createdAt: latestOrder.createdAt,
+            },
         });
     } catch (error) {
-        console.error('Error retrieving orders:', error);
-        res.status(500).json({ error: 'An error occurred while retrieving the orders.' });
+        console.error('Error retrieving the latest order:', error);
+        res.status(500).json({ error: 'An error occurred while retrieving the latest order.' });
     }
 });
+
+router.get('/invoice/:name', async (req, res) => {
+    try {
+        const invoice = await Invoice.findOne({ name: req.params.name });  // Find by filename (name)
+        if (!invoice) {
+            return res.status(404).json({ error: 'Invoice not found' });
+        }
+
+        // Send the invoice PDF file
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename="${invoice.name}"`);
+        res.send(invoice.pdfData);
+    } catch (error) {
+        console.error('Error retrieving invoice:', error);
+        res.status(500).json({ error: 'Failed to retrieve invoice' });
+    }
+});
+
 
 module.exports = router;

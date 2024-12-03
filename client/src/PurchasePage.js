@@ -114,21 +114,12 @@ const CheckoutForm = () => {
         }
     
         try {
-            // Process payment for each item in the cart
-            for (const item of cartItems) {
-                await axios.post("/api/purchases/add", {
-                    userId: localStorage.getItem("user"),
-                    productId: item.productId,
-                    quantity: item.quantity,
-                });
-    
+            // Process payment for cartItems
                 await axios.post("/api/processing/order", {
                     userId: localStorage.getItem("user"),
-                    productId: item.productId,
-                    quantity: item.quantity,
+                    products: cartItems
                 });
-            }
-    
+            
             // Clear the cart after successful payment processing
             await clearCart();
     

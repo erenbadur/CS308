@@ -6,41 +6,56 @@ import logo from "./logo.png";
 
 const TrackPage = () => {
   const navigate = useNavigate();
-  const [orders, setOrders] = useState([]); // Stores fetched orders
+  const [order, setOrder] = useState(null); // Store the latest order
   const [loading, setLoading] = useState(true); // Indicates if data is loading
   const [error, setError] = useState(null); // Stores any error messages
+  const [invoiceUrl, setInvoiceUrl] = useState(''); // URL for the invoice PDF
 
   // Handle navigation back to the main page
   const handleGoBack = () => {
     navigate("/"); // Replace '/' with the correct path to your main page
   };
 
-  // Fetch orders on component mount
+  // Fetch the latest order on component mount
   useEffect(() => {
-    const fetchOrders = async () => {
+    const fetchLatestOrder = async () => {
       try {
         const userId = localStorage.getItem("user"); // Fetch user ID from localStorage
         if (!userId) {
           throw new Error("User not logged in.");
         }
 
-        // Make a GET request to fetch the latest orders
+        // Make a GET request to fetch the latest order
         const response = await axios.get("/api/track/latest", {
           params: { userId }, // Pass userId as a query parameter
         });
 
-        // Update orders state with the fetched data
-        setOrders(response.data.orders);
+        // Update order state with the fetched data
+        setOrder(response.data.order);
       } catch (err) {
-        console.error("Error fetching orders:", err);
-        setError("Failed to load orders. Please try again.");
+        console.error("Error fetching the latest order:", err);
+        setError("Failed to load your latest order. Please try again.");
       } finally {
         setLoading(false); // Stop loading indicator
       }
     };
 
-    fetchOrders();
+    fetchLatestOrder();
   }, []);
+
+  const viewInvoice = async (purchaseId) => {
+    try {
+      const response = await axios.get(`/order/invoice/${purchaseId}`, { responseType: 'blob' });
+      if (response.status === 200) {
+        const url = URL.createObjectURL(response.data);
+        setInvoiceUrl(url); // Set the URL for the iframe
+      } else {
+        alert('Error: Unable to fetch the invoice.');
+      }
+    } catch (error) {
+      console.error('Error fetching invoice:', error);
+    }
+  };
 
   return (
     <div className="trackpage-container">
@@ -57,34 +72,59 @@ const TrackPage = () => {
       {error && <p className="error-message">{error}</p>}
 
       <div className="trackorder-container">
-        {/* Map through fetched orders and display them */}
-        {!loading && !error && orders.length > 0 ? (
-          orders.map(({ order, productName }) => (
-            <div key={order._id} className="order-box">
-              <div className="order-info">
-                <span>Product:</span>
-                <span>{productName} x {order.quantity}</span>
-              </div>
-              <div className="order-info">
-                <span>Status:</span>
-                <span>{order.status}</span>
-              </div>
-              <div className="order-info">
-                <span>Estimated Delivery:</span>
-                <span>
-                  {new Date(order.createdAt).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </span>
-              </div>
+        {/* Display order details */}
+        {!loading && !error && order ? (
+          <div className="order-box">
+            <div className="order-info">
+              <span>Purchase ID:</span>
+              <span>{order.purchaseId}</span>
             </div>
-          ))
+            <div className="order-info">
+              <span>Status:</span>
+              <span>{order.status}</span>
+            </div>
+            <div className="order-info">
+              <span>Estimated Delivery:</span>
+              <span>
+                {new Date(order.createdAt).toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </span>
+            </div>
+            <div className="product-header">
+              <h3>Products</h3>
+            </div>
+            <ul className="product-list">
+              {order.products.map((product) => (
+                <li key={product.productId} className="product-item">
+                  <span>{product.name}</span>
+                  <span> x {product.quantity}</span>
+                </li>
+              ))}
+            </ul>
+
+            {/* Button to view the invoice */}
+            <button onClick={() => viewInvoice(order.purchaseId)} className="view-invoice-btn">
+              View Invoice
+            </button>
+
+            {/* Display the invoice PDF in an iframe */}
+            {invoiceUrl && (
+              <div className="invoice-container">
+                <iframe
+                  src={invoiceUrl}
+                  width="100%"
+                  height="600px"
+                  title="Invoice"
+                  frameBorder="0"
+                />
+              </div>
+            )}
+          </div>
         ) : (
-          // Show this message if no orders are found
-          !loading &&
-          !error && <p>No recent orders found.</p>
+          !loading && !error && <p>No recent orders found.</p>
         )}
       </div>
 

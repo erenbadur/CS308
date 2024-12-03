@@ -197,6 +197,10 @@ router.put('/update', getOrCreateCart, async (req, res) => {
     }
 });
 
+// Clear Cart Endpoint
+router.delete('/clear', async (req, res) => {
+    const { sessionId, userId } = req.body;
+
 
 // Clear the cart
 router.delete('/clear', async (req, res) => {

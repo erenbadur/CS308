@@ -16,8 +16,11 @@ router.post('/signin', async (req, res) => {
       return res.status(400).json({ message: 'User already exists' });
     }
 
+    // Hash the password before saving
+    const hashedPassword = await bcrypt.hash(password, 10);
+
     // Create new user
-    const newUser = new User({ username, email, password });
+    const newUser = new User({ username, email, password: hashedPassword });
     await newUser.save();
 
     res.status(201).json({ message: 'User created successfully' });
@@ -27,66 +30,53 @@ router.post('/signin', async (req, res) => {
   }
 });
 
+// Login Route
 router.post('/login', async (req, res) => {
   const { username, password, sessionId } = req.body;
-
-  console.log('Login request received:', { username, sessionId }); // Debug
 
   try {
       const user = await User.findOne({ username }).select('+password');
       if (!user) {
-          console.warn('Login failed: User not found', { username });
           return res.status(400).json({ message: 'Invalid credentials' });
       }
 
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
-          console.warn('Login failed: Invalid password', { username });
           return res.status(400).json({ message: 'Invalid credentials' });
       }
 
-      console.log('User authenticated successfully:', { userId: user.userId, username });
-
-      console.log('starting to merge carts'); // debug log
-      // Handle cart merging
+      let userCart = await Cart.findOne({ userId: user.userId });
       if (sessionId) {
-          console.log('Checking for session cart:', { sessionId });
-          const sessionCart = await Cart.findOne({ sessionId });
-          let userCart = await Cart.findOne({ userId: user.userId });
-
-          if (sessionCart) {
+          const guestCart = await Cart.findOne({ sessionId });
+          if (guestCart) {
               if (!userCart) {
-                  console.log('Assigning session cart to user.');
-                  sessionCart.userId = user.userId;
-                  sessionCart.sessionId = sessionId;
-                  await sessionCart.save();
+                  userCart = guestCart;
+                  userCart.userId = user.userId;
+                  userCart.sessionId = null;
+                  await userCart.save();
               } else {
-                  console.log('Merging session cart into user cart...');
-                  userCart.sessionId = sessionId
-                  sessionCart.items.forEach((sessionItem) => {
+                  // Merge guestCart into userCart
+                  guestCart.items.forEach((guestItem) => {
                       const existingItem = userCart.items.find(
-                          (userItem) => userItem.productId === sessionItem.productId
+                          (item) => item.productId === guestItem.productId
                       );
                       if (existingItem) {
-                          existingItem.quantity += sessionItem.quantity;
+                          existingItem.quantity += guestItem.quantity;
                       } else {
-                          userCart.items.push(sessionItem);
+                          userCart.items.push(guestItem);
                       }
                   });
-
                   await userCart.save();
-                  await sessionCart.deleteOne();
+                  await guestCart.deleteOne();
               }
           }
-          else{
-            console.log("couldn't find the session cart"); // debug log
-          }
-          console.log('Merged Cart:', userCart);
-      } else {
-          console.log('No session cart provided.');
       }
 
-      res.status(200).json({ userId: user.userId, message: 'Login successful' });
+      res.status(200).json({
+          userId: user.userId,
+          cart: userCart ? userCart.items : [],
+          message: 'Login successful',
+      });
   } catch (error) {
       console.error('Error during login:', error);
       res.status(500).json({ message: 'Internal server error' });
@@ -95,10 +85,7 @@ router.post('/login', async (req, res) => {
 
 
 
-
-
-
-  // Get All Users
+// Get All Users
 router.get('/users', async (req, res) => {
   try {
     const users = await User.find({}, '-password'); // Fetch all users without passwords
@@ -109,10 +96,4 @@ router.get('/users', async (req, res) => {
   }
 });
 
-
-
-
-
-
 module.exports = router;
-

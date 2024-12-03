@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios"; // Axios for making HTTP requests
+import axios from "axios";
 import "./TrackPage.css";
 import logo from "./logo.png";
 
@@ -113,6 +113,7 @@ const TrackPage = () => {
                 <li key={product.productId} className="product-item">
                   <span>{product.name}</span>
                   <span> x {product.quantity}</span>
+                  <span className="product-item-price">${(product.price * product.quantity).toFixed(2)}</span>
                 </li>
               ))}
             </ul>
@@ -133,7 +134,6 @@ const TrackPage = () => {
                   width="100%"
                   height="600px"
                   title="Invoice"
-                  frameBorder="0"
                 />
               </div>
             )}

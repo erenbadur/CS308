@@ -8,7 +8,7 @@ const Invoice = require('../models/invoice');
 async function getProductDetails(productId) {
     try {
         const product = await Product.findOne({ productId });
-        return product ? { name: product.name, productId: product.productId } : { name: 'Unknown Product', productId };
+        return product ? { name: product.name, productId: product.productId, price: product.price } : { name: 'Unknown Product', productId };
     } catch (error) {
         console.error(`Error retrieving product details for productId ${productId}:`, error);
         return { name: 'Unknown Product', productId };

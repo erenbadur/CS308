@@ -67,21 +67,26 @@
 }
 
 .product-list {
-  list-style: none;
+  list-style-type: none;
   padding: 0;
-  margin: 10px 0;
 }
 
 .product-item {
   display: flex;
   justify-content: space-between;
-  padding: 5px 0;
-  border-bottom: 1px solid #eee;
+  padding: 10px 0;
+  border-bottom: 1px solid #ddd;
 }
 
-.product-item span:first-child {
-  font-weight: bold;
+.product-item span {
+  flex: 1;
+  text-align: left;
 }
+
+.product-item-price {
+  text-align: right;
+}
+
 
 
 .invoice-container {
@@ -98,6 +103,7 @@
   color: white;
   border: none;
   cursor: pointer;
+  border-radius: 5px;
 }
 
 .view-invoice-btn:hover {

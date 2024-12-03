@@ -63,37 +63,35 @@ const UnifiedPurchasePage = () => {
 
     const handleAddressChange = (e, regex) => {
         const { name, value } = e.target;
-
-        if (regex && !regex.test(value)) {
-            return; // Prevent invalid input
+    
+        // Allow empty input or match regex
+        if (regex && value && !regex.test(value)) {
+            return; // Reject invalid input
         }
-
+    
         setShippingAddr({
             ...shippingAddr,
             [name]: value,
         });
     };
+    
 
     const handlePaymentChange = (e) => {
         const { name, value } = e.target;
-
+    
+        // Field-specific validation
         if (name === 'exprDate') {
-            // Allow only MM/YY format
-            const isValid = /^(\d{0,2})\/?(\d{0,2})$/.test(value);
-            if (!isValid) return;
+            if (!/^(\d{0,2})\/?(\d{0,2})$/.test(value)) return;
+        } else if (name === 'cvv') {
+            if (!/^\d{0,3}$/.test(value)) return;
         }
-
-        if (name === 'cvv') {
-            // Allow only 3-digit numbers
-            const isValid = /^\d{0,3}$/.test(value);
-            if (!isValid) return;
-        }
-
+    
         setCardInfo({
             ...cardInfo,
             [name]: value,
         });
     };
+    
 
     const toggleSection = (section) => {
         if (section === 'address-section') {
@@ -102,62 +100,68 @@ const UnifiedPurchasePage = () => {
             setShowPayment(!showPayment);
         }
     };
-
     const handleCompletePayment = async () => {
         const userId = localStorage.getItem("user");
         if (!userId) {
             alert("You must be logged in to complete the purchase.");
             return;
         }
-
+    
+        // Validate address
         const isAddressValid =
-            shippingAddr.fullName !== '' &&
-            shippingAddr.phoneNum !== '' &&
-            shippingAddr.address !== '' &&
-            shippingAddr.country !== '' &&
-            shippingAddr.postalCode !== '';
-
+            shippingAddr.fullName.trim().length > 0 &&
+            /^\d{10,15}$/.test(shippingAddr.phoneNum) && // Accept 10-15 digit phone numbers
+            shippingAddr.address.trim().length > 0 &&
+            shippingAddr.country.trim().length > 0 &&
+            shippingAddr.postalCode.trim().length > 0;
+    
+        // Validate payment
         const isPaymentValid =
-            cardInfo.cardName !== '' &&
-            cardInfo.cardNum !== '' &&
-            /^\d{2}\/\d{2}$/.test(cardInfo.exprDate) && // Validate MM/YY format
-            /^\d{3}$/.test(cardInfo.cvv); // Validate 3-digit CVV
-
+            cardInfo.cardName.trim().length > 0 &&
+            /^\d{16}$/.test(cardInfo.cardNum) && // Accept exactly 16 digits for card number
+            /^\d{2}\/\d{2}$/.test(cardInfo.exprDate) && // Match MM/YY format
+            /^\d{3}$/.test(cardInfo.cvv); // Match 3-digit CVV
+    
         if (!isAddressValid || !isPaymentValid) {
-            alert('Please complete both Address and Payment Information before proceeding.');
+            alert("Please complete all required fields in Address and Payment Information.");
             return;
         }
-
+    
         setShowModal(true);
         setModalMessage("Processing order...");
         setIsProcessing(true);
-
+    
         try {
             for (const item of cartItems) {
+                // Add item to purchase history
                 await axios.post("/api/purchases/add", {
                     userId,
                     productId: item.productId,
                     quantity: item.quantity,
                 });
-
-                await axios.post("/api/processing/order", {
+    
+                // Confirm payment and send shipping address
+                await axios.post("/api/purchases/confirm-payment", {
                     userId,
                     productId: item.productId,
                     quantity: item.quantity,
+                    shippingAddress: shippingAddr, // Pass the address to the server
                 });
             }
-
+    
             setModalMessage("Payment completed successfully.");
             setTimeout(() => {
-                navigate('/track');
+                navigate("/track");
             }, 3000);
         } catch (error) {
-            console.error("Error during payment processing:", error);
+            console.error("Error during payment processing:", error.response || error);
             setModalMessage("Error during payment processing.");
         } finally {
             setIsProcessing(false);
         }
     };
+    
+    
 
     return (
         <div className="container">

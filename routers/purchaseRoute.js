@@ -85,7 +85,6 @@ const generateInvoicePDF = (purchase, product, user) => {
 };
 
 
-
 router.post('/add', async (req, res) => {
     const { userId, sessionId, productId, quantity } = req.body;
     console.log('Adding purchase with userId:', userId, 'productId:', productId, 'quantity:', quantity);
@@ -95,19 +94,19 @@ router.post('/add', async (req, res) => {
             return res.status(400).json({ error: 'userId or sessionId is required.' });
         }
 
-        // Correctly find user by userId as a string
+        // Find user
         const user = userId ? await User.findOne({ userId }) : null;
         if (userId && !user) {
             return res.status(404).json({ error: 'User not found.' });
         }
 
-        // Find product by productId
+        // Find product
         const product = await Product.findOne({ productId });
         if (!product) {
             return res.status(404).json({ error: 'Product not found.' });
         }
 
-        // Check stock availability
+        // Check stock
         if (product.quantityInStock < quantity) {
             return res.status(400).json({ error: 'Not enough items in stock.' });
         }
@@ -117,29 +116,67 @@ router.post('/add', async (req, res) => {
         await product.save();
 
         // Save purchase history
-        const purchase = await PurchaseHistory.create({
+        const purchase = new PurchaseHistory({
             user: userId || null,
-            sessionId: sessionId || null,
             product: productId,
             quantity,
         });
 
-        // Generate invoice as a PDF
-        const invoicePath = generateInvoicePDF(purchase, product, user);
+        // Generate invoice as PDF and save it as binary in DB
+        const pdfDoc = new pdf();
+        const invoiceChunks = [];
+        pdfDoc.on('data', (chunk) => invoiceChunks.push(chunk));
+        pdfDoc.on('end', async () => {
+            const invoiceBuffer = Buffer.concat(invoiceChunks);
+            purchase.invoice = invoiceBuffer;
+            purchase.invoiceContentType = 'application/pdf';
+            await purchase.save(); // Save the purchase with the invoice in DB
 
-        // Send email with invoice if user exists
-        if (user && user.email) {
-            const emailContent = `
-                <h1>Order Confirmation</h1>
-                <p>Dear ${user.name || 'Customer'},</p>
-                <p>Thank you for your purchase! Please find your invoice attached.</p>
-                <p>We are processing your order and will update you once it's shipped.</p>
-                <p>Thank you for shopping with us!</p>
-            `;
-            await sendEmailWithInvoice(user.email, 'Your Order Invoice', emailContent, invoicePath);
-        }
+            // Send invoice email if user exists
+            if (user && user.email) {
+                const emailContent = `
+                    <h1>Order Confirmation</h1>
+                    <p>Dear ${user.name || 'Customer'},</p>
+                    <p>Thank you for your purchase! Please find your invoice attached.</p>
+                    <p>Thank you for shopping with us!</p>
+                `;
+                try {
+                    await transporter.sendMail({
+                        from: `"N308" <${process.env.EMAIL_USER}>`,
+                        to: user.email,
+                        subject: 'Your Order Invoice',
+                        html: emailContent,
+                        attachments: [
+                            {
+                                filename: 'Invoice.pdf',
+                                content: invoiceBuffer,
+                            },
+                        ],
+                    });
+                } catch (error) {
+                    console.error('Error sending email:', error);
+                }
+            }
 
-        res.status(201).json({ message: 'Purchase added successfully. Invoice sent to email.', purchase });
+            res.status(201).json({ message: 'Purchase completed successfully.', purchase });
+        });
+
+        // Add content to the PDF document
+        pdfDoc.fontSize(20).text('Invoice', { align: 'center' });
+        pdfDoc.moveDown();
+        pdfDoc.fontSize(12).text(`Invoice ID: ${purchase._id}`);
+        pdfDoc.text(`Date: ${new Date().toLocaleDateString()}`);
+        pdfDoc.moveDown();
+        pdfDoc.text(`Customer: ${user ? user.name : 'Guest'}`);
+        pdfDoc.text(`Email: ${user ? user.email : 'N/A'}`);
+        pdfDoc.moveDown();
+        pdfDoc.text(`Product: ${product.name}`);
+        pdfDoc.text(`Quantity: ${purchase.quantity}`);
+        pdfDoc.text(`Price per unit: $${product.price.toFixed(2)}`);
+        pdfDoc.text(`Total: $${(product.price * purchase.quantity).toFixed(2)}`);
+        pdfDoc.moveDown();
+        pdfDoc.text('Thank you for your purchase!', { align: 'center' });
+        pdfDoc.end();
     } catch (error) {
         console.error('Error adding purchase:', error);
         res.status(500).json({ error: 'An error occurred while adding the purchase.' });

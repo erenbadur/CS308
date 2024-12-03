@@ -263,34 +263,47 @@ const MainPage = () => {
         const userId = localStorage.getItem('user'); // Optional
     
         try {
-            if (cartItem.quantity === 1) {
-                setStockWarnings((prev) => ({
-                    ...prev,
-                    [cartItem.productId]: '', // Clear warning if decreasing below 1
-                }));
-                return;
-            }
+            const newQuantity = cartItem.quantity - 1;
     
-            const response = await axios.put('/api/cart/update', {
-                sessionId,
-                userId,
-                productId: cartItem.productId,
-                quantity: cartItem.quantity - 1, // Decrement quantity
-            });
+            if (newQuantity > 0) {
+                // Decrease quantity by 1
+                const response = await axios.put('/api/cart/update', {
+                    sessionId,
+                    userId,
+                    productId: cartItem.productId,
+                    quantity: newQuantity,
+                });
     
-            if (response.status === 200) {
-                setCartItems(response.data.cart.items); // Update the cart state
-                setStockWarnings((prev) => ({
-                    ...prev,
-                    [cartItem.productId]: '', // Clear warning after successful update
-                }));
+                if (response.status === 200) {
+                    setCartItems(response.data.cart.items); // Update the cart state
+                } else {
+                    console.error('Error updating cart:', response.data.error);
+                }
             } else {
-                console.error('Error updating cart:', response.data.error);
+                // Quantity is now 0, remove the item from the cart
+                // Optionally, confirm with the user
+                const confirmRemove = window.confirm('Do you want to remove this item from your cart?');
+                if (!confirmRemove) return;
+    
+                const response = await axios.put('/api/cart/update', {
+                    sessionId,
+                    userId,
+                    productId: cartItem.productId,
+                    quantity: 0, // Setting quantity to 0 to remove the item
+                });
+    
+                if (response.status === 200) {
+                    setCartItems(response.data.cart.items); // Update the cart state
+                } else {
+                    console.error('Error removing item from cart:', response.data.error);
+                }
             }
         } catch (error) {
             console.error('Error in handleDecreaseQuantity:', error.response?.data || error.message);
         }
     };
+    
+    
     
     const handleCheckout = () => {
         const user = localStorage.getItem('user'); // Check if the user is logged in
@@ -730,7 +743,6 @@ const MainPage = () => {
             <button
                 onClick={() => handleDecreaseQuantity(index)}
                 className="quantity-btn"
-                disabled={item.quantity <= 1}
             >
                 -
             </button>
@@ -814,22 +826,18 @@ const MainPage = () => {
                                         <span>{'⭐️'.repeat(Math.round(product.averageRating || 0))}</span>
                                     </div>
                                     <button
-    className={`add-to-cart-button ${product.quantityInStock === 0 ? 'disabled' : ''}`}
+    className={`add-to-cart-button ${product.quantityInStock === 0 ? 'out-of-stock' : ''}`}
     onClick={(e) => {
         e.stopPropagation(); // Prevent triggering product click
         if (product.quantityInStock > 0) {
-            handleAddToCart(product); // Call only if stock > 0
+            handleAddToCart(product);
         }
     }}
-    disabled={product.quantityInStock === 0} // Properly disable the button
-    style={{
-        pointerEvents: product.quantityInStock === 0 ? 'none' : 'auto', // Prevent any interaction if out of stock
-        backgroundColor: product.quantityInStock === 0 ? 'gray' : 'orange',
-        cursor: product.quantityInStock === 0 ? 'not-allowed' : 'pointer',
-    }}
+    disabled={product.quantityInStock === 0}
 >
     {product.quantityInStock === 0 ? 'Out of Stock' : 'Add to Cart'}
 </button>
+
 
 
 

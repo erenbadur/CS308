@@ -6,14 +6,11 @@ const User = require('../models/user');
 const { v4: uuidv4 } = require('uuid'); // Import UUID generator
 
 async function getOrCreateCart(req, res, next) {
-    //console.log("here req start -------------------");
-    //console.log(req.body);
-    let { sessionId, userId } =  req.body || req.query; 
-    console.log("here is your session id:", sessionId);
+    let { userId, sessionId } = req.body || req.query;
+
     // Generate a `sessionId` if it is missing
-    if (!sessionId && !userId){
-        //sessionId = uuidv4();
-        return res.status(400).json({ error: 'Either sessionId or userId must be provided.' });
+    if (!sessionId && !userId) {
+        sessionId = uuidv4();
     }
 
     try {
@@ -35,8 +32,10 @@ async function getOrCreateCart(req, res, next) {
 router.post('/add', async (req, res) => {
     const { productId, quantity, sessionId, userId } = req.body;
 
-    if (!sessionId) {
-        return res.status(400).json({ error: 'Session ID is required.' });
+    console.log('Adding to cart:', { productId, quantity, sessionId, userId });
+
+    if (!sessionId && !userId) {
+        return res.status(400).json({ error: 'Session ID or User ID is required.' });
     }
 
     try {
@@ -47,9 +46,7 @@ router.post('/add', async (req, res) => {
         }
 
         if (userId && !cart.userId) {
-            //console.log(cart.userId,userId);
-            cart.userId = userId; // If user has logged in, connect the userID to them
-            //console.log(cart.userId,userId);
+            cart.userId = userId; // Assign userId to the cart
         }
 
         // Check if the product exists
@@ -58,13 +55,15 @@ router.post('/add', async (req, res) => {
             return res.status(404).json({ error: `Product with ID ${productId} not found.` });
         }
 
+        if (product.quantityInStock === 0) {
+            return res.status(400).json({ error: `Product ${product.name} is out of stock.` });
+        }
+
         // Check if the product is already in the cart
         const existingItem = cart.items.find((item) => item.productId === productId);
-
         if (existingItem) {
-            existingItem.quantity += quantity; // Update the quantity
+            existingItem.quantity += quantity; // Update quantity
         } else {
-            // Add a new item to the cart
             cart.items.push({ productId, quantity });
         }
 
@@ -74,12 +73,12 @@ router.post('/add', async (req, res) => {
         const productIds = cart.items.map((item) => item.productId);
         const products = await Product.find({ productId: { $in: productIds } });
 
+        // Populate cart items with product details
         const productMap = products.reduce((map, product) => {
             map[product.productId] = product;
             return map;
         }, {});
 
-        // Populate cart items with product details
         const populatedItems = cart.items.map((item) => {
             const product = productMap[item.productId];
             return {
@@ -99,34 +98,35 @@ router.post('/add', async (req, res) => {
 
 
 router.get('/get', async (req, res) => {
-    const { sessionId, userId } = req.query; // Get sessionId and userId from query parameters
+    const { userId, sessionId } = req.query;
 
-    console.log("Fetching cart with:", { sessionId, userId }); // Debug log
+    console.log('Fetching cart with:', { userId, sessionId });
 
-    // If neither sessionId nor userId is provided, return an error
     if (!sessionId && !userId) {
-        return res.status(400).json({ error: 'Either sessionId or userId must be provided.' });
+        return res.status(400).json({ error: 'Session ID or User ID is required.' });
     }
 
     try {
-        // Find the cart based on sessionId or userId
-        let cart = await Cart.findOne({ $or: [{ userId }, { sessionId }] });
+        // Find the cart based on userId or sessionId
+        const cart = userId
+            ? await Cart.findOne({ userId })
+            : await Cart.findOne({ sessionId });
 
         if (!cart) {
-            // Create a new cart if it doesn't exist
-            cart = await Cart.create({ userId: userId || null, sessionId, items: [] });
+            console.warn('Cart not found for:', { userId, sessionId });
+            return res.status(404).json({ error: 'Cart not found.' });
         }
 
         // Fetch and populate product details for cart items
         const productIds = cart.items.map((item) => item.productId);
         const products = await Product.find({ productId: { $in: productIds } }); // Retrieve product details
 
+        // Map product details to cart items
         const productMap = products.reduce((map, product) => {
             map[product.productId] = product; // Create a mapping for easy lookup
             return map;
         }, {});
 
-        // Map cart items with their product details
         const populatedItems = cart.items.map((item) => {
             const product = productMap[item.productId];
             return {
@@ -147,8 +147,6 @@ router.get('/get', async (req, res) => {
         res.status(500).json({ error: 'Error retrieving cart.' });
     }
 });
-
-
 
 
 
@@ -175,7 +173,6 @@ router.put('/update', getOrCreateCart, async (req, res) => {
 
         await cart.save();
 
-
         const populatedItems = await Promise.all(
             cart.items.map(async (item) => {
                 const product = await Product.findOne({ productId: item.productId });
@@ -201,32 +198,37 @@ router.put('/update', getOrCreateCart, async (req, res) => {
 router.delete('/clear', async (req, res) => {
     const { sessionId, userId } = req.body;
 
+    console.log('Clear cart request received:', { sessionId, userId });
 
-// Clear the cart
-router.delete('/clear', async (req, res) => {
-    const { sessionId, userId } = req.body;
-
-    if (!sessionId) {
-        return res.status(400).json({ error: 'Session ID is required.' });
+    if (!sessionId && !userId) {
+        return res.status(400).json({ error: 'Session ID or User ID is required.' });
     }
 
     try {
-        const cart = await Cart.findOne({ sessionId });
+        // Find the cart using sessionId or userId
+        const cart = userId
+            ? await Cart.findOne({ userId })
+            : await Cart.findOne({ sessionId });
 
         if (!cart) {
+            console.warn('Cart not found for:', { sessionId, userId });
             return res.status(404).json({ error: 'Cart not found.' });
         }
 
-        // Clear the cart items
+        // Clear the items in the cart
         cart.items = [];
         await cart.save();
+
+        console.log('Cart cleared successfully:', { sessionId, userId });
 
         res.status(200).json({ message: 'Cart cleared successfully.' });
     } catch (error) {
         console.error('Error clearing cart:', error);
-        res.status(500).json({ error: 'An error occurred while clearing the cart.' });
+        res.status(500).json({ error: 'Internal server error.' });
     }
 });
+
+
 
 
 

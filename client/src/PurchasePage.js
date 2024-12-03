@@ -106,7 +106,6 @@ const UnifiedPurchasePage = () => {
     };
 
 
-    const [cartItems, setCartItems] = useState([]);
     const [error, setError] = useState(null);
 
     // fetch cart

@@ -164,10 +164,12 @@ router.put('/update', getOrCreateCart, async (req, res) => {
         }
 
         if (quantity === 0) {
+            console.log(`Removing item from cart, but NOT from database: ${productId}`);
             cart.items = cart.items.filter((item) => item.productId !== productId);
         } else {
             item.quantity = quantity;
         }
+        
 
         console.log('Updated Cart Items:', cart.items); // Debug log
 

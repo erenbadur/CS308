@@ -13,13 +13,14 @@ const searchBar = require('./searchBar');
 const createProduct = require('./createProduct');
 const cart = require('./cart');
 const track = require('./track');
+const productManagerRoutes = require('./productManager');
 
 // Models (all in the `models` folder, one level up)
 const Cart = require('../models/cartModel');
 const User = require('../models/user');
 const Product = require('../models/product');
 const Order = require('../models/order');
-
+const Delivery = require('../models/delivery');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -43,7 +44,8 @@ app.use('/api/createUser', createUser);
 app.use('/api/searchBar', searchBar);
 app.use('/api/cart', cart);
 app.use('/api/processing', orderProcessingRoute);
-app.use('api/track', track)
+app.use('/api/track', track)
+app.use('/api/manager', productManagerRoutes);
 
 // Start Server
 app.listen(PORT, () => {

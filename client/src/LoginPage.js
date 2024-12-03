@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 const LoginPage = () => {
   const [username, setUsername] = useState(''); // Use username instead of email
   const [password, setPassword] = useState('');
+  const sessionId = localStorage.getItem('sessionId');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -28,7 +29,7 @@ const LoginPage = () => {
       const response = await fetch('/api/auth/login', { // Updated URL
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }), // Send username and password
+        body: JSON.stringify({ username, password, sessionId }), // Send username and password
       });
   
       const data = await response.json();

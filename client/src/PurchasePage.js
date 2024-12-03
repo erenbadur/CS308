@@ -1,5 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+
 import logo from './logo.png';
 import './PurchasePage.css';
 import axios from 'axios';
@@ -103,62 +105,94 @@ const UnifiedPurchasePage = () => {
         }
     };
 
+
+    const [cartItems, setCartItems] = useState([]);
+    const [error, setError] = useState(null);
+
+    // fetch cart
+    useEffect(() => {
+        const fetchCart = async () => {
+            try {
+                // Get sessionId and userId (from localStorage or other state)
+                const sessionId = localStorage.getItem('sessionId');
+                const userId = localStorage.getItem('user');
+                console.log('here is the userId from  localStorage:', userId);
+
+                // Fetch cart data from backend
+                const { data } = await axios.get('/api/cart/get', {
+                    params: { sessionId, userId },
+                });
+
+                setCartItems(data.items);
+            } catch (err) {
+                setError('Failed to fetch cart. Please try again later.');
+                console.error('Error fetching cart:', err);
+            }
+        };
+
+        fetchCart();
+    }, []);
+
+    const calculateTotal = () => {
+        return cartItems.reduce((total, item) => total + item.quantity * item.price, 0).toFixed(2);
+    };
+
     const handleCompletePayment = async () => {
-        const userId = localStorage.getItem("user");
-        if (!userId) {
-            alert("You must be logged in to complete the purchase.");
-            return;
-        }
-
-        const isAddressValid =
-            shippingAddr.fullName !== '' &&
-            shippingAddr.phoneNum !== '' &&
-            shippingAddr.address !== '' &&
-            shippingAddr.country !== '' &&
+        // Check if Address Info contains any "" values
+        const isAddressValid = 
+            shippingAddr.fullName !== '' && 
+            shippingAddr.phoneNum !== '' && 
+            shippingAddr.address !== '' && 
+            shippingAddr.country !== '' && 
             shippingAddr.postalCode !== '';
-
-        const isPaymentValid =
-            cardInfo.cardName !== '' &&
-            cardInfo.cardNum !== '' &&
-            /^\d{2}\/\d{2}$/.test(cardInfo.exprDate) && // Validate MM/YY format
-            /^\d{3}$/.test(cardInfo.cvv); // Validate 3-digit CVV
+    
+        // Check if Payment Info contains any "" values
+        const isPaymentValid = 
+            cardInfo.cardName !== '' && 
+            cardInfo.cardNum !== '' && 
+            cardInfo.exprDate !== '' && 
+            cardInfo.cvv !== '';
+    
+        // Only proceed if both Address Info and Payment Info are valid
 
         if (!isAddressValid || !isPaymentValid) {
             alert('Please complete both Address and Payment Information before proceeding.');
             return;
         }
 
-        setShowModal(true);
-        setModalMessage("Processing order...");
-        setIsProcessing(true);
-
+    
         try {
-            for (const item of cartItems) {
-                await axios.post("/api/purchases/add", {
-                    userId,
-                    productId: item.productId,
-                    quantity: item.quantity,
-                });
-
+            // Process payment for cartItems
                 await axios.post("/api/processing/order", {
-                    userId,
-                    productId: item.productId,
-                    quantity: item.quantity,
+                    userId: localStorage.getItem("user"),
+                    products: cartItems
                 });
-            }
-
-            setModalMessage("Payment completed successfully.");
-            setTimeout(() => {
-                navigate('/track');
-            }, 3000);
+            
+            // Clear the cart after successful payment processing
+            await clearCart();
+    
+            // After successful processing, print payment completed message
+            alert('Payment completed!');
+            navigate('/track'); // Navigate to the Track page
         } catch (error) {
             console.error("Error during payment processing:", error);
-            setModalMessage("Error during payment processing.");
-        } finally {
-            setIsProcessing(false);
+            alert('Error during payment processing. Please try again.');
         }
     };
 
+    const clearCart = async () => {
+        const sessionId = localStorage.getItem("sessionId"); 
+        const userId = localStorage.getItem('user');
+        try {
+            const response = await axios.delete("/api/cart/clear", {
+                data: { sessionId, userId },  // Pass the data in the request body
+            });
+            console.log("Cart cleared:", response.data);
+        } catch (error) {
+            console.error("Error clearing cart:", error.response ? error.response.data : error);
+        }
+    };
+    
     return (
         <div className="container">
             {/* Header Section */}
@@ -283,19 +317,30 @@ const UnifiedPurchasePage = () => {
 
             {/* Order Summary Section */}
             <div className="side">
-                <h2>Order Summary</h2>
-                <div className="section-content">
+                <div className="order-summary-container">
+                    <h2>Order Summary</h2>
                     {cartItems.map((item) => (
-                        <div key={item.productId}>
-                            <p>{item.name}</p>
-                            <p>{item.quantity} x ${(item.price).toFixed(2)}</p>
+                        <div key={item.productId} className="product-summary">
+                            <span>{item.name} × {item.quantity}</span>
+                            <span>${(item.price * item.quantity).toFixed(2)}</span>
                         </div>
                     ))}
-                    <p>Product Total: ${productTotal}</p>
-                    <p>Shipping Fee: ${shippingFee}</p>
-                    <h4>Order Total: ${orderTotal}</h4>
+                    <div>
+                        <span>Product Total:</span>
+                        <span>${calculateTotal()}</span>
+                    </div>
+                    <div>
+                        <span>Shipping Fee:</span>
+                        <span>$20.00</span>
+                    </div>
+                    <div style={{ fontSize: "1.5rem", fontWeight: "bold" }}>
+                        <span>Order Total:</span>
+                        <span>${(parseFloat(calculateTotal()) + 20).toFixed(2)}</span>
+                    </div>
+
                 </div>
             </div>
+
 
             {/* Complete Payment Button */}
             <div className="complete-payment">

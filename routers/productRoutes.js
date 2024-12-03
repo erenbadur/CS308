@@ -167,41 +167,48 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Sorting products by price or popularity
 router.get('/sort', async (req, res) => {
-    const { sortBy = 'price', order = 'asc', page = 1, limit = 9 } = req.query;
+    const { sortBy = 'price', order = 'asc', page = 1, limit = 9, category, term } = req.query;
 
-    const validSortFields = ['price', 'popularity', 'averageRating'];
-    if (!validSortFields.includes(sortBy)) {
-        return res.status(400).json({ error: 'Invalid sort field.' });
-    }
+    const sortOrder = order === 'asc' ? 1 : -1; // Determine sort order
+    const skip = (parseInt(page) - 1) * parseInt(limit); // Calculate the number of documents to skip
 
     try {
-        const sortOrder = order === 'asc' ? 1 : -1;
-        const skip = (parseInt(page) - 1) * parseInt(limit);
+        // Build the query object
+        const query = {};
+        if (category) query.category = category; // Filter by category if provided
+        if (term) {
+            query.$or = [
+                { name: { $regex: term, $options: 'i' } }, // Match term in name
+                { description: { $regex: term, $options: 'i' } }, // Match term in description
+            ];
+        }
 
-        const products = await Product.find({})
+        // Fetch sorted and paginated products
+        const products = await Product.find(query)
             .sort({ [sortBy]: sortOrder })
             .skip(skip)
             .limit(parseInt(limit));
 
-        const totalProducts = await Product.countDocuments();
+        const totalProducts = await Product.countDocuments(query); // Total filtered products
 
         const pagination = {
             currentPage: parseInt(page),
             totalPages: Math.ceil(totalProducts / parseInt(limit)),
             pageSize: parseInt(limit),
-            totalProducts: totalProducts,
+            totalProducts,
             hasPrevPage: parseInt(page) > 1,
             hasNextPage: parseInt(page) < Math.ceil(totalProducts / parseInt(limit)),
         };
 
         res.status(200).json({ products, pagination });
     } catch (error) {
-        console.error('Error sorting products:', error);
+        console.error('Error during sorting:', error);
         res.status(500).json({ error: 'Sorting failed.' });
     }
 });
+
+
 
 router.get('/:productId', async (req, res) => {
     const { productId } = req.params;

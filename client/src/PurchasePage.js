@@ -143,10 +143,13 @@ const UnifiedPurchasePage = () => {
                 // Confirm payment and send shipping address
                 await axios.post("/api/purchases/confirm-payment", {
                     userId,
-                    productId: item.productId,
-                    quantity: item.quantity,
+                    products: cartItems.map((item) => ({
+                        productId: item.productId,
+                        quantity: item.quantity, // This is inside the map and works properly
+                    })),
                     shippingAddress: shippingAddr, // Pass the address to the server
                 });
+                
             }
     
             setModalMessage("Payment completed successfully.");

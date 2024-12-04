@@ -5,99 +5,74 @@ const PurchaseHistory = require('../models/PurchaseHistory');
 const User = require('../models/user'); // Import Product model
 // Middleware to check if the user purchased the product
 const canCommentOrRate = async (req, res, next) => {
-  const { userId } = req.body; // Extract userId from the request body
-  const { productId } = req.params; // Extract productId from the URL
+    const { userId } = req.body;
+    const { productId } = req.params;
 
-  console.log('Validating userId:', userId);
-  console.log('Validating productId:', productId);
+    if (!userId || !productId) {
+        return res.status(400).json({ error: 'User ID and Product ID are required.' });
+    }
 
-  try {
-      // Use the custom productId and userId for the query
-      const purchase = await PurchaseHistory.findOne({ user: userId, product: productId });
-      if (!purchase) {
-          return res.status(403).json({ error: 'You can only comment or rate products you have purchased.' });
-      }
-      next();
-  } catch (error) {
-      console.error('Error during validation:', error);
-      res.status(500).json({ error: 'An error occurred during validation.' });
-  }
+    try {
+        const purchase = await PurchaseHistory.findOne({ user: userId, product: productId });
+        if (!purchase) {
+            return res.status(403).json({ error: 'You can only comment or rate products you have purchased.' });
+        }
+        next();
+    } catch (error) {
+        console.error('Error during validation:', error);
+        res.status(500).json({ error: 'An error occurred during validation.' });
+    }
 };
 
+
 // Add a comment to a product
-router.post('/:productId/comment', canCommentOrRate, async (req, res) => {
+router.post('/:productId/comment', async (req, res) => {
+// Submit a rating or a comment for a product
     const { productId } = req.params;
-    const { userId, content } = req.body;
+    const { userId, rating, content } = req.body;
 
     try {
+        // Validate rating
+        if (!rating || rating < 1 || rating > 5) {
+            return res.status(400).json({ error: 'A valid rating (1-5) is required.' });
+        }
+
+        // Validate content length (if provided)
+        if (content && content.length > 500) {
+            return res.status(400).json({ error: 'Comment content exceeds the maximum length of 500 characters.' });
+        }
+
         // Find the product
         const product = await Product.findOne({ productId });
-        if (!product) return res.status(404).json({ error: 'Product not found.' });
+        if (!product) {
+            return res.status(404).json({ error: 'Product not found.' });
+        }
 
-        // Fetch the username from the User model
-        const user = await user.findOne( { userId });
-        const username = user?.username || 'Anonymous'; // Fallback to "Anonymous" if user not found
+        // Add the rating to the product
+        product.ratings.push({ user: userId, rating });
 
-        // Add the comment with username and timestamp
-        product.comments.push({
-            user: userId,
-            username: username || 'Anonymous', // Use provided username or default to Anonymous
-            content,
-            createdAt: new Date(), // Add current timestamp
-        });
+        // Only add a comment if content is provided
+        if (content) {
+            product.comments.push({
+                user: userId,
+                content,
+                approved: false, // Default to false; needs admin approval
+            });
+        }
+
+        // Save the updated product
         await product.save();
 
-        res.status(201).json({ message: 'Comment added successfully.' });
+        res.status(201).json({ message: 'Rating and/or comment submitted successfully.' });
     } catch (error) {
-        console.error('Error adding comment:', error);
-        res.status(500).json({ error: 'An error occurred while adding the comment.' });
+        console.error('Error submitting rating/comment:', error);
+        res.status(500).json({ error: 'An error occurred while submitting your rating/comment.' });
     }
 });
 
 
-router.get('/:productId/comments', async (req, res) => {
-    const { productId } = req.params;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 5; // Default to 5 comments per page
 
-    try {
-        // Find product and validate existence
-        const product = await Product.findOne({ productId });
-        if (!product) return res.status(404).json({ error: 'Product not found.' });
-
-        // Paginate comments
-        const startIndex = (page - 1) * limit;
-        const endIndex = page * limit;
-        const totalComments = product.comments.length;
-
-        const paginatedComments = product.comments.slice(startIndex, endIndex);
-
-        // Enrich comments with username and format response
-        const comments = await Promise.all(
-            paginatedComments.map(async (comment) => {
-                const user = await User.findOne({ userId: comment.user }); // Fetch username using userId
-
-              return {
-                username: user?.username || 'Anonymous',
-                content: comment.content,
-                date: comment.createdAt || new Date(),
-              };
-            })
-          );
-      
-        res.status(200).json({
-            comments,
-            pagination: {
-                currentPage: page,
-                totalPages: Math.ceil(totalComments / limit),
-                totalComments,
-            },
-        });
-    } catch (error) {
-        console.error('Error fetching comments:', error);
-        res.status(500).json({ error: 'An error occurred while fetching comments.' });
-    }
-});
+    
 
 
 router.post('/:productId/rate', canCommentOrRate, async (req, res) => {
@@ -208,6 +183,36 @@ router.get('/sort', async (req, res) => {
     }
 });
 
+router.get('/:productId/comments', async (req, res) => {
+    const { productId } = req.params;
+
+    try {
+        const product = await Product.findOne({ productId });
+        if (!product) {
+            return res.status(404).json({ error: 'Product not found.' });
+        }
+
+        // Filter approved comments
+        const approvedComments = product.comments.filter(comment => comment.approved);
+
+        // Fetch user details for each comment
+        const commentsWithUsernames = await Promise.all(
+            approvedComments.map(async (comment) => {
+                const user = await User.findOne({ userId: comment.user }); // Fetch user details
+                return {
+                    ...comment.toObject(),
+                    username: user ? user.name : 'Anonymous',
+                    createdAt: comment.createdAt, // Already available in the schema
+                };
+            })
+        );
+
+        res.status(200).json({ comments: commentsWithUsernames });
+    } catch (error) {
+        console.error('Error fetching comments:', error);
+        res.status(500).json({ error: 'An error occurred while fetching comments.' });
+    }
+});
 
 
 router.get('/:productId', async (req, res) => {

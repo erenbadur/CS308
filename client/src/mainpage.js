@@ -76,6 +76,9 @@ const MainPage = () => {
         };
     }, [currentPage, activeCategory, isLoggedIn]);
     
+
+
+    
     const fetchProducts = async (page = currentPage) => {
         try {
             const params = {
@@ -394,42 +397,31 @@ const MainPage = () => {
 
       
 
-
-      const handleProductClick = async (product) => {
+    const handleProductClick = async (product) => {
         setSelectedProduct(product);
-
-        const userId = localStorage.getItem('user'); // Get logged-in user ID
+    
         if (userId) {
             try {
-                const response = await axios.get('/api/purchases/orders', {
-                    params: {
-                        userId,
-                        productId: product.productId,
-                    },
-                });
-                console.log(response.data); // Log the response
-
-                setHasPurchased(response.data.hasPurchased || false); // Ensure hasPurchased is always a boolean
-            console.log('Has Purchased:', response.data.hasPurchased);
-
+                const response = await axios.get(`/api/purchases/${userId}/${product.productId}`);
+                setHasPurchased(response.data.hasPurchased);
             } catch (error) {
-                console.error('Error checking purchase history:', error.response?.data || error.message);
+                console.error('Error checking purchase status:', error.response?.data || error.message);
+                setHasPurchased(false);
             }
         } else {
-            setHasPurchased(false); // User not logged in
+            setHasPurchased(false);
         }
-        
-
+    
         // Fetch comments for the product
-        fetchComments(product.productId, 1); // Fetch first page of comments
-        
+        fetchComments(product.productId, 1);
     };
-    const fetchComments = async (productId, page) => {
+    
+    const fetchComments = async (productId, page = 1) => {
         try {
             const response = await axios.get(`/api/products/${productId}/comments`, {
                 params: { page },
             });
-            console.log('Fetching comments for productId:', productId, 'on page:', page);
+    
             setComments(response.data.comments);
             setCommentsPage(response.data.pagination.currentPage);
             setCommentsTotalPages(response.data.pagination.totalPages);
@@ -437,12 +429,15 @@ const MainPage = () => {
             console.error('Error fetching comments:', error.response?.data || error.message);
         }
     };
+    
 
     const handlePrevCommentsPage = () => {
         if (commentsPage > 1) {
             fetchComments(selectedProduct.productId, commentsPage - 1);
         }
     };
+
+    
 
     const handleNextCommentsPage = () => {
         if (commentsPage < commentsTotalPages) {
@@ -453,59 +448,44 @@ const MainPage = () => {
     const handleAddCommentClick = () => {
         setIsAddingComment(true);
     };
+// Handles the submission of a comment or rating
+const handleSubmitComment = async () => {
+    if (!newRating) {
+        alert('You must provide a rating to submit a comment.');
+        return;
+    }
 
-    const handleSubmitComment = async () => {
-        if (!newRating && !newComment.trim()) {
-            alert('You must enter a rating or a comment');
-            return;
-        }
+    if (!userId) {
+        alert('You must be logged in to submit a comment or rating.');
+        return;
+    }
 
-        if (!userId) {
-            alert('You must be logged in to submit a comment');
-            return;
-        }
+    const productId = selectedProduct.productId;
 
-        const productId = selectedProduct.productId;
-        console.log('Current userId:', userId);
-        const username = localStorage.getItem('username') || 'Anonymous'; // Fetch username from storage or use default
+    try {
+        await axios.post(`/api/products/${productId}/comment`, {
+            userId,
+            content: newComment.trim() || null, // Allow empty comment
+            rating: parseFloat(newRating),
+        });
 
-        try {
-            // If rating is given, submit rating
-            if (newRating) {
-                const ratingResponse = await axios.post(`/api/products/${productId}/rate`, {
-                    userId,
-                    username,
-                    rating: parseFloat(newRating),
-                });
-                console.log('Rating submitted:', ratingResponse.data);
-            }
+        alert('Your comment/rating has been submitted and is awaiting approval.');
 
-            // If comment is given, submit comment
-            if (newComment.trim()) {
-                const commentResponse = await axios.post(`/api/products/${productId}/comment`, {
-                    userId,
-                    content: newComment.trim(),
-                });
-                console.log('Comment submitted:', commentResponse.data);
-            }
+        // Clear the form
+        setNewRating('');
+        setNewComment('');
+        setIsAddingComment(false);
 
-            // After submission, reset form and go back to product page
-            setNewRating('');
-            setNewComment('');
-            setIsAddingComment(false);
+        // Optionally refresh approved comments
+        fetchComments(productId, 1);
+    } catch (error) {
+        console.error('Error submitting comment/rating:', error.response?.data || error.message);
+        alert('An error occurred while submitting your comment or rating.');
+    }
+};
 
-            // Refresh comments
-            fetchComments(productId, 1);
 
-            // Update product rating
-            // Fetch the updated product details
-            const productResponse = await axios.get(`/api/products/${productId}`);
-            setSelectedProduct(productResponse.data.product);
-        } catch (error) {
-            console.error('Error submitting comment/rating:', error.response?.data || error.message);
-            alert(error.response?.data?.error || 'An error occurred while submitting your comment.');
-        }
-    };
+
 
     const handleBackToProducts = () => {
         setSelectedProduct(null);
@@ -854,18 +834,18 @@ const MainPage = () => {
 
 
                     <div className="product-details">
-                        <button className="product-details-back-button" onClick={handleBackToProducts}>
-                         &larr; Back to Products
+                    <button className="product-details-back-button" onClick={handleBackToProducts}>
+                        &larr; Back to Products
                         </button>
 
                         <div className="product-details-container">
-                            {/* Left Side: Product Image */}
-                            <div className="product-image-container">
-                                {hasPurchased && (
-                                <div className="purchased-banner">You have purchased this product</div>
-                                )}
-                                <img src={selectedProduct.imageUrl} alt={selectedProduct.name} className="product-detail-image" />
-                            </div>
+            {/* Left: Product Image */}
+            <div className="product-image-container">
+              {hasPurchased && (
+                <div className="purchased-banner">You have purchased this product before</div>
+              )}
+            </div>
+
 
 
                         {/* Right Side: Product Information */}
@@ -886,7 +866,7 @@ const MainPage = () => {
                                 <p className="product-stock" style={{ color: 'red' }}>
                                 {selectedProduct.quantityInStock} items left in stock
                                 </p>
-
+                                {hasPurchased && <p style={{ color: 'green' }}>Thank you for your purchase!</p>}
                                 {/* Add to Cart Button */}
                                 <button
                                 onClick={() => handleAddToCart(selectedProduct)}

@@ -100,23 +100,34 @@ router.get('/invoices', async (req, res) => {
 });
 
 // Update comment approval
-router.put('/comments/:commentId', async (req, res) => {
-    const { commentId } = req.params;
+router.put('/:productId/:commentId', async (req, res) => {
+    const { productId, commentId } = req.params;
     const { approved } = req.body;
 
     try {
-        const comment = await Comment.findById(commentId);
+        // Find the product containing the comment
+        const product = await Product.findOne({ productId });
+        if (!product) {
+            return res.status(404).json({ error: 'Product not found.' });
+        }
+
+        // Find the specific comment within the product's comments array
+        const comment = product.comments.id(commentId);
         if (!comment) {
             return res.status(404).json({ error: 'Comment not found.' });
         }
+
+        // Update the comment's approval status
         comment.approved = approved;
-        await comment.save();
+        await product.save();
+
         res.status(200).json({ message: 'Comment updated successfully.', comment });
     } catch (error) {
         console.error('Error updating comment:', error);
         res.status(500).json({ error: 'An error occurred while updating the comment.' });
     }
 });
+
 
 // Update delivery status
 router.patch('/deliveries/:deliveryId', async (req, res) => {

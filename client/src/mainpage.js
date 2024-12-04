@@ -92,13 +92,38 @@ const MainPage = () => {
                 params.category = activeCategory;
             }
     
+            const userId = localStorage.getItem('user'); // Get user ID
             const response = await axios.get('/api/products/sort', { params });
-            setProducts(response.data.products);
+            const products = response.data.products;
+    
+            if (userId) {
+                // Fetch purchase status for all products
+                const purchaseStatuses = await Promise.all(
+                    products.map((product) =>
+                        axios
+                            .get(`/api/purchases/${userId}/${product.productId}`)
+                            .then((res) => ({ productId: product.productId, hasPurchased: res.data.hasPurchased }))
+                            .catch(() => ({ productId: product.productId, hasPurchased: false }))
+                    )
+                );
+    
+                // Add purchase status to each product
+                const updatedProducts = products.map((product) => {
+                    const purchaseStatus = purchaseStatuses.find((status) => status.productId === product.productId);
+                    return { ...product, hasPurchased: purchaseStatus?.hasPurchased || false };
+                });
+    
+                setProducts(updatedProducts);
+            } else {
+                setProducts(products); // No user logged in, just set products
+            }
+    
             setTotalPages(response.data.pagination.totalPages);
         } catch (error) {
             console.error('Error fetching products:', error);
         }
     };
+    
     
 
     const scrollToTop = () => {
@@ -415,6 +440,7 @@ const MainPage = () => {
         // Fetch comments for the product
         fetchComments(product.productId, 1);
     };
+    
     
     const fetchComments = async (productId, page = 1) => {
         try {
@@ -787,37 +813,42 @@ const handleSubmitComment = async () => {
                         <p style={{ fontSize: "1.5em" }}>Check out some of our most popular items.</p>
 
                         <div className="product-grid">
-                            {products.map((product) => (
-                                <div
-                                    className="product-card"
-                                    key={product._id}
-                                    onClick={() => handleProductClick(product)} // Handle product click
-                                >
-                                    <img src={product.imageUrl} alt={product.name} className="product-image" />
-                                    <h3 className="product-name">{product.name}</h3>
-                                    <p className="product-price">${product.price}</p>
-                                    <div className="product-rating">
-                                        <span>{'⭐️'.repeat(Math.round(product.averageRating || 0))}</span>
-                                    </div>
-                                    <button
-    className={`add-to-cart-button ${product.quantityInStock === 0 ? 'out-of-stock' : ''}`}
-    onClick={(e) => {
-        e.stopPropagation(); // Prevent triggering product click
-        if (product.quantityInStock > 0) {
-            handleAddToCart(product);
-        }
-    }}
-    disabled={product.quantityInStock === 0}
->
-    {product.quantityInStock === 0 ? 'Out of Stock' : 'Add to Cart'}
-</button>
+    {products.map((product) => (
+        <div
+            className="product-card"
+            key={product._id}
+            onClick={() => handleProductClick(product)} // Handle product click
+        >
+            <img src={product.imageUrl} alt={product.name} className="product-image" />
+            <h3 className="product-name">{product.name}</h3>
+            <p className="product-price">${product.price}</p>
+            <div className="product-rating">
+                <span>{'⭐️'.repeat(Math.round(product.averageRating || 0))}</span>
+            </div>
 
+            {/* Add to Cart Button */}
+            <button
+                className={`add-to-cart-button ${
+                    product.quantityInStock === 0 || hasPurchased ? 'disabled' : ''
+                }`}
+                onClick={(e) => {
+                    e.stopPropagation(); // Prevent triggering product click
+                    if (!hasPurchased && product.quantityInStock > 0) {
+                        handleAddToCart(product);
+                    }
+                }}
+                disabled={product.quantityInStock === 0 || hasPurchased}
+            >
+                {hasPurchased
+                    ? 'Already Purchased'
+                    : product.quantityInStock === 0
+                    ? 'Out of Stock'
+                    : 'Add to Cart'}
+            </button>
+        </div>
+    ))}
+</div>
 
-
-
-                                </div>
-                            ))}
-                        </div>
                         <div className="pagination-controls">
                         <button onClick={goToPrevPage} disabled={isSearching ? searchCurrentPage === 1 : currentPage === 1}>
                         &laquo; Prev
@@ -839,12 +870,6 @@ const handleSubmitComment = async () => {
                         </button>
 
                         <div className="product-details-container">
-            {/* Left: Product Image */}
-            <div className="product-image-container">
-              {hasPurchased && (
-                <div className="purchased-banner">You have purchased this product before</div>
-              )}
-            </div>
 
 
 
@@ -866,7 +891,10 @@ const handleSubmitComment = async () => {
                                 <p className="product-stock" style={{ color: 'red' }}>
                                 {selectedProduct.quantityInStock} items left in stock
                                 </p>
-                                {hasPurchased && <p style={{ color: 'green' }}>Thank you for your purchase!</p>}
+                                {hasPurchased && (
+    <p style={{ color: 'green' }}>You have already purchased this product.</p>
+)}
+
                                 {/* Add to Cart Button */}
                                 <button
                                 onClick={() => handleAddToCart(selectedProduct)}

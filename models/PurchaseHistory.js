@@ -2,17 +2,23 @@ const mongoose = require('mongoose');
 const { Schema, model } = mongoose;
 
 const purchaseHistorySchema = new Schema({
-    user: { type: String, required: true }, // Custom userId instead of ObjectId
-    product: { type: String, required: true }, // Custom productId instead of ObjectId
-    quantity: { type: Number, required: true, min: 1 }, // Quantity purchased
+    user: { type: String, required: true }, // User ID
+    products: [
+        {
+            productId: { type: String, required: true },
+            name: { type: String, required: true },
+            price: { type: Number, required: true },
+            quantity: { type: Number, required: true },
+        },
+    ], // Array of products in a single purchase
     status: { 
         type: String, 
-        enum: ['reserved', 'confirmed'], // Status can be 'reserved' or 'confirmed'
-        default: 'reserved' // Default status is 'reserved'
+        enum: ['reserved', 'confirmed'], 
+        default: 'reserved',
     },
-    purchaseDate: { type: Date, default: Date.now }, // Date of purchase
-    invoice: { type: Buffer }, // Binary data for the invoice (optional)
-    invoiceContentType: { type: String, enum: ['application/pdf'] }, // File type for the invoice
+    purchaseDate: { type: Date, default: Date.now },
+    invoice: { type: Buffer }, // PDF Invoice
+    invoiceContentType: { type: String, enum: ['application/pdf'] },
 }, { timestamps: true });
 
 module.exports = model('PurchaseHistory', purchaseHistorySchema);

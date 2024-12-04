@@ -89,6 +89,7 @@ router.post("/confirm-payment", async (req, res) => {
             return res.status(400).json({ error: "No products provided for payment confirmation." });
         }
 
+        // Fetch and validate product details
         const productDetails = await Promise.all(
             products.map(async (item) => {
                 const product = await Product.findOne({ productId: item.productId });
@@ -100,7 +101,6 @@ router.post("/confirm-payment", async (req, res) => {
                         `Not enough stock for product ${product.name}. Available: ${product.quantityInStock}`
                     );
                 }
-
                 return {
                     productId: product.productId,
                     name: product.name,
@@ -110,58 +110,57 @@ router.post("/confirm-payment", async (req, res) => {
             })
         );
 
-        // Save each purchase in the purchase history
-        const purchases = await Promise.all(
-            productDetails.map(async (detail) => {
-                const purchase = new PurchaseHistory({
-                    user: userId,
-                    product: detail.productId,
-                    quantity: detail.quantity,
-                    status: "confirmed",
-                });
+        // Save a single purchase record for the combined products
+        const purchase = new PurchaseHistory({
+            user: userId,
+            products: productDetails, // Include full product details in the purchase record
+            status: "confirmed",
+        });
 
-                await purchase.save();
-                return purchase;
-            })
-        );
+        await purchase.save();
 
-        console.log("Purchases saved successfully:", purchases);
+        console.log("Purchase saved successfully:", purchase);
 
-        // Generate invoice for the purchase(s)
-        const invoiceBuffer = await generateInvoice(purchases, productDetails, user);
+        // Generate a single invoice for the combined purchase
+        const invoiceBuffer = await generateInvoice(purchase, productDetails, user);
 
-        // Save invoice to the first purchase record for simplicity
-        purchases[0].invoice = invoiceBuffer;
-        purchases[0].invoiceContentType = "application/pdf";
-        await purchases[0].save();
-        console.log("Invoice generated and attached to the first purchase record.");
+        // Attach the invoice to the purchase
+        purchase.invoice = invoiceBuffer;
+        purchase.invoiceContentType = "application/pdf";
+        await purchase.save();
 
-        // Create delivery records for each purchase
-        const deliveries = await Promise.all(
-            purchases.map(async (purchase) => {
-                const delivery = new Delivery({
-                    purchase: purchase._id,
-                    user: userId,
-                    product: purchase.product,
-                    quantity: purchase.quantity,
-                    deliveryAddress: shippingAddress,
-                    status: "processing",
-                });
-                await delivery.save();
-                return delivery;
-            })
-        );
+        console.log("Invoice generated and attached to the purchase record.");
+
+        // Create a single delivery record
+        const delivery = new Delivery({
+            purchase: purchase._id,
+            user: userId,
+            products: productDetails.map((product) => ({
+                productId: product.productId,
+                name: product.name,
+                quantity: product.quantity,
+            })), // Include only necessary product fields for the delivery record
+            deliveryAddress: shippingAddress,
+            status: "processing",
+        });
+
+        await delivery.save();
+
+        console.log("Delivery record saved successfully:", delivery);
 
         // Send invoice email
-        await sendInvoiceEmail(user.email, user.name, invoiceBuffer);
+        await sendInvoiceEmail(user.email, user.username, invoiceBuffer);
         console.log(`Invoice email sent to ${user.email}`);
 
         // Respond to the client
         res.status(200).json({
             message: "Payment confirmed and invoice generated. Email sent.",
-            purchases,
-            deliveries,
+            purchase,
+            delivery,
         });
+
+        // Simulate delivery status updates
+        simulateDeliveryStatusUpdate(delivery._id);
     } catch (error) {
         console.error("Error confirming payment:", error);
         res.status(500).json({ error: "An error occurred while confirming the payment." });
@@ -169,52 +168,55 @@ router.post("/confirm-payment", async (req, res) => {
 });
 
 
-const generateInvoice = async (purchases, productDetails, user) => {
+const generateInvoice = async (purchase, productDetails, user) => {
     return new Promise((resolve, reject) => {
-        console.log("Generating invoice with:", { purchases, productDetails, user }); // Debugging log
+        console.log("Generating invoice with:", { purchase, productDetails, user });
 
         const pdfDoc = new pdf();
         const invoiceChunks = [];
 
-        pdfDoc.on('data', (chunk) => invoiceChunks.push(chunk));
-        pdfDoc.on('end', () => resolve(Buffer.concat(invoiceChunks)));
-        pdfDoc.on('error', (error) => reject(error));
+        pdfDoc.on("data", (chunk) => invoiceChunks.push(chunk));
+        pdfDoc.on("end", () => resolve(Buffer.concat(invoiceChunks)));
+        pdfDoc.on("error", (error) => reject(error));
 
         // Invoice Header
-        pdfDoc.fontSize(20).text('Invoice', { align: 'center' });
+        pdfDoc.fontSize(20).text("Invoice", { align: "center" });
         pdfDoc.moveDown();
 
         // Invoice Metadata
-        const firstPurchase = purchases[0]; // Assuming there is at least one purchase
-        pdfDoc.fontSize(12).text(`Invoice ID: ${firstPurchase._id || 'N/A'}`);
+        pdfDoc.fontSize(12).text(`Invoice ID: ${purchase._id}`);
         pdfDoc.text(`Date: ${new Date().toLocaleDateString()}`);
         pdfDoc.moveDown();
 
         // Customer Information
-        pdfDoc.text(`Customer: ${user.username || 'N/A'}`);
-        pdfDoc.text(`Email: ${user.email || 'N/A'}`);
+        pdfDoc.text(`Customer: ${user.username}`);
+        pdfDoc.text(`Email: ${user.email}`);
         pdfDoc.moveDown();
 
         // Products Section
-        pdfDoc.fontSize(14).text('Products:');
+        pdfDoc.fontSize(14).text("Products:");
         productDetails.forEach((product, index) => {
-            pdfDoc.fontSize(12).text(`${index + 1}. ${product.name || 'Unknown Product'}`);
-            pdfDoc.text(`   Quantity: ${product.quantity || 'N/A'}`);
-            pdfDoc.text(`   Price per unit: $${product.price ? product.price.toFixed(2) : 'N/A'}`);
-            pdfDoc.text(`   Total: $${product.price && product.quantity ? (product.price * product.quantity).toFixed(2) : 'N/A'}`);
+            pdfDoc.fontSize(12).text(`${index + 1}. ${product.name}`);
+            pdfDoc.text(`   Quantity: ${product.quantity}`);
+            pdfDoc.text(`   Price per unit: $${product.price.toFixed(2)}`);
+            pdfDoc.text(`   Total: $${(product.price * product.quantity).toFixed(2)}`);
             pdfDoc.moveDown();
         });
 
         // Grand Total
-        const totalAmount = productDetails.reduce((sum, product) => sum + (product.price || 0) * (product.quantity || 0), 0);
-        pdfDoc.fontSize(14).text(`Grand Total: $${totalAmount.toFixed(2)}`, { align: 'right' });
+        const totalAmount = productDetails.reduce(
+            (sum, product) => sum + product.price * product.quantity,
+            0
+        );
+        pdfDoc.fontSize(14).text(`Grand Total: $${totalAmount.toFixed(2)}`, { align: "right" });
         pdfDoc.moveDown();
 
         // Thank You Message
-        pdfDoc.text('Thank you for shopping with us!', { align: 'center' });
+        pdfDoc.text("Thank you for shopping with us!", { align: "center" });
         pdfDoc.end();
     });
 };
+
 
 
 
@@ -272,14 +274,14 @@ const simulateDeliveryStatusUpdate = async (deliveryId) => {
 };
 
 // Endpoint to check if a user has purchased a product
-router.get('/purchases/:userId/:productId', async (req, res) => {
+router.get('/:userId/:productId', async (req, res) => {
     const { userId, productId } = req.params;
 
     try {
         // Check if the user has purchased the product
         const purchase = await PurchaseHistory.findOne({
             user: userId,
-            product: productId,
+            'products.productId': productId, // Check if the productId exists in the products array
             status: 'confirmed', // Ensure it's a completed purchase
         });
 
@@ -293,6 +295,7 @@ router.get('/purchases/:userId/:productId', async (req, res) => {
         res.status(500).json({ error: 'An error occurred while checking the purchase history.' });
     }
 });
+
 
 
 // Test endpoint

@@ -37,6 +37,15 @@ const userSchema = new mongoose.Schema({
         default: false, // Regular user status
     },
     orders: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Order' }], // Reference to Order documents
+
+    notifications: [
+        {
+          id: String, // Unique identifier for the notification
+          message: String, // Notification text
+          timestamp: Date, // Time when the notification was created
+          isRead: Boolean, // Whether the user has read this notification
+        }
+      ],
 });
 
 // Password hashing before saving

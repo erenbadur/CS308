@@ -15,6 +15,7 @@ const cart = require('./cart');
 const track = require('./track');
 const productManagerRoutes = require('./productManager');
 const notificationsRoutes = require('./notifications');
+const wishlistRoutes = require('./wishlistRoute');
 
 // Models (all in the `models` folder, one level up)
 const Cart = require('../models/cartModel');
@@ -48,6 +49,7 @@ app.use('/api/processing', orderProcessingRoute);
 app.use('/api/track', track);
 app.use('/api/manager', productManagerRoutes);
 app.use('/api/notifications', notificationsRoutes);
+app.use('/api/wishlist', wishlistRoutes);
 
 // Start Server
 app.listen(PORT, () => {

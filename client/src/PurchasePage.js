@@ -41,9 +41,11 @@ const UnifiedPurchasePage = () => {
                 return;
             }
 
+            const userId = localStorage.getItem("user");
+
             try {
                 const response = await axios.get('/api/cart/get', {
-                    params: { sessionId },
+                    params: { sessionId, userId},
                 });
                 if (response.status === 200) {
                     const items = response.data.items;

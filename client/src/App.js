@@ -10,6 +10,7 @@ import LoginPage from './LoginPage';
 import SignInPage from './SignInPage';
 import PurchasePage from './PurchasePage';
 import TrackPage from './TrackPage';
+import WishlistPage from './WishlistPage';
 
 
 
@@ -22,6 +23,7 @@ function App() {
                 <Route path='/signin' element={<SignInPage/>}/>
                 <Route path='/checkout' element={<PurchasePage/>}/>
                 <Route path='/track' element={<TrackPage/>}/>
+                <Route path='/wishlist' element={<WishlistPage />} />
             </Routes>
         </BrowserRouter>
       );

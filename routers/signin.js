@@ -2,7 +2,6 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const User = require('../models/user');
 const Cart = require('../models/cartModel');
-const { v4: uuidv4 } = require('uuid'); // Import uuidv4
 const router = express.Router();
 
 // Sign-Up Route
@@ -37,25 +36,31 @@ router.post('/login', async (req, res) => {
   try {
       const user = await User.findOne({ username }).select('+password');
       if (!user) {
+          //console.log("invalid credentials beacuse of user"); for debugging
           return res.status(400).json({ message: 'Invalid credentials' });
       }
-
+      //console.log("invalid credentials because of match"); for debugging
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
           return res.status(400).json({ message: 'Invalid credentials' });
       }
 
       let userCart = await Cart.findOne({ userId: user.userId });
+
+      console.log("merging carts");
       if (sessionId) {
-          const guestCart = await Cart.findOne({ sessionId });
+          const guestCart = await Cart.findOne({ sessionId, userId: null });
           if (guestCart) {
               if (!userCart) {
                   userCart = guestCart;
                   userCart.userId = user.userId;
                   userCart.sessionId = null;
                   await userCart.save();
+                  //await guestCart.deleteOne();
+                  console.log("created new cart for the user and merged it with guest cart");
               } else {
                   // Merge guestCart into userCart
+                  console.log("user cart already exists, merging user and guest carts");
                   guestCart.items.forEach((guestItem) => {
                       const existingItem = userCart.items.find(
                           (item) => item.productId === guestItem.productId

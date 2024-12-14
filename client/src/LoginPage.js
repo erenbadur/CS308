@@ -3,6 +3,20 @@ import './LoginPage.css';
 import logo from './logo.png';
 import { useNavigate } from 'react-router-dom';
 
+// Utility to get sessionId, when the program starts running the session Id should already be created and set by index.js file
+const getSessionId = () => {
+  try {
+      const sessionId = localStorage.getItem('sessionId');
+      if (!sessionId) {
+          console.log("sessionId not found in local storage.");
+      }
+      return sessionId;
+  } catch (error) {
+      console.error("Failed to retrieve sessionId from local storage:", error);
+      return null;
+  }
+};
+
 const LoginPage = () => {
   const [username, setUsername] = useState(''); // Use username instead of email
   const [password, setPassword] = useState('');
@@ -25,10 +39,16 @@ const LoginPage = () => {
     setSuccess(null);
   
     try {
+      const sessionId = getSessionId();
+      if(!sessionId) {
+        console.log("SessionId is required");
+        return 
+      }
+      
       const response = await fetch('/api/auth/login', { // Updated URL
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }), // Send username and password
+        body: JSON.stringify({ username, password, sessionId }), // Send username and password
       });
   
       const data = await response.json();

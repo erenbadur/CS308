@@ -15,7 +15,7 @@ const TrackPage = () => {
     const userId = localStorage.getItem('user');
 
     try {
-      await axios.delete('/api/cart/clear', { params: { sessionId, userId } });
+      await axios.delete('/api/cart/delete', { params: { userId } });
       console.log('Cart cleared successfully.');
     } catch (err) {
       console.error('Error clearing cart:', err);

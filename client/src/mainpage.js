@@ -3,16 +3,33 @@ import './mainpage.css';
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 
-// Utility to get or create a session ID
+// Utility to get sessionId, when the program starts running the session Id should already be created and set by index.js file
 const getSessionId = () => {
-    let sessionId = localStorage.getItem('sessionId');
-    if (!sessionId) {
-        sessionId = uuidv4();
-        localStorage.setItem('sessionId', sessionId);
+    try {
+        const sessionId = localStorage.getItem('sessionId');
+        if (!sessionId) {
+            console.log("sessionId not found in local storage.");
+        }
+        return sessionId;
+    } catch (error) {
+        console.error("Failed to retrieve sessionId from local storage:", error);
+        return null;
     }
-    return sessionId;
 };
 
+// Utility to get user Id from the local storage.
+const getUserId = () => {
+    try {
+        const userId = localStorage.getItem('user');
+        if(!userId) {
+            console.log("User is not logged in. User is not found in the local storage");
+        }
+        return userId;
+    } catch (error) {
+        console.error("Failed to retrieve userId from local storage:", error);
+        return null;
+    }
+}
 
 const MainPage = () => {
     const [searchTotalPages, setSearchTotalPages] = useState(1); // Total pages for search results
@@ -144,8 +161,11 @@ const MainPage = () => {
     };
     
     const fetchCart = async () => {
-        const sessionId = localStorage.getItem('sessionId');
-        const userId = localStorage.getItem('userId'); // Ensure correct retrieval of userId
+        // getSessionId() function should be used for retrieving sessionId
+        const sessionId = getSessionId();
+        console.log("Here is the session Id", sessionId);
+        const userId = localStorage.getItem('user');
+        console.log("Here is the user Id", userId)
     
         console.log('Fetching cart with:', { sessionId, userId }); // Debug log
     
@@ -219,7 +239,8 @@ const MainPage = () => {
 
     const handleIncreaseQuantity = async (index) => {
         const cartItem = cartItems[index];
-        const sessionId = localStorage.getItem('sessionId');
+        // getSessionId() function should be used for retrieving sessionId
+        const sessionId = getSessionId();
         const userId = localStorage.getItem('user'); // Optional
     
         try {
@@ -273,7 +294,8 @@ const MainPage = () => {
     
     const handleDecreaseQuantity = async (index) => {
         const cartItem = cartItems[index];
-        const sessionId = localStorage.getItem('sessionId');
+        //getSessionId() function should be used for retrieving sessionId
+        const sessionId = getSessionId();
         const userId = localStorage.getItem('user'); // Optional
     
         try {
@@ -334,11 +356,11 @@ const MainPage = () => {
             console.warn(`Product ${product.productId} is out of stock and cannot be added to the cart.`);
             return; // Exit the function
         }
-
-        let sessionId = localStorage.getItem('sessionId');
-        if (!sessionId) {
-            sessionId = uuidv4();
-            localStorage.setItem('sessionId', sessionId); // Save a new sessionId in localStorage
+        // getSessionId() function should be used for retrieving sessionId
+        let sessionId = getSessionId();
+        if(!sessionId){
+            console.log("SessionId is null");
+            return;
         }
     
         const userId = localStorage.getItem('user'); // Optional for logged-in users
@@ -561,7 +583,6 @@ const handleSubmitComment = async () => {
 
     const handleLoginRedirect = () => {
         const sessionId = getSessionId(); // Ensure sessionId exists
-        getSessionId(); // Ensures sessionId is stored before redirecting
         window.location.href = `/login?sessionId=${sessionId}`;
     };
     

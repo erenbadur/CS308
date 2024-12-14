@@ -3,23 +3,37 @@ const router = express.Router();
 const Cart = require('../models/cartModel');
 const Product = require('../models/product');
 const User = require('../models/user');
-const { v4: uuidv4 } = require('uuid'); // Import UUID generator
 
 async function getOrCreateCart(req, res, next) {
-    let { userId, sessionId } = req.body || req.query;
+    let userId, sessionId;
+    
+    if (req.method == "GET") {
+        ({ userId, sessionId } = req.query);
+    } else  {
+        ({ userId, sessionId } = req.body);
+    }
 
-    // Generate a `sessionId` if it is missing
     if (!sessionId && !userId) {
-        sessionId = uuidv4();
+        console.log("sessionId or userId is required");
+        return res.status(400).json({ error: "sessionId or userId is required"});
     }
 
     try {
-        let cart = await Cart.findOne({ $or: [{ userId }, { sessionId }] });
+        let cart;
 
-        if (!cart) {
-            cart = await Cart.create({ userId: userId || null, sessionId, items: [] });
+        if (userId) {
+            cart = await Cart.findOne({ userId });
+
+            if (!cart) {
+                cart = await Cart.create({ userId: userId, sessionId, items: [] });
+            }
+        } else {
+            cart = await Cart.findOne({ sessionId });
+
+            if (!cart) {
+                cart = await Cart.create({ userId: userId, sessionId, items: [] });
+            }
         }
-
         req.cart = cart; // Attach the cart to the request
         next();
     } catch (error) {
@@ -29,25 +43,13 @@ async function getOrCreateCart(req, res, next) {
 }
 
 
-router.post('/add', async (req, res) => {
+router.post('/add', getOrCreateCart, async (req, res) => {
     const { productId, quantity, sessionId, userId } = req.body;
+    const cart = req.cart;
 
     console.log('Adding to cart:', { productId, quantity, sessionId, userId });
 
-    if (!sessionId && !userId) {
-        return res.status(400).json({ error: 'Session ID or User ID is required.' });
-    }
-
     try {
-        // Find or create the cart
-        let cart = await Cart.findOne({ $or: [{ sessionId }, { userId }] });
-        if (!cart) {
-            cart = new Cart({ sessionId, userId, items: [] });
-        }
-
-        if (userId && !cart.userId) {
-            cart.userId = userId; // Assign userId to the cart
-        }
 
         // Check if the product exists
         const product = await Product.findOne({ productId });
@@ -97,20 +99,13 @@ router.post('/add', async (req, res) => {
 });
 
 
-router.get('/get', async (req, res) => {
+router.get('/get', getOrCreateCart, async (req, res) => {
     const { userId, sessionId } = req.query;
+    const cart = req.cart
 
     console.log('Fetching cart with:', { userId, sessionId });
 
-    if (!sessionId && !userId) {
-        return res.status(400).json({ error: 'Session ID or User ID is required.' });
-    }
-
     try {
-        // Find the cart based on userId or sessionId
-        const cart = userId
-            ? await Cart.findOne({ userId })
-            : await Cart.findOne({ sessionId });
 
         if (!cart) {
             console.warn('Cart not found for:', { userId, sessionId });
@@ -148,17 +143,18 @@ router.get('/get', async (req, res) => {
     }
 });
 
-router.delete('/clear', async (req, res) => {
-    const { sessionId } = req.query;
+
+router.delete('/delete', async (req, res) => {
+    const { userId } = req.query;
   
-    if (!sessionId) {
+    if (!userId) {
       return res.status(400).json({ error: 'Both sessionId and userId are missing.' });
     }
   
     try {
-      if (sessionId) {
+      if (userId) {
         // Clear cart for logged-in user
-        await Cart.deleteMany({ sessionId });
+        await Cart.deleteMany({ userId });
       }
   
       res.status(200).json({ message: 'Cart cleared successfully.' });
@@ -167,7 +163,7 @@ router.delete('/clear', async (req, res) => {
       res.status(500).json({ error: 'Failed to clear cart.' });
     }
   });
-  
+ 
 
 router.put('/update', getOrCreateCart, async (req, res) => {
     const { productId, quantity } = req.body;
@@ -215,9 +211,11 @@ router.put('/update', getOrCreateCart, async (req, res) => {
     }
 });
 
-// Clear Cart Endpoint
-router.delete('/clear', async (req, res) => {
+/* not necessary right now
+// Clear Cart Endpoint // might change it with deleting
+router.delete('/clear', getOrCreateCart, async (req, res) => {
     const { sessionId, userId } = req.body;
+    const cart = req.cart;
 
     console.log('Clear cart request received:', { sessionId, userId });
 
@@ -226,16 +224,6 @@ router.delete('/clear', async (req, res) => {
     }
 
     try {
-        // Find the cart using sessionId or userId
-        const cart = userId
-            ? await Cart.findOne({ userId })
-            : await Cart.findOne({ sessionId });
-
-        if (!cart) {
-            console.warn('Cart not found for:', { sessionId, userId });
-            return res.status(404).json({ error: 'Cart not found.' });
-        }
-
         // Clear the items in the cart
         cart.items = [];
         await cart.save();
@@ -247,11 +235,32 @@ router.delete('/clear', async (req, res) => {
         console.error('Error clearing cart:', error);
         res.status(500).json({ error: 'Internal server error.' });
     }
+});  */
+
+/*
+// Cart Deleting Endpoint
+router.delete('/delete', getOrCreateCart, async (req, res) => {
+    const cart = req.cart;
+
+    console.log('Delete cart request received:', { cart });
+
+    if (!cart) {
+        return res.status(404).json({ error: 'Cart not found.' });
+    }
+
+    try {
+        // Delete the cart
+        await Cart.deleteOne({ _id: cart._id });
+
+        console.log('Cart deleted successfully:', { cartId: cart._id });
+
+        res.status(200).json({ message: 'Cart deleted successfully.' });
+    } catch (error) {
+        console.error('Error deleting cart:', error);
+        res.status(500).json({ error: 'Internal server error.' });
+    }
 });
-
-
-
+*/
 
 
 module.exports = router;
-

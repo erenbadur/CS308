@@ -42,16 +42,7 @@ router.post('/add', async (req, res) => {
             return res.status(400).json({ error: `Not enough stock. Available: ${product.quantityInStock}` });
         }
 
-        // Deduct stock atomically
-        const updatedProduct = await Product.findOneAndUpdate(
-            { productId, quantityInStock: { $gte: quantity } },
-            { $inc: { quantityInStock: -quantity } },
-            { new: true }
-        );
-
-        console.log('Stock successfully deducted. Remaining stock:', updatedProduct.quantityInStock);
-
-        // Create a purchase record with a status of "reserved"
+        // Reserve stock in cart without deducting from actual stock
         const purchase = new PurchaseHistory({
             user: userId,
             product: productId,
@@ -62,7 +53,7 @@ router.post('/add', async (req, res) => {
         await purchase.save();
 
         res.status(201).json({
-            message: 'Product added successfully and purchase recorded.',
+            message: 'Product added to cart and reserved.',
             purchase,
         });
     } catch (error) {
@@ -70,6 +61,7 @@ router.post('/add', async (req, res) => {
         res.status(500).json({ error: 'An error occurred while adding the product to the cart.' });
     }
 });
+
 
 // `/confirm-payment` endpoint
 router.post("/confirm-payment", async (req, res) => {
@@ -89,18 +81,19 @@ router.post("/confirm-payment", async (req, res) => {
             return res.status(400).json({ error: "No products provided for payment confirmation." });
         }
 
-        // Fetch and validate product details
+        // Validate stock and update atomically
         const productDetails = await Promise.all(
             products.map(async (item) => {
-                const product = await Product.findOne({ productId: item.productId });
+                const product = await Product.findOneAndUpdate(
+                    { productId: item.productId, quantityInStock: { $gte: item.quantity } },
+                    { $inc: { quantityInStock: -item.quantity } },
+                    { new: true }
+                );
+
                 if (!product) {
-                    throw new Error(`Product with ID ${item.productId} not found.`);
+                    throw new Error(`Product with ID ${item.productId} not found or insufficient stock.`);
                 }
-                if (product.quantityInStock < item.quantity) {
-                    throw new Error(
-                        `Not enough stock for product ${product.name}. Available: ${product.quantityInStock}`
-                    );
-                }
+
                 return {
                     productId: product.productId,
                     name: product.name,
@@ -110,10 +103,24 @@ router.post("/confirm-payment", async (req, res) => {
             })
         );
 
-        // Save a single purchase record for the combined products
+        // Validate shipping address
+        if (
+            !shippingAddress ||
+            !shippingAddress.fullName ||
+            !shippingAddress.phoneNum ||
+            !shippingAddress.address ||
+            !shippingAddress.country ||
+            !shippingAddress.postalCode
+        ) {
+            return res.status(400).json({
+                error: "Invalid shipping address. 'fullName', 'phoneNum', 'address', 'country', and 'postalCode' are required.",
+            });
+        }
+
+        // Create a purchase record
         const purchase = new PurchaseHistory({
             user: userId,
-            products: productDetails, // Include full product details in the purchase record
+            products: productDetails,
             status: "confirmed",
         });
 
@@ -121,17 +128,13 @@ router.post("/confirm-payment", async (req, res) => {
 
         console.log("Purchase saved successfully:", purchase);
 
-        // Generate a single invoice for the combined purchase
+        // Generate invoice
         const invoiceBuffer = await generateInvoice(purchase, productDetails, user);
-
-        // Attach the invoice to the purchase
         purchase.invoice = invoiceBuffer;
         purchase.invoiceContentType = "application/pdf";
         await purchase.save();
 
-        console.log("Invoice generated and attached to the purchase record.");
-
-        // Create a single delivery record
+        // Create delivery record
         const delivery = new Delivery({
             purchase: purchase._id,
             user: userId,
@@ -139,7 +142,7 @@ router.post("/confirm-payment", async (req, res) => {
                 productId: product.productId,
                 name: product.name,
                 quantity: product.quantity,
-            })), // Include only necessary product fields for the delivery record
+            })),
             deliveryAddress: shippingAddress,
             status: "processing",
         });
@@ -152,20 +155,20 @@ router.post("/confirm-payment", async (req, res) => {
         await sendInvoiceEmail(user.email, user.username, invoiceBuffer);
         console.log(`Invoice email sent to ${user.email}`);
 
-        // Respond to the client
         res.status(200).json({
-            message: "Payment confirmed and invoice generated. Email sent.",
+            message: "Payment confirmed and invoice generated.",
             purchase,
             delivery,
         });
 
-        // Simulate delivery status updates
         simulateDeliveryStatusUpdate(delivery._id);
     } catch (error) {
-        console.error("Error confirming payment:", error);
-        res.status(500).json({ error: "An error occurred while confirming the payment." });
+        console.error("Error confirming payment:", error.message);
+        res.status(400).json({ error: error.message });
     }
 });
+
+
 
 
 const generateInvoice = async (purchase, productDetails, user) => {

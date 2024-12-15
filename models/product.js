@@ -56,13 +56,20 @@ productSchema.pre('save', function (next) {
     next(); // Proceed with saving
 });
 
-productSchema.methods.decreaseStock = function (quantity) {
-    if (this.quantityInStock - quantity < 0) { // Check if there is enough stock
-        throw new Error('Not enough items in stock.'); // Throw an error if insufficient
+productSchema.methods.decreaseStock = async function (quantity) {
+    const updatedProduct = await Product.findOneAndUpdate(
+        { productId: this.productId, quantityInStock: { $gte: quantity } },
+        { $inc: { quantityInStock: -quantity } },
+        { new: true }
+    );
+
+    if (!updatedProduct) {
+        throw new Error('Not enough items in stock.');
     }
-    this.quantityInStock -= quantity; // Reduce stock
-    return this.save(); // Save the updated product
+
+    return updatedProduct;
 };
+
 
 productSchema.index({ name: 'text', description: 'text', model: 'text' });
 

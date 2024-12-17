@@ -18,35 +18,37 @@ const productSchema = new Schema({
             return `PROD-${new mongoose.Types.ObjectId()}`; // Generate unique product ID
         },
     },
-    name: { type: String, required: true, trim: true }, // Product name
-    model: { type: String, required: true, unique: true }, // Unique model identifier
-    serialNumber: { type: String, required: true, unique: true }, // Unique serial number
-    description: { type: String, trim: true }, // Optional description
+    name: { type: String, required: true, trim: true },
+    model: { type: String, required: true, unique: true },
+    serialNumber: { type: String, required: true, unique: true },
+    description: { type: String, trim: true },
     category: {
         type: String,
-        required: true, // Makes the category mandatory
-        enum: ['mobile phone', 'computer', 'tablet', 'accessories', 'headphone','smartwatch','television','camera'], // Define allowed categories
-        default: 'accessory', // Default value if not specified
+        required: true,
+        enum: ['mobile phone', 'computer', 'tablet', 'accessories', 'headphone', 'smartwatch', 'television', 'camera'],
+        default: 'accessory',
     },
-    quantityInStock: { type: Number, required: true, min: 0, default: 100 }, // Stock quantity cannot go below 0
-    price: { type: Number, required: true, min: 0 }, // Price of the product
-    warrantyStatus: { type: Boolean, default: true }, // Indicates if the product is under warranty
-    distributor: { type: String, required: true }, // Distributor information
+    quantityInStock: { type: Number, required: true, min: 0, default: 100 },
+    price: { type: Number, required: true, min: 0 },
+    warrantyStatus: { type: Boolean, default: true },
+    distributor: { type: String, required: true },
     ratings: [
         {
-            user: { type: String, required: true }, // Use custom userId (String) instead of ObjectId
+            user: { type: String, required: true },
             rating: { type: Number, required: true, min: 1, max: 5 },
         },
     ],
-    
-    averageRating: { type: Number, default: 0 }, // Automatically calculated average rating
-    comments: [commentSchema], // Array of comments
-    popularity: { type: Number, default: 0 }, // Popularity score (optional)
+    averageRating: { type: Number, default: 0 },
+    comments: [commentSchema],
+    popularity: { type: Number, default: 0 },
     discount: {
-        percentage: { type: Number, min: 0, max: 100, default: 0 }, // Discount percentage
-        validUntil: { type: Date } // Expiration date for the discount
-    }
-}, { timestamps: true }); // Automatically adds createdAt and updatedAt fields
+        percentage: { type: Number, min: 0, max: 100, default: 0 },
+        validUntil: { type: Date },
+        purchasesDuringDiscount: { type: Number, default: 0 }, // Number of purchases made during discounts
+    },
+    refundable: { type: Boolean, default: true }, // Indicates if the product is eligible for returns
+    totalRefunded: { type: Number, default: 0 }, // Total quantity refunded
+}, { timestamps: true });
 
 productSchema.pre('save', function (next) {
     if (this.ratings.length > 0) {
@@ -70,6 +72,15 @@ productSchema.methods.decreaseStock = async function (quantity) {
     return updatedProduct;
 };
 
+productSchema.methods.increaseStock = async function (quantity) {
+    const updatedProduct = await Product.findOneAndUpdate(
+        { productId: this.productId },
+        { $inc: { quantityInStock: quantity, totalRefunded: quantity } },
+        { new: true }
+    );
+
+    return updatedProduct;
+};
 
 productSchema.index({ name: 'text', description: 'text', model: 'text' });
 

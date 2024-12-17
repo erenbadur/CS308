@@ -8,6 +8,7 @@ const path = require('path');
 const pdf = require('pdfkit');
 const fs = require('fs');
 const PurchaseHistory = require('../models/PurchaseHistory');
+const Invoice = require('../models/invoice'); // Import Invoice model
 
 // Load environment variables
 require('dotenv').config({ path: path.join(__dirname, '../mail.env') });
@@ -22,7 +23,6 @@ const transporter = nodemailer.createTransport({
 });
 
 
-// Add product to cart or make a purchase
 router.post('/add', async (req, res) => {
     const { userId, productId, quantity } = req.body;
 
@@ -42,11 +42,17 @@ router.post('/add', async (req, res) => {
             return res.status(400).json({ error: `Not enough stock. Available: ${product.quantityInStock}` });
         }
 
-        // Reserve stock in cart without deducting from actual stock
+        // Create a purchase record (reserved status)
         const purchase = new PurchaseHistory({
             user: userId,
-            product: productId,
-            quantity,
+            products: [
+                {
+                    productId: product.productId,
+                    name: product.name,
+                    price: product.price,
+                    quantity,
+                },
+            ],
             status: 'reserved',
         });
 
@@ -57,10 +63,11 @@ router.post('/add', async (req, res) => {
             purchase,
         });
     } catch (error) {
-        console.error('Error adding product to cart:', error);
+        console.error('Error adding product to cart:', error.message);
         res.status(500).json({ error: 'An error occurred while adding the product to the cart.' });
     }
 });
+
 
 
 // `/confirm-payment` endpoint
@@ -81,7 +88,10 @@ router.post("/confirm-payment", async (req, res) => {
             return res.status(400).json({ error: "No products provided for payment confirmation." });
         }
 
-        // Validate stock and update atomically
+        let totalRevenue = 0;
+        let totalProfit = 0;
+
+        // Validate stock and calculate revenue/profit
         const productDetails = await Promise.all(
             products.map(async (item) => {
                 const product = await Product.findOneAndUpdate(
@@ -94,14 +104,56 @@ router.post("/confirm-payment", async (req, res) => {
                     throw new Error(`Product with ID ${item.productId} not found or insufficient stock.`);
                 }
 
+                const revenue = product.price * item.quantity;
+                const profit = revenue - (product.costPrice || 0) * item.quantity;
+
+                totalRevenue += revenue;
+                totalProfit += profit;
+
                 return {
                     productId: product.productId,
                     name: product.name,
                     price: product.price,
                     quantity: item.quantity,
+                    total: revenue,
                 };
             })
         );
+
+        // Create a purchase record
+        const purchase = new PurchaseHistory({
+            user: userId,
+            products: productDetails,
+            status: "confirmed",
+            purchaseDate: new Date(),
+            totalRevenue,
+            totalProfit,
+        });
+        await purchase.save();
+
+        console.log("Purchase record saved:", purchase);
+
+        // Generate invoice and save to the new Invoice model
+        const invoiceBuffer = await generateInvoiceFile(user, productDetails, totalRevenue);
+        const invoiceFilePath = `invoices/Invoice-${Date.now()}.pdf`;
+
+        fs.writeFileSync(invoiceFilePath, invoiceBuffer);
+
+        const newInvoice = new Invoice({
+            user: user._id,
+            email: user.email,
+            products: productDetails.map((item) => ({
+                name: item.name,
+                quantity: item.quantity,
+                price: item.price,
+                total: item.total,
+            })),
+            totalAmount: totalRevenue,
+            invoiceFilePath,
+        });
+        await newInvoice.save();
+
+        console.log("Invoice saved successfully:", newInvoice);
 
         // Validate shipping address
         if (
@@ -117,23 +169,6 @@ router.post("/confirm-payment", async (req, res) => {
             });
         }
 
-        // Create a purchase record
-        const purchase = new PurchaseHistory({
-            user: userId,
-            products: productDetails,
-            status: "confirmed",
-        });
-
-        await purchase.save();
-
-        console.log("Purchase saved successfully:", purchase);
-
-        // Generate invoice
-        const invoiceBuffer = await generateInvoice(purchase, productDetails, user);
-        purchase.invoice = invoiceBuffer;
-        purchase.invoiceContentType = "application/pdf";
-        await purchase.save();
-
         // Create delivery record
         const delivery = new Delivery({
             purchase: purchase._id,
@@ -146,7 +181,6 @@ router.post("/confirm-payment", async (req, res) => {
             deliveryAddress: shippingAddress,
             status: "processing",
         });
-
         await delivery.save();
 
         console.log("Delivery record saved successfully:", delivery);
@@ -155,12 +189,18 @@ router.post("/confirm-payment", async (req, res) => {
         await sendInvoiceEmail(user.email, user.username, invoiceBuffer);
         console.log(`Invoice email sent to ${user.email}`);
 
+        // Response to client
         res.status(200).json({
             message: "Payment confirmed and invoice generated.",
-            purchase,
+            invoice: {
+                id: newInvoice.invoiceId,
+                totalAmount: totalRevenue,
+                filePath: invoiceFilePath,
+            },
             delivery,
         });
 
+        // Simulate delivery updates
         simulateDeliveryStatusUpdate(delivery._id);
     } catch (error) {
         console.error("Error confirming payment:", error.message);
@@ -168,59 +208,43 @@ router.post("/confirm-payment", async (req, res) => {
     }
 });
 
-
-
-
-const generateInvoice = async (purchase, productDetails, user) => {
+// Generate invoice PDF and return as buffer
+const generateInvoiceFile = (user, products, totalAmount, invoiceId) => {
     return new Promise((resolve, reject) => {
-        console.log("Generating invoice with:", { purchase, productDetails, user });
-
         const pdfDoc = new pdf();
         const invoiceChunks = [];
 
-        pdfDoc.on("data", (chunk) => invoiceChunks.push(chunk));
-        pdfDoc.on("end", () => resolve(Buffer.concat(invoiceChunks)));
-        pdfDoc.on("error", (error) => reject(error));
+        pdfDoc.on('data', (chunk) => invoiceChunks.push(chunk));
+        pdfDoc.on('end', () => resolve(Buffer.concat(invoiceChunks)));
+        pdfDoc.on('error', (error) => reject(error));
 
         // Invoice Header
-        pdfDoc.fontSize(20).text("Invoice", { align: "center" });
-        pdfDoc.moveDown();
+        pdfDoc.fontSize(20).text('Invoice', { align: 'center' }).moveDown();
 
         // Invoice Metadata
-        pdfDoc.fontSize(12).text(`Invoice ID: ${purchase._id}`);
-        pdfDoc.text(`Date: ${new Date().toLocaleDateString()}`);
-        pdfDoc.moveDown();
+        pdfDoc.fontSize(12).text(`Invoice ID: ${invoiceId}`); // Use actual Invoice ID
+        pdfDoc.text(`Date: ${new Date().toLocaleDateString()}`).moveDown();
 
         // Customer Information
         pdfDoc.text(`Customer: ${user.username}`);
-        pdfDoc.text(`Email: ${user.email}`);
-        pdfDoc.moveDown();
+        pdfDoc.text(`Email: ${user.email}`).moveDown();
 
         // Products Section
-        pdfDoc.fontSize(14).text("Products:");
-        productDetails.forEach((product, index) => {
+        pdfDoc.fontSize(14).text('Products:');
+        products.forEach((product, index) => {
             pdfDoc.fontSize(12).text(`${index + 1}. ${product.name}`);
             pdfDoc.text(`   Quantity: ${product.quantity}`);
             pdfDoc.text(`   Price per unit: $${product.price.toFixed(2)}`);
-            pdfDoc.text(`   Total: $${(product.price * product.quantity).toFixed(2)}`);
-            pdfDoc.moveDown();
+            pdfDoc.text(`   Total: $${product.total.toFixed(2)}`).moveDown();
         });
 
         // Grand Total
-        const totalAmount = productDetails.reduce(
-            (sum, product) => sum + product.price * product.quantity,
-            0
-        );
-        pdfDoc.fontSize(14).text(`Grand Total: $${totalAmount.toFixed(2)}`, { align: "right" });
-        pdfDoc.moveDown();
+        pdfDoc.fontSize(14).text(`Grand Total: $${totalAmount.toFixed(2)}`).moveDown();
+        pdfDoc.text('Thank you for shopping with us!', { align: 'center' });
 
-        // Thank You Message
-        pdfDoc.text("Thank you for shopping with us!", { align: "center" });
         pdfDoc.end();
     });
 };
-
-
 
 
 
@@ -307,3 +331,5 @@ router.get('/test', (req, res) => {
 });
 
 module.exports = router;
+
+

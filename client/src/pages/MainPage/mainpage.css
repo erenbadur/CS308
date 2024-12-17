@@ -757,8 +757,7 @@ i {
 /* About Section Styling with Image Background */
 .about-section {
     
-    background-image: url('../public/resimler/3.jpg');
-
+    background-image: url('../MainPage/3.jpg');
     background-size: cover; /* Ensures the image covers the entire section */
     background-position: center; /* Centers the image */
     background-repeat: no-repeat;

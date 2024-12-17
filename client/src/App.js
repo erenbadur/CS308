@@ -1,17 +1,19 @@
-// App.js
 import React from 'react';
-import {BrowserRouter, Routes, Route} from 'react-router-dom';
-import './mainpage.css'; 
-import './LoginPage.css'; 
-import './SignInPage.css'; 
-import './PurchasePage.css';
-import MainPage from './mainpage';
-import LoginPage from './LoginPage';
-import SignInPage from './SignInPage';
-import PurchasePage from './PurchasePage';
-import TrackPage from './TrackPage';
-import WishlistPage from './WishlistPage';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
+// Correct relative paths to CSS files
+import './pages/MainPage/mainpage.css';
+import './pages/LoginPage/LoginPage.css';
+import './pages/SignInPage/SignInPage.css';
+import './pages/PurchasePage/PurchasePage.css';
+
+// Page components
+import MainPage from './pages/MainPage/mainpage';
+import LoginPage from './pages/LoginPage/LoginPage';
+import SignInPage from './pages/SignInPage/SignInPage';
+import PurchasePage from './pages/PurchasePage/PurchasePage';
+import TrackPage from './pages/TrackPage/TrackPage';
+import WishlistPage from './pages/WishlistPage/WishlistPage';
 
 
 function App() {

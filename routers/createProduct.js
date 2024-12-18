@@ -4,6 +4,7 @@ const router = express.Router();
 const Product = require('../models/product'); // Adjust path for Product model
 const Category = require('../models/category'); // Import Category model
 
+// POST /product (Add new product)
 router.post('/product', async (req, res) => {
     const {
         name,
@@ -15,7 +16,6 @@ router.post('/product', async (req, res) => {
         price,
         distributor,
         warrantyStatus,
-        discount,
         imageUrl, // New field for image URL
     } = req.body;
 
@@ -51,7 +51,7 @@ router.post('/product', async (req, res) => {
             return res.status(400).json({ error: 'A product with the same model or serial number already exists.' });
         }
 
-        // Create a new product
+        // Create a new product without discount fields
         const newProduct = new Product({
             name,
             model,
@@ -62,7 +62,6 @@ router.post('/product', async (req, res) => {
             price,
             distributor,
             warrantyStatus: warrantyStatus !== undefined ? warrantyStatus : true, // Default to true if not provided
-            discount: discount || { percentage: 0, validUntil: null },
             imageUrl, // Set image URL
         });
 

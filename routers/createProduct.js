@@ -65,7 +65,7 @@ router.post('/product', async (req, res) => {
             imageUrl, // Set image URL
         });
 
-        // Save the product to the database
+        // Save the product to the databasee
         await newProduct.save();
 
         res.status(201).json({

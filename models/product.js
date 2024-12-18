@@ -6,7 +6,7 @@ const commentSchema = new Schema({
     content: { type: String, required: true, maxlength: 500 }, // Comment text, max length 500
     approved: { type: Boolean, default: false }, // Indicates if the comment is approved
     createdAt: { type: Date, default: Date.now }, // Automatically sets the creation date
-    approved: { type: Boolean, default: false } // New field
+    //approved: { type: Boolean, default: false } // New field
 });
 
 const productSchema = new Schema({
@@ -23,10 +23,9 @@ const productSchema = new Schema({
     serialNumber: { type: String, required: true, unique: true },
     description: { type: String, trim: true },
     category: {
-        type: String,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Category',
         required: true,
-        enum: ['mobile phone', 'computer', 'tablet', 'accessories', 'headphone', 'smartwatch', 'television', 'camera'],
-        default: 'accessory',
     },
     quantityInStock: { type: Number, required: true, min: 0, default: 100 },
     price: { type: Number, required: true, min: 0 },

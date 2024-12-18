@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import logo from '../PurchasePage/logo.png';
 import './PurchasePage.css';
 import axios from 'axios';
+import Swal from "sweetalert2";
 
 const UnifiedPurchasePage = () => {
     const [shippingAddr, setShippingAddr] = useState({
@@ -30,8 +31,8 @@ const UnifiedPurchasePage = () => {
     const [showModal, setShowModal] = useState(false);
     const [modalMessage, setModalMessage] = useState("");
     const [isProcessing, setIsProcessing] = useState(false);
-
     const navigate = useNavigate();
+    const Swal = require('sweetalert2');
 
     useEffect(() => {
         const fetchCart = async () => {
@@ -105,7 +106,12 @@ const UnifiedPurchasePage = () => {
     const handleCompletePayment = async () => {
         const userId = localStorage.getItem("user");
         if (!userId) {
-            alert("You must be logged in to complete the purchase.");
+            //alert("You must be logged in to complete the purchase.");
+            Swal.fire({
+                icon: "error",
+                title: "Oops...",
+                text: "You must be logged in to complete the purchase!"
+            });
             return;
         }
     
@@ -125,7 +131,12 @@ const UnifiedPurchasePage = () => {
             /^\d{3}$/.test(cardInfo.cvv); // Match 3-digit CVV
     
         if (!isAddressValid || !isPaymentValid) {
-            alert("Please complete all required fields in Address and Payment Information.");
+            //alert("Please complete all required fields in Address and Payment Information.");
+            Swal.fire({
+                icon: "error",
+                title: "Oops...",
+                text: "Please complete all required fields in Address and Payment Information!"
+            });
             return;
         }
     

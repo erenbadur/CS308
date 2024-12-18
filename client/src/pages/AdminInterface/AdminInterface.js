@@ -35,10 +35,22 @@ const AdminInterface = () => {
         price: 0,
         distributor: '',
         warrantyStatus: true,
-        discount: {
-            percentage: 0,
-            validUntil: '',
-        },
+        imageUrl: '',
+    });
+
+    // State for update modal
+    const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+    const [productToUpdate, setProductToUpdate] = useState(null);
+    const [updateFields, setUpdateFields] = useState({
+        name: '',
+        model: '',
+        serialNumber: '',
+        description: '',
+        category: '',
+        quantityInStock: 0,
+        price: 0,
+        distributor: '',
+        warrantyStatus: true,
         imageUrl: '',
     });
 
@@ -210,16 +222,7 @@ const AdminInterface = () => {
      */
     const handleProductInputChange = (e) => {
         const { name, value, type, checked } = e.target;
-        if (name.startsWith('discount.')) {
-            const discountField = name.split('.')[1];
-            setNewProduct(prevState => ({
-                ...prevState,
-                discount: {
-                    ...prevState.discount,
-                    [discountField]: discountField === 'percentage' ? Number(value) : value,
-                },
-            }));
-        } else if (name === 'warrantyStatus') {
+        if (name === 'warrantyStatus') {
             setNewProduct(prevState => ({
                 ...prevState,
                 [name]: checked,
@@ -256,7 +259,6 @@ const AdminInterface = () => {
             price,
             distributor,
             warrantyStatus,
-            discount,
             imageUrl,
         } = newProduct;
 
@@ -281,7 +283,6 @@ const AdminInterface = () => {
                     price,
                     distributor: distributor.trim(),
                     warrantyStatus,
-                    discount,
                     imageUrl: imageUrl.trim(),
                 }),
             });
@@ -299,10 +300,6 @@ const AdminInterface = () => {
                     price: 0,
                     distributor: '',
                     warrantyStatus: true,
-                    discount: {
-                        percentage: 0,
-                        validUntil: '',
-                    },
                     imageUrl: '',
                 });
                 fetchProducts();
@@ -348,6 +345,136 @@ const AdminInterface = () => {
     };
 
     /**
+     * Opens the update modal for a specific product.
+     *
+     * @param {Object} product - The product to update.
+     */
+    const openUpdateModal = (product) => {
+        setProductToUpdate(product);
+        setUpdateFields({
+            name: product.name,
+            model: product.model,
+            serialNumber: product.serialNumber,
+            description: product.description,
+            category: product.category ? product.category._id : '',
+            quantityInStock: product.quantityInStock,
+            price: product.price,
+            distributor: product.distributor,
+            warrantyStatus: product.warrantyStatus,
+            imageUrl: product.imageUrl,
+        });
+        setIsUpdateModalOpen(true);
+    };
+
+    /**
+     * Closes the update modal.
+     */
+    const closeUpdateModal = () => {
+        setIsUpdateModalOpen(false);
+        setProductToUpdate(null);
+        setUpdateFields({
+            name: '',
+            model: '',
+            serialNumber: '',
+            description: '',
+            category: '',
+            quantityInStock: 0,
+            price: 0,
+            distributor: '',
+            warrantyStatus: true,
+            imageUrl: '',
+        });
+    };
+
+    /**
+     * Handles input changes for the update product form.
+     *
+     * @param {Object} e - The event object.
+     */
+    const handleUpdateInputChange = (e) => {
+        const { name, value, type, checked } = e.target;
+        if (name === 'warrantyStatus') {
+            setUpdateFields(prevState => ({
+                ...prevState,
+                [name]: checked,
+            }));
+        } else if (name === 'category') {
+            setUpdateFields(prevState => ({
+                ...prevState,
+                [name]: value,
+            }));
+        } else {
+            setUpdateFields(prevState => ({
+                ...prevState,
+                [name]: type === 'number' ? Number(value) : value,
+            }));
+        }
+    };
+
+    /**
+     * Handles updating a product.
+     *
+     * @param {Event} e - The form submission event.
+     */
+    const handleUpdateProduct = async (e) => {
+        e.preventDefault();
+
+        const { productId } = productToUpdate;
+        const {
+            name,
+            model,
+            serialNumber,
+            description,
+            category,
+            quantityInStock,
+            price,
+            distributor,
+            warrantyStatus,
+            imageUrl,
+        } = updateFields;
+
+        // Basic validation
+        if (!name.trim() || !model.trim() || !serialNumber.trim() || !category || quantityInStock < 0 || price < 0 || !distributor.trim() || !imageUrl.trim()) {
+            setErrorMessage('Please fill in all required fields correctly.');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const response = await fetch(`/api/manager/products/${encodeURIComponent(productId)}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: name.trim(),
+                    model: model.trim(),
+                    serialNumber: serialNumber.trim(),
+                    description: description.trim(),
+                    category,
+                    quantityInStock,
+                    price,
+                    distributor: distributor.trim(),
+                    warrantyStatus,
+                    imageUrl: imageUrl.trim(),
+                }),
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                setSuccessMessage('Product updated successfully.');
+                closeUpdateModal();
+                fetchProducts();
+            } else {
+                setErrorMessage(data.error || 'Failed to update product.');
+            }
+        } catch (error) {
+            console.error('Error updating product:', error);
+            setErrorMessage('An error occurred while updating the product.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    /**
      * Gets category name by its ID.
      *
      * @param {string} categoryId - The ID of the category.
@@ -372,6 +499,14 @@ const AdminInterface = () => {
         }
     }, [errorMessage, successMessage]);
 
+    /**
+     * Handles logout by clearing localStorage and redirecting to login.
+     */
+    const handleLogout = () => {
+        localStorage.clear();
+        window.location.href = '/login'; // Adjust the route as per your routing setup
+    };
+
     return (
         <div className="admin-container">
             {/* Sidebar */}
@@ -384,7 +519,7 @@ const AdminInterface = () => {
                         className={`nav-button ${role === 'salesManager' ? 'active' : 'secondary'}`}
                         onClick={() => handleNavClick('salesManager')}
                         disabled={role !== 'salesManager'}
-                        title={role !== 'salesManager' ? 'You do not have permission to access this section' : ''}
+                        title={role === 'salesManager' ? '' : 'You do not have permission to access this section'}
                     >
                         Sales Manager
                     </button>
@@ -427,6 +562,13 @@ const AdminInterface = () => {
                         </div>
                     )}
                 </div>
+                {/* Logout Button */}
+                <button
+                    className="logout-button"
+                    onClick={handleLogout}
+                >
+                    Logout
+                </button>
             </div>
             {/* Main Content Area */}
             <div className="main-content">
@@ -592,26 +734,6 @@ const AdminInterface = () => {
                                 />
                             </div>
                             <div className="form-group">
-                                <label>Discount Percentage:</label>
-                                <input
-                                    type="number"
-                                    name="discount.percentage"
-                                    value={newProduct.discount.percentage}
-                                    onChange={handleProductInputChange}
-                                    min="0"
-                                    max="100"
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Discount Valid Until:</label>
-                                <input
-                                    type="date"
-                                    name="discount.validUntil"
-                                    value={newProduct.discount.validUntil}
-                                    onChange={handleProductInputChange}
-                                />
-                            </div>
-                            <div className="form-group">
                                 <label>Image URL:</label>
                                 <input
                                     type="url"
@@ -682,6 +804,9 @@ const AdminInterface = () => {
                                                         <button onClick={() => handleDeleteProduct(product.productId)} disabled={loading}>
                                                             Delete
                                                         </button>
+                                                        <button onClick={() => openUpdateModal(product)} disabled={loading}>
+                                                            Update
+                                                        </button>
                                                     </td>
                                                 </tr>
                                             ))
@@ -697,7 +822,128 @@ const AdminInterface = () => {
                     </div>
                 )}
             </div>
+
+            {/* Update Product Modal */}
+            {isUpdateModalOpen && productToUpdate && (
+                <div className="modal-overlay">
+                    <div className="modal-content">
+                        <h3>Update Product</h3>
+                        <form onSubmit={handleUpdateProduct} className="update-form">
+                            <div className="form-group">
+                                <label>Name:</label>
+                                <input
+                                    type="text"
+                                    name="name"
+                                    value={updateFields.name}
+                                    onChange={handleUpdateInputChange}
+                                    required
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Model:</label>
+                                <input
+                                    type="text"
+                                    name="model"
+                                    value={updateFields.model}
+                                    onChange={handleUpdateInputChange}
+                                    required
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Serial Number:</label>
+                                <input
+                                    type="text"
+                                    name="serialNumber"
+                                    value={updateFields.serialNumber}
+                                    onChange={handleUpdateInputChange}
+                                    required
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Description:</label>
+                                <textarea
+                                    name="description"
+                                    value={updateFields.description}
+                                    onChange={handleUpdateInputChange}
+                                ></textarea>
+                            </div>
+                            <div className="form-group">
+                                <label>Category:</label>
+                                <select
+                                    name="category"
+                                    value={updateFields.category}
+                                    onChange={handleUpdateInputChange}
+                                    required
+                                >
+                                    <option value="" disabled>Select Category</option>
+                                    {categories.map((cat) => (
+                                        <option key={cat._id} value={cat._id}>{cat.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label>Quantity In Stock:</label>
+                                <input
+                                    type="number"
+                                    name="quantityInStock"
+                                    value={updateFields.quantityInStock}
+                                    onChange={handleUpdateInputChange}
+                                    min="0"
+                                    required
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Price:</label>
+                                <input
+                                    type="number"
+                                    name="price"
+                                    value={updateFields.price}
+                                    onChange={handleUpdateInputChange}
+                                    min="0"
+                                    step="0.01"
+                                    required
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Distributor:</label>
+                                <input
+                                    type="text"
+                                    name="distributor"
+                                    value={updateFields.distributor}
+                                    onChange={handleUpdateInputChange}
+                                    required
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Warranty Status:</label>
+                                <input
+                                    type="checkbox"
+                                    name="warrantyStatus"
+                                    checked={updateFields.warrantyStatus}
+                                    onChange={handleUpdateInputChange}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Image URL:</label>
+                                <input
+                                    type="url"
+                                    name="imageUrl"
+                                    value={updateFields.imageUrl}
+                                    onChange={handleUpdateInputChange}
+                                    required
+                                />
+                            </div>
+                            <div className="modal-actions">
+                                <button type="submit" disabled={loading}>Save Changes</button>
+                                <button type="button" onClick={closeUpdateModal} disabled={loading}>Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
+
 }
+
     export default AdminInterface;

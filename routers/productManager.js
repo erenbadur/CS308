@@ -50,9 +50,6 @@ router.delete('/categories/:categoryName', async (req, res) => {
         if (!category) {
             return res.status(404).json({ error: 'Category not found.' });
         }
-
-        // Burada dikkat: Product modeli category alanını ObjectId ile tutuyor.
-        // Bu nedenle ürünleri silerken category._id kullanın, categoryName kullanmayın.
         const deletedProducts = await Product.deleteMany({ category: category._id });
 
         await Category.deleteOne({ _id: category._id });
@@ -120,6 +117,43 @@ router.put('/product/decrease-stock', async (req, res) => {
     } catch (error) {
         console.error('Error decreasing stock:', error);
         res.status(500).json({ error: 'An error occurred while decreasing stock.' });
+    }
+});
+
+// PUT /manager/products/:productId - Update product details (excluding discount)
+router.put('/products/:productId', async (req, res) => {
+    const { productId } = req.params;
+    const updateFields = { ...req.body };
+
+    // Remove discount fields if present
+    delete updateFields.discount;
+    delete updateFields.discountPercentage;
+    delete updateFields.discountValidUntil;
+
+    try {
+        // Validate if category is being updated and exists
+        if (updateFields.category) {
+            const categoryExists = await Category.findById(updateFields.category);
+            if (!categoryExists) {
+                return res.status(400).json({ error: 'Selected category does not exist.' });
+            }
+        }
+
+        // Update the product
+        const updatedProduct = await Product.findOneAndUpdate(
+            { productId },
+            { $set: updateFields },
+            { new: true, runValidators: true }
+        ).populate('category');
+
+        if (!updatedProduct) {
+            return res.status(404).json({ error: 'Product not found.' });
+        }
+
+        res.status(200).json({ message: 'Product updated successfully.', product: updatedProduct });
+    } catch (error) {
+        console.error('Error updating product:', error);
+        res.status(500).json({ error: 'An error occurred while updating the product.' });
     }
 });
 

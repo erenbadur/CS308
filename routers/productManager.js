@@ -2,40 +2,70 @@ const express = require('express');
 const router = express.Router();
 const Product = require('../models/product');
 const PurchaseHistory = require('../models/PurchaseHistory');
+const Category = require('../models/category');
 const User = require('../models/user');
 const Order = require('../models/order');
 const Delivery = require('../models/delivery'); // Ensure this is correctly defined
 
-// Remove a product
-router.delete('/product/:productId', async (req, res) => {
-    const { productId } = req.params;
-
+// GET /categories
+router.get('/categories', async (req, res) => {
     try {
-        const deletedProduct = await Product.findOneAndDelete({ productId });
-        if (!deletedProduct) {
-            return res.status(404).json({ error: 'Product not found.' });
-        }
-        res.status(200).json({ message: 'Product removed successfully.', product: deletedProduct });
+        const categories = await Category.find().sort({ name: 1 });
+        res.status(200).json({ categories });
     } catch (error) {
-        console.error('Error removing product:', error);
-        res.status(500).json({ error: 'An error occurred while removing the product.' });
+        console.error('Error fetching categories:', error);
+        res.status(500).json({ error: 'An error occurred while fetching categories.' });
     }
 });
 
-// Add a new category (fix Category handling logic)
+// POST /categories (Add category)
 router.post('/categories', async (req, res) => {
-    const { category } = req.body;
+    const { name } = req.body;
+    if (!name || typeof name !== 'string' || name.trim() === '') {
+        return res.status(400).json({ error: 'Category name is required and must be a non-empty string.' });
+    }
 
     try {
-        // Simulating category addition logic (use your actual implementation)
-        // If categories are part of the Product schema, this may require schema updates
-        res.status(200).json({ message: `Category "${category}" added successfully.` });
+        const existingCategory = await Category.findOne({ name: name.trim() });
+        if (existingCategory) {
+            return res.status(400).json({ error: 'Category already exists.' });
+        }
+
+        const newCategory = new Category({ name: name.trim() });
+        await newCategory.save();
+
+        res.status(201).json({ message: 'Category added successfully.', category: newCategory });
     } catch (error) {
         console.error('Error adding category:', error);
         res.status(500).json({ error: 'An error occurred while adding the category.' });
     }
 });
 
+// DELETE /categories/:categoryName (Delete category and its products)
+router.delete('/categories/:categoryName', async (req, res) => {
+    const { categoryName } = req.params;
+
+    try {
+        const category = await Category.findOne({ name: categoryName });
+        if (!category) {
+            return res.status(404).json({ error: 'Category not found.' });
+        }
+
+        // Burada dikkat: Product modeli category alanını ObjectId ile tutuyor.
+        // Bu nedenle ürünleri silerken category._id kullanın, categoryName kullanmayın.
+        const deletedProducts = await Product.deleteMany({ category: category._id });
+
+        await Category.deleteOne({ _id: category._id });
+
+        res.status(200).json({
+            message: `Category "${categoryName}" and its associated products have been deleted successfully.`,
+            deletedProductsCount: deletedProducts.deletedCount
+        });
+    } catch (error) {
+        console.error('Error deleting category:', error);
+        res.status(500).json({ error: 'An error occurred while deleting the category.' });
+    }
+});
 // Decrease stock for a product
 router.put('/product/decrease-stock', async (req, res) => {
     const { productId, quantityToRemove } = req.body;

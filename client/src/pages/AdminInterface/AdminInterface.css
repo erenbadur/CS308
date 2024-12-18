@@ -23,7 +23,7 @@
     font-size: 1.5rem;
     text-align: center;
     font-weight: bold;
-    color: white; /* Orange */
+    color: #FFA500; /* Orange */
 }
 
 /* Welcome Message */
@@ -31,7 +31,7 @@
     margin-bottom: 30px;
     text-align: center;
     font-size: 1rem;
-    color: white; /* Gold */
+    color: #FFD700; /* Gold */
 }
 
 /* Navigation Buttons Container */
@@ -55,8 +55,15 @@
     color: #fff;
 }
 
+/* Submenu Button Styling */
+.submenu-button {
+    padding-left: 40px; /* Indent submenu buttons */
+    background-color: #8B008B; /* Darker Purple */
+}
+
 /* Active Button Styling */
-.nav-button.active {
+.nav-button.active,
+.submenu-button.active {
     background-color: #FFA500; /* Orange */
     color: #fff;
     cursor: default; /* No pointer for active button */
@@ -64,7 +71,8 @@
 }
 
 /* Disabled Button Styling */
-.nav-button:disabled {
+.nav-button:disabled,
+.submenu-button:disabled {
     background-color: #A9A9A9; /* Gray */
     color: #fff;
     cursor: not-allowed;
@@ -72,13 +80,15 @@
 }
 
 /* Hover effect for enabled buttons */
-.nav-button:not(:disabled):hover {
+.nav-button:not(:disabled):hover,
+.submenu-button:not(:disabled):hover {
     background-color: #8B008B; /* Darker Purple */
     transform: scale(1.05);
 }
 
 /* Tooltip for disabled buttons */
-.nav-button:disabled::after {
+.nav-button:disabled::after,
+.submenu-button:disabled::after {
     content: 'You do not have permission to access this section';
     visibility: hidden;
     width: 220px;
@@ -98,7 +108,8 @@
 }
 
 /* Show the tooltip on hover */
-.nav-button:disabled:hover::after {
+.nav-button:disabled:hover::after,
+.submenu-button:disabled:hover::after {
     visibility: visible;
     opacity: 1;
 }
@@ -119,12 +130,91 @@
     to { opacity: 1; }
 }
 
+/* Submenu Container */
+.submenu {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-left: 10px;
+}
+
 /* Main Content Styling */
 .main-content {
     flex: 1;
     padding: 40px;
     background-color: #fff;
     overflow-y: auto;
+}
+
+/* Dashboard Content Styling */
+.dashboard-content {
+    /* Add any specific styling for dashboard content here */
+}
+
+/* Manage Categories Styling */
+.manage-categories {
+    /* Add any specific styling for manage categories here */
+}
+
+.manage-categories .category-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 400px;
+}
+
+.manage-categories .category-form input[type="text"],
+.manage-categories .category-form select {
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.manage-categories .category-form button {
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    background-color: #FFA500; /* Orange */
+    color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.manage-categories .category-form button:hover {
+    background-color: #FF8C00; /* Dark Orange */
+}
+
+.manage-categories .delete-form {
+    margin-top: 20px;
+}
+
+.manage-categories .existing-categories {
+    margin-top: 30px;
+}
+
+.manage-categories .existing-categories ul {
+    list-style-type: disc;
+    padding-left: 20px;
+}
+
+.manage-categories .existing-categories li {
+    margin-bottom: 5px;
+}
+
+/* Success Message Styling */
+.success-message {
+    color: #28a745; /* Green */
+    margin-top: 10px;
+    font-weight: bold;
+}
+
+/* Error Message Styling */
+.error-message {
+    color: #dc3545; /* Red */
+    margin-top: 10px;
+    font-weight: bold;
 }
 
 /* Responsive Design */
@@ -145,7 +235,8 @@
         gap: 5px;
     }
 
-    .nav-button {
+    .nav-button,
+    .submenu-button {
         padding: 10px 15px;
         font-size: 0.9rem;
     }
@@ -156,5 +247,10 @@
 
     .main-content {
         padding: 20px;
+    }
+
+    /* Adjust forms in collapsible content for smaller screens */
+    .manage-categories .category-form {
+        flex-direction: column;
     }
 }

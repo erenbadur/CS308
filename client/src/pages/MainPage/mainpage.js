@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './mainpage.css';
 import axios from 'axios';
+import Swal from 'sweetalert2';
 import { v4 as uuidv4 } from 'uuid';
 
 // Utility to get sessionId, when the program starts running the session Id should already be created and set by index.js file
@@ -56,6 +57,7 @@ const MainPage = () => {
     const [userId, setUserId] = useState(localStorage.getItem('user')); // Logged-in user's ID
     const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('user'));
     const [stockWarnings, setStockWarnings] = useState({}); // Track stock warnings for cart items
+    const Swal = require('sweetalert2')
 
     useEffect(() => {
         const handleScroll = () => {
@@ -230,7 +232,13 @@ const MainPage = () => {
             setCurrentPage(response.data.currentPage || 1);
         } catch (error) {
             console.error("Error during search:", error.response?.data || error.message);
-            alert("An error occurred during the search.");
+            //alert("An error occurred during the search.");
+            Swal.fire({
+                icon: "error",
+                title: "Oops...",
+                text: "An error occurred during the search!"
+            });
+
         } finally {
             setIsSearching(false);
         }
@@ -437,7 +445,12 @@ const MainPage = () => {
             }
         } catch (error) {
             console.error('Error during login:', error.response?.data || error.message);
-            alert('Login failed. Please try again.');
+            //alert('Login failed. Please try again.');
+            Swal.fire({
+                icon: "error",
+                title: "Oops...",
+                text: "Login failed. Please try again!"
+            });
         }
     };
     
@@ -499,12 +512,23 @@ const MainPage = () => {
 // Handles the submission of a comment or rating
 const handleSubmitComment = async () => {
     if (!newRating) {
-        alert('You must provide a rating to submit a comment.');
+        //alert('You must provide a rating to submit a comment.');
+        Swal.fire({
+            icon: "error",
+            title: "Oops...",
+            text: "You must provide a rating to submit a comment!"
+        });
+
         return;
     }
 
     if (!userId) {
-        alert('You must be logged in to submit a comment or rating.');
+        //alert('You must be logged in to submit a comment or rating.');
+        Swal.fire({
+            icon: "error",
+            title: "Oops...",
+            text: "You must be logged in to submit a comment or rating!"
+        });
         return;
     }
 
@@ -517,7 +541,11 @@ const handleSubmitComment = async () => {
             rating: parseFloat(newRating),
         });
 
-        alert('Your comment/rating has been submitted and is awaiting approval.');
+        //alert('Your comment/rating has been submitted and is awaiting approval.');
+        Swal.fire({
+            icon: "success",
+            text: "Your comment/rating has been submitted and is awaiting approval!"
+        });
 
         // Clear the form
         setNewRating('');
@@ -528,7 +556,13 @@ const handleSubmitComment = async () => {
         fetchComments(productId, 1);
     } catch (error) {
         console.error('Error submitting comment/rating:', error.response?.data || error.message);
-        alert('An error occurred while submitting your comment or rating.');
+        //alert('An error occurred while submitting your comment or rating.');
+        Swal.fire({
+            icon: "error",
+            title: "Oops...",
+            text: "Error submitting comment/rating!"
+        });
+
     }
 };
 
@@ -571,7 +605,12 @@ const handleSubmitComment = async () => {
             setCurrentPage(1); // Reset to the first page
         } catch (error) {
             console.error("Error during sorting:", error.response?.data || error.message);
-            alert("An error occurred during sorting. Please try again.");
+            //alert("An error occurred during sorting. Please try again.");
+            Swal.fire({
+                icon: "error",
+                title: "Oops...",
+                text: "Error during sorting!"
+            });
         }
     };
     
@@ -789,8 +828,8 @@ const handleSubmitComment = async () => {
                         <p>Your cart is empty.</p>
                     )}
                     {cartItems.length > 0 && (
-                        <button 
-                            className="checkout-btn" 
+                        <button
+                            className="checkout-btn"
                             onClick={handleCheckout}
                         >
                             Proceed to Checkout
@@ -799,7 +838,7 @@ const handleSubmitComment = async () => {
                 </div>
             )}
 
-            
+
             {/* Fixed Hero Section */}
             <div className="hero-section">
                 <img src="resimler/mainimage.jpg" alt="Hero Banner" className="hero-image" />
@@ -971,7 +1010,7 @@ const handleSubmitComment = async () => {
         comments.map((comment, index) => (
             <div key={index} className="comment">
                 <p>
-                    <strong>{comment.username || 'Anonymous'}</strong> - 
+                    <strong>{comment.username || 'Anonymous'}</strong> -
                     {comment.date ? new Date(comment.date).toLocaleDateString() : 'Unknown Date'}
                 </p>
                 {comment.rating && <p>Rating: {'⭐️'.repeat(Math.round(comment.rating))}</p>}
@@ -1000,7 +1039,7 @@ const handleSubmitComment = async () => {
                     </div>
 
 
-                    
+
                         )}
             </div>
 

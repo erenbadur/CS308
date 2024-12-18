@@ -1,6 +1,8 @@
+// routers/createProduct.js
 const express = require('express');
 const router = express.Router();
 const Product = require('../models/product'); // Adjust path for Product model
+const Category = require('../models/category'); // Import Category model
 
 router.post('/product', async (req, res) => {
     const {
@@ -8,27 +10,28 @@ router.post('/product', async (req, res) => {
         model,
         serialNumber,
         description,
-        category, // Add category field
+        category, // Should be category ObjectId
         quantityInStock,
         price,
         distributor,
         warrantyStatus,
         discount,
+        imageUrl, // New field for image URL
     } = req.body;
 
     try {
         // Validate required fields
-        if (!name || !model || !serialNumber || !category || quantityInStock === undefined || price === undefined || !distributor) {
+        if (!name || !model || !serialNumber || !category || quantityInStock === undefined || price === undefined || !distributor || !imageUrl) {
             return res.status(400).json({
-                error: 'Fields name, model, serialNumber, category, quantityInStock, price, and distributor are required.',
+                error: 'Fields name, model, serialNumber, category, quantityInStock, price, distributor, and imageUrl are required.',
             });
         }
 
-        // Validate category
-        const allowedCategories = ['mobile phone', 'computer', 'tablet', 'accessories', 'headphone', 'smartwatch', 'television', 'camera'];
-        if (!allowedCategories.includes(category)) {
+        // Validate category exists
+        const categoryExists = await Category.findById(category);
+        if (!categoryExists) {
             return res.status(400).json({
-                error: `Invalid category. Allowed categories are: ${allowedCategories.join(', ')}.`,
+                error: 'Selected category does not exist.',
             });
         }
 
@@ -54,12 +57,13 @@ router.post('/product', async (req, res) => {
             model,
             serialNumber,
             description,
-            category, // Add category field
+            category, // category ObjectId
             quantityInStock,
             price,
             distributor,
-            warrantyStatus: warrantyStatus || true, // Default to true if not provided
+            warrantyStatus: warrantyStatus !== undefined ? warrantyStatus : true, // Default to true if not provided
             discount: discount || { percentage: 0, validUntil: null },
+            imageUrl, // Set image URL
         });
 
         // Save the product to the database
@@ -74,6 +78,5 @@ router.post('/product', async (req, res) => {
         res.status(500).json({ error: 'An error occurred while creating the product.' });
     }
 });
-
 
 module.exports = router;

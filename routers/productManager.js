@@ -66,6 +66,42 @@ router.delete('/categories/:categoryName', async (req, res) => {
         res.status(500).json({ error: 'An error occurred while deleting the category.' });
     }
 });
+
+// GET /manager/products - List all products, with optional category filter
+router.get('/products', async (req, res) => {
+    try {
+        const { category } = req.query; // category is category ObjectId
+
+        let query = {};
+        if (category) {
+            query.category = category;
+        }
+
+        const products = await Product.find(query).populate('category');
+        res.status(200).json({ products });
+    } catch (error) {
+        console.error('Error fetching products:', error);
+        res.status(500).json({ error: 'An error occurred while fetching products.' });
+    }
+});
+
+// DELETE /manager/products/:productId - Delete a product by productId
+router.delete('/products/:productId', async (req, res) => {
+    const { productId } = req.params;
+
+    try {
+        const product = await Product.findOneAndDelete({ productId });
+        if (!product) {
+            return res.status(404).json({ error: 'Product not found.' });
+        }
+
+        res.status(200).json({ message: 'Product deleted successfully.', product });
+    } catch (error) {
+        console.error('Error deleting product:', error);
+        res.status(500).json({ error: 'An error occurred while deleting the product.' });
+    }
+});
+
 // Decrease stock for a product
 router.put('/product/decrease-stock', async (req, res) => {
     const { productId, quantityToRemove } = req.body;

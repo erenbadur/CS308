@@ -27,6 +27,7 @@ const productSchema = new Schema({
         ref: 'Category',
         required: true,
     },
+    imageUrl: { type: String, required: true },
     quantityInStock: { type: Number, required: true, min: 0, default: 100 },
     price: { type: Number, required: true, min: 0 },
     warrantyStatus: { type: Boolean, default: true },

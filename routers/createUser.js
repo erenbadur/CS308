@@ -2,15 +2,23 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/user'); // Adjust path for User model
 
-// Create a new user
+// Create a new user with a specific role
 router.post('/user', async (req, res) => {
-    const { username, email, password, isAdmin } = req.body;
+    const { username, email, password, role } = req.body;
 
     try {
         // Validate required fields
         if (!username || !email || !password) {
             return res.status(400).json({
                 error: 'Fields username, email, and password are required.',
+            });
+        }
+
+        // Validate role
+        const allowedRoles = ['user', 'salesManager', 'productManager'];
+        if (role && !allowedRoles.includes(role)) {
+            return res.status(400).json({
+                error: `Invalid role. Allowed roles are: ${allowedRoles.join(', ')}.`,
             });
         }
 
@@ -29,7 +37,7 @@ router.post('/user', async (req, res) => {
             username,
             email,
             password, // Password will be hashed by the `pre` middleware in the User model
-            isAdmin: isAdmin || false, // Default to false if not provided
+            role: role || 'user', // Default role is 'user' if not provided
         });
 
         // Save the user to the database

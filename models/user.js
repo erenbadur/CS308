@@ -32,9 +32,10 @@ const userSchema = new mongoose.Schema({
         minlength: 8,
         select: false, // Exclude password from query results by default to ensure security
     },
-    isAdmin: {
-        type: Boolean,
-        default: false, // Regular user status
+    role: {
+        type: String,
+        enum: ['customer', 'salesManager', 'productManager'], // Allow only specific roles
+        default: 'customer', // Default role for new users
     },
     orders: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Order' }], // Reference to Order documents
 

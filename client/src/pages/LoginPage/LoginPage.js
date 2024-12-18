@@ -51,10 +51,17 @@ const LoginPage = () => {
         setError(data.message || 'Username or password is incorrect');
       } else {
         localStorage.setItem('user', data.userId);
+        localStorage.setItem('role', data.role);
         setSuccess('Welcome');
         setUsername('');
         setPassword('');
-        window.location.href = '/';
+        if (data.role === 'customer') {
+          navigate('/');
+        } else if (data.role === 'salesManager' || data.role === 'productManager') {
+          navigate('/admin');
+        } else {
+          navigate('/'); 
+        }
       }
     } catch (error) {
       console.error('Error during login:', error);

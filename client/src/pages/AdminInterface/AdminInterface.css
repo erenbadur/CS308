@@ -1,0 +1,160 @@
+/* src/pages/AdminInterface/AdminInterface.css */
+
+/* Container holding the sidebar and main content */
+.admin-container {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Sidebar Styling */
+.sidebar {
+    width: 250px;
+    padding: 20px;
+    background-color: #6A0DAD; /* Deep Purple */
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Sidebar Title */
+.sidebar-title {
+    margin-bottom: 20px;
+    font-size: 1.5rem;
+    text-align: center;
+    font-weight: bold;
+    color: white; /* Orange */
+}
+
+/* Welcome Message */
+.welcome-message {
+    margin-bottom: 30px;
+    text-align: center;
+    font-size: 1rem;
+    color: white; /* Gold */
+}
+
+/* Navigation Buttons Container */
+.nav-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* General Navigation Button Styling */
+.nav-button {
+    width: 100%;
+    text-align: left;
+    padding: 12px 20px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 5px;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    cursor: pointer;
+    position: relative; /* For tooltip positioning */
+    color: #fff;
+}
+
+/* Active Button Styling */
+.nav-button.active {
+    background-color: #FFA500; /* Orange */
+    color: #fff;
+    cursor: default; /* No pointer for active button */
+    transform: scale(1.02);
+}
+
+/* Disabled Button Styling */
+.nav-button:disabled {
+    background-color: #A9A9A9; /* Gray */
+    color: #fff;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* Hover effect for enabled buttons */
+.nav-button:not(:disabled):hover {
+    background-color: #8B008B; /* Darker Purple */
+    transform: scale(1.05);
+}
+
+/* Tooltip for disabled buttons */
+.nav-button:disabled::after {
+    content: 'You do not have permission to access this section';
+    visibility: hidden;
+    width: 220px;
+    background-color: #555;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 8px 0;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%; /* Position above the button */
+    left: 50%;
+    margin-left: -110px; /* Center the tooltip */
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-size: 0.9rem;
+}
+
+/* Show the tooltip on hover */
+.nav-button:disabled:hover::after {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Collapsible Content Styling */
+.collapse-content {
+    margin-top: 10px;
+    padding: 15px 20px;
+    background-color: #483D8B; /* Dark Slate Blue */
+    border-radius: 5px;
+    color: #fff;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Fade-in animation for collapsible content */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Main Content Styling */
+.main-content {
+    flex: 1;
+    padding: 40px;
+    background-color: #fff;
+    overflow-y: auto;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .admin-container {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .nav-buttons {
+        flex-direction: row;
+        gap: 5px;
+    }
+
+    .nav-button {
+        padding: 10px 15px;
+        font-size: 0.9rem;
+    }
+
+    .collapse-content {
+        padding: 10px 15px;
+    }
+
+    .main-content {
+        padding: 20px;
+    }
+}

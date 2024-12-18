@@ -14,18 +14,32 @@ import SignInPage from './pages/SignInPage/SignInPage';
 import PurchasePage from './pages/PurchasePage/PurchasePage';
 import TrackPage from './pages/TrackPage/TrackPage';
 import WishlistPage from './pages/WishlistPage/WishlistPage';
+import AdminInterface from './pages/AdminInterface/AdminInterface';
+import Unauthorized from './pages/Unauthorized/Unauthorized';
 
-
+import PrivateRoute from './components/PrivateRoute';
 function App() {
     return (
         <BrowserRouter>
             <Routes>
-                <Route path='/' element={<MainPage/>}/>
+            <Route path='/' element={
+                    <PrivateRoute allowedRoles={['customer']}>
+                        <MainPage/>
+                    </PrivateRoute>
+                }/>                
+                {/* Admin Interface */}
+                <Route path='/admin' element={
+                    <PrivateRoute allowedRoles={['salesManager', 'productManager']}>
+                        <AdminInterface/>
+                    </PrivateRoute>
+                }/>
                 <Route path='/login' element={<LoginPage/>}/>
                 <Route path='/signin' element={<SignInPage/>}/>
                 <Route path='/checkout' element={<PurchasePage/>}/>
                 <Route path='/track' element={<TrackPage/>}/>
                 <Route path='/wishlist' element={<WishlistPage />} />
+                <Route path='/unauthorized' element={<Unauthorized />} />
+
             </Routes>
         </BrowserRouter>
       );

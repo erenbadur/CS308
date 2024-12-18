@@ -78,6 +78,7 @@ router.post('/login', async (req, res) => {
       res.status(200).json({
           userId: user.userId,
           cart: userCart ? userCart.items : [],
+          role: user.role,
           message: 'Login successful',
       });
   } catch (error) {

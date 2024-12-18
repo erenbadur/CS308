@@ -1,0 +1,25 @@
+/* src/pages/Unauthorized/Unauthorized.css */
+.unauthorized-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background-color: #f8d7da;
+    color: #721c24;
+    text-align: center;
+}
+
+.unauthorized-container a {
+    margin-top: 20px;
+    padding: 10px 20px;
+    background-color: #721c24;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 5px;
+}
+
+.unauthorized-container a:hover {
+    background-color: #a94442;
+    cursor: pointer; /* Ekstra kullanıcı geri bildirimi */
+}

@@ -70,7 +70,6 @@ router.post('/add', async (req, res) => {
 
 
 
-// `/confirm-payment` endpoint
 router.post("/confirm-payment", async (req, res) => {
     const { userId, products, shippingAddress } = req.body;
 
@@ -133,8 +132,28 @@ router.post("/confirm-payment", async (req, res) => {
 
         console.log("Purchase record saved:", purchase);
 
-        // Generate invoice and save to the new Invoice model
-        const invoiceBuffer = await generateInvoiceFile(user, productDetails, totalRevenue);
+        // Calculate delivery price (can be dynamic)
+        const totalDeliveryPrice = 50; // Example delivery price
+
+        // Create delivery record
+        const delivery = new Delivery({
+            purchase: purchase._id,
+            user: userId,
+            products: productDetails.map((product) => ({
+                productId: product.productId,
+                name: product.name,
+                quantity: product.quantity,
+            })),
+            deliveryAddress: shippingAddress,
+            status: "processing",
+            totalPrice: totalDeliveryPrice, // Include the total delivery price
+        });
+        await delivery.save();
+
+        console.log("Delivery record saved successfully:", delivery);
+
+        // Generate invoice and save to the Invoice model
+        const invoiceBuffer = await generateInvoiceFile(user, productDetails, totalRevenue, delivery);
         const invoiceFilePath = `invoices/Invoice-${Date.now()}.pdf`;
 
         fs.writeFileSync(invoiceFilePath, invoiceBuffer);
@@ -148,42 +167,18 @@ router.post("/confirm-payment", async (req, res) => {
                 price: item.price,
                 total: item.total,
             })),
-            totalAmount: totalRevenue,
+            totalAmount: totalRevenue + totalDeliveryPrice, // Include delivery price in total
+            delivery: {
+                deliveryId: delivery._id,
+                totalPrice: delivery.totalPrice,
+                status: delivery.status,
+                address: delivery.deliveryAddress,
+            },
             invoiceFilePath,
         });
         await newInvoice.save();
 
         console.log("Invoice saved successfully:", newInvoice);
-
-        // Validate shipping address
-        if (
-            !shippingAddress ||
-            !shippingAddress.fullName ||
-            !shippingAddress.phoneNum ||
-            !shippingAddress.address ||
-            !shippingAddress.country ||
-            !shippingAddress.postalCode
-        ) {
-            return res.status(400).json({
-                error: "Invalid shipping address. 'fullName', 'phoneNum', 'address', 'country', and 'postalCode' are required.",
-            });
-        }
-
-        // Create delivery record
-        const delivery = new Delivery({
-            purchase: purchase._id,
-            user: userId,
-            products: productDetails.map((product) => ({
-                productId: product.productId,
-                name: product.name,
-                quantity: product.quantity,
-            })),
-            deliveryAddress: shippingAddress,
-            status: "processing",
-        });
-        await delivery.save();
-
-        console.log("Delivery record saved successfully:", delivery);
 
         // Send invoice email
         await sendInvoiceEmail(user.email, user.username, invoiceBuffer);
@@ -194,8 +189,9 @@ router.post("/confirm-payment", async (req, res) => {
             message: "Payment confirmed and invoice generated.",
             invoice: {
                 id: newInvoice.invoiceId,
-                totalAmount: totalRevenue,
+                totalAmount: newInvoice.totalAmount,
                 filePath: invoiceFilePath,
+                delivery: newInvoice.delivery,
             },
             delivery,
         });
@@ -207,6 +203,7 @@ router.post("/confirm-payment", async (req, res) => {
         res.status(400).json({ error: error.message });
     }
 });
+
 
 // Generate invoice PDF and return as buffer
 const generateInvoiceFile = (user, products, totalAmount, invoiceId) => {

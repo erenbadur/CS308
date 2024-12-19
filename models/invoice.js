@@ -27,8 +27,20 @@ const invoiceSchema = new mongoose.Schema({
         },
     ],
     totalAmount: { type: Number, required: true },
+    delivery: {
+        deliveryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Delivery' },
+        totalPrice: { type: Number }, // Total price of delivery
+        status: { type: String, enum: ["processing", "in-transit", "delivered"], default: "processing" }, // Delivery status
+        address: {
+            fullName: { type: String },
+            phoneNum: { type: String },
+            address: { type: String },
+            country: { type: String },
+            postalCode: { type: String },
+        },
+    },
     date: { type: Date, default: Date.now },
-    invoiceFilePath: { type: String, required: true }, // Path to the saved invoice PDF
+    invoiceFilePath: { type: String, required: true },
 });
 
 const Invoice = mongoose.model('Invoice', invoiceSchema);

@@ -21,6 +21,7 @@ const deliverySchema = new mongoose.Schema({
         enum: ["processing", "in-transit", "delivered"],
         default: "processing",
     },
+    totalPrice: { type: Number, default: 0 }, // New field for total delivery price
 });
 
 module.exports = mongoose.model("Delivery", deliverySchema);

@@ -58,6 +58,43 @@ const MainPage = () => {
     const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('user'));
     const [stockWarnings, setStockWarnings] = useState({}); // Track stock warnings for cart items
     const Swal = require('sweetalert2')
+    const [userMap, setUserMap] = useState({});
+
+    useEffect(() => {
+        const fetchUsernames = async () => {
+            if (comments.length === 0) return;
+
+            // Extract unique userIds from comments
+            const uniqueUserIds = [...new Set(comments.map(comment => comment.user))];
+            console.log('Unique User IDs:', uniqueUserIds);
+
+            // Filter out userIds already in userMap
+            const userIdsToFetch = uniqueUserIds.filter(uid => !userMap[uid]);
+            console.log('User IDs to fetch:', userIdsToFetch);
+
+            const newUserMap = { ...userMap };
+
+            const userFetchPromises = userIdsToFetch.map(async (uid) => {
+                try {
+                    console.log(`Fetching username for userId: ${uid}`);
+                    const response = await axios.get(`/api/users/${uid}`);
+                    console.log(`Fetched username for ${uid}:`, response.data.username);
+                    newUserMap[uid] = response.data.username;
+                } catch (error) {
+                    console.error(`Error fetching user ${uid}:`, error.response?.data || error.message);
+                    newUserMap[uid] = 'Anonymous'; // Assign 'Anonymous' in case of error
+                }
+            });
+
+            await Promise.all(userFetchPromises);
+            setUserMap(newUserMap);
+            console.log('Updated User Map:', newUserMap);
+        };
+
+        if (comments.length > 0) {
+            fetchUsernames();
+        }
+    }, [comments]);
 
     useEffect(() => {
         const handleScroll = () => {
@@ -1010,8 +1047,8 @@ const handleSubmitComment = async () => {
         comments.map((comment, index) => (
             <div key={index} className="comment">
                 <p>
-                    <strong>{comment.username || 'Anonymous'}</strong> -
-                    {comment.date ? new Date(comment.date).toLocaleDateString() : 'Unknown Date'}
+                <strong>{userMap[comment.user] || 'Loading...'}</strong>                
+                {comment.createdAt ? new Date(comment.createdAt).toLocaleDateString() : 'Unknown Date'}
                 </p>
                 {comment.rating && <p>Rating: {'⭐️'.repeat(Math.round(comment.rating))}</p>}
                 {comment.content && <p>{comment.content}</p>}

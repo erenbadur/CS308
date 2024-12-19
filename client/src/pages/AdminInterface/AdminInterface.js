@@ -6,7 +6,7 @@ import './AdminInterface.css';
  * AdminInterface component representing the admin dashboard.
  *
  * Displays a sidebar with navigation buttons based on user roles.
- * Includes a submenu for Product Manager to manage categories and products.
+ * Includes a submenu for Product Manager to manage categories, products, comments, and deliveries.
  */
 const AdminInterface = () => {
     // Retrieve the user's role from localStorage
@@ -57,13 +57,25 @@ const AdminInterface = () => {
     // State for Manage Comments
     const [comments, setComments] = useState([]);
     const [filterApproved, setFilterApproved] = useState('all'); // 'all', 'approved', 'disapproved'
-    const [sortBy, setSortBy] = useState('createdAt');
-    const [order, setOrder] = useState('desc'); // 'asc' veya 'desc'
+    const [sortByComments, setSortByComments] = useState('createdAt');
+    const [orderComments, setOrderComments] = useState('desc'); // 'asc' veya 'desc'
+
+    // State for Manage Deliveries
+    const [deliveries, setDeliveries] = useState([]);
+    const [sortByDeliveries, setSortByDeliveries] = useState('purchaseDate');
+    const [orderDeliveries, setOrderDeliveries] = useState('desc'); // 'asc' veya 'desc'
 
     // State for loading and messages
     const [loading, setLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
+
+    // Fetch all deliveries when activeContent changes to 'manageDeliveries'
+    useEffect(() => {
+        if (activeContent === 'manageDeliveries') {
+            fetchDeliveries();
+        }
+    }, [activeContent, sortByDeliveries, orderDeliveries]);
 
     // Fetch all categories on component mount or when activeContent changes to 'manageCategories' or 'manageProducts'
     useEffect(() => {
@@ -76,7 +88,32 @@ const AdminInterface = () => {
         if (activeContent === 'manageComments') {
             fetchComments();
         }
-    }, [activeContent, filterApproved, sortBy, order]);
+    }, [activeContent, filterApproved, sortByComments, orderComments]);
+
+    /**
+     * Fetches all deliveries from the backend with current sorting.
+     */
+    const fetchDeliveries = async () => {
+        setLoading(true);
+        try {
+            let url = '/api/manager/deliveries?';
+            url += `sortBy=${sortByDeliveries}&order=${orderDeliveries}`;
+
+            const response = await fetch(url);
+            const data = await response.json();
+            if (response.ok) {
+                setDeliveries(data.deliveries);
+                setErrorMessage('');
+            } else {
+                setErrorMessage(data.error || 'Failed to fetch deliveries.');
+            }
+        } catch (error) {
+            console.error('Error fetching deliveries:', error);
+            setErrorMessage('An error occurred while fetching deliveries.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     /**
      * Fetches all categories from the backend.
@@ -140,7 +177,7 @@ const AdminInterface = () => {
                 url += `approved=false&`;
             }
 
-            url += `sortBy=${sortBy}&order=${order}`;
+            url += `sortBy=${sortByComments}&order=${orderComments}`;
 
             const response = await fetch(url);
             const data = await response.json();
@@ -607,23 +644,40 @@ const AdminInterface = () => {
     const handleFilterChange = (e) => {
         setFilterApproved(e.target.value);
     };
+/**
+ * Handles changing the sort field for deliveries.
+ *
+ * @param {Event} e - The change event.
+ */
+const handleSortByDeliveriesChange = (e) => {
+    setSortByDeliveries(e.target.value);
+};
+
+/**
+ * Handles changing the sort order for deliveries.
+ *
+ * @param {Event} e - The change event.
+ */
+const handleOrderDeliveriesChange = (e) => {
+    setOrderDeliveries(e.target.value);
+};
 
     /**
-     * Handles changing the sort field.
+     * Handles changing the sort field for comments.
      *
      * @param {Event} e - The change event.
      */
     const handleSortByChange = (e) => {
-        setSortBy(e.target.value);
+        setSortByComments(e.target.value);
     };
 
     /**
-     * Handles changing the sort order.
+     * Handles changing the sort order for comments.
      *
      * @param {Event} e - The change event.
      */
     const handleOrderChange = (e) => {
-        setOrder(e.target.value);
+        setOrderComments(e.target.value);
     };
 
     /**
@@ -711,7 +765,7 @@ const AdminInterface = () => {
                             >
                                 Manage Products
                             </button>
-                            {/* Yeni Manage Comments Butonu */}
+                            {/* Manage Comments Button */}
                             <button
                                 className={`nav-button submenu-button ${activeContent === 'manageComments' ? 'active' : 'secondary'}`}
                                 onClick={() => handleSubMenuClick('manageComments')}
@@ -719,6 +773,16 @@ const AdminInterface = () => {
                                 title={activeContent === 'manageComments' ? 'Manage Comments is active' : ''}
                             >
                                 Manage Comments
+                            </button>
+
+                            {/* Manage Deliveries Button */}
+                            <button
+                                className={`nav-button submenu-button ${activeContent === 'manageDeliveries' ? 'active' : 'secondary'}`}
+                                onClick={() => handleSubMenuClick('manageDeliveries')}
+                                disabled={activeContent === 'manageDeliveries'}
+                                title={activeContent === 'manageDeliveries' ? 'Manage Deliveries is active' : ''}
+                            >
+                                Manage Deliveries
                             </button>
                         </div>
                     )}
@@ -986,7 +1050,6 @@ const AdminInterface = () => {
                     <div className="manage-comments">
                         <h3>Manage Comments</h3>
 
-                        {/* Filter ve Sort Ayarları */}
                         <div className="filter-sort-controls">
                             <div className="filter-group">
                                 <label>Approval Status:</label>
@@ -998,11 +1061,10 @@ const AdminInterface = () => {
                             </div>
                             <div className="sort-group">
                                 <label>Sort By:</label>
-                                <select value={sortBy} onChange={handleSortByChange}>
+                                <select value={sortByComments} onChange={handleSortByChange}>
                                     <option value="createdAt">Creation Date</option>
-                                    {/* Diğer sıralama kriterleri ekleyebilirsiniz */}
                                 </select>
-                                <select value={order} onChange={handleOrderChange}>
+                                <select value={orderComments} onChange={handleOrderChange}>
                                     <option value="asc">Ascending</option>
                                     <option value="desc">Descending</option>
                                 </select>
@@ -1013,7 +1075,6 @@ const AdminInterface = () => {
                         {errorMessage && <p className="error-message">{errorMessage}</p>}
                         {successMessage && <p className="success-message">{successMessage}</p>}
 
-                        {/* Yorum Listesi */}
                         <div className="comments-list">
                             {loading ? (
                                 <p>Loading comments...</p>
@@ -1063,6 +1124,76 @@ const AdminInterface = () => {
                                 </table>
                             ) : (
                                 <p>No comments found.</p>
+                            )}
+                        </div>
+                    </div>
+                )}
+                {activeContent === 'manageDeliveries' && (
+                    <div className="manage-deliveries">
+                        <h3>Manage Deliveries</h3>
+
+                        {/* Sort Controls */}
+                        <div className="filter-sort-controls">
+                            <div className="sort-group">
+                                <label>Sort By:</label>
+                                <select value={sortByDeliveries} onChange={handleSortByDeliveriesChange}>
+                                    <option value="purchaseDate">Purchase Date</option>
+                                    {/* Add more sorting options if needed */}
+                                </select>
+                                <select value={orderDeliveries} onChange={handleOrderDeliveriesChange}>
+                                    <option value="asc">Ascending</option>
+                                    <option value="desc">Descending</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Display Success and Error Messages */}
+                        {errorMessage && <p className="error-message">{errorMessage}</p>}
+                        {successMessage && <p className="success-message">{successMessage}</p>}
+
+                        {/* Deliveries List */}
+                        <div className="deliveries-list">
+                            {loading ? (
+                                <p>Loading deliveries...</p>
+                            ) : deliveries.length > 0 ? (
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Delivery ID</th>
+                                            <th>Customer ID</th>
+                                            <th>Product ID</th>
+                                            <th>Quantity</th>
+                                            <th>Total Price</th>
+                                            <th>Delivery Address</th>
+                                            <th>Delivery Status</th>
+                                            <th>Purchase Date</th>
+                                            <th>Invoice ID</th>
+                                            <th>Invoice Date</th>
+                                            <th>Invoice Total Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {deliveries.map(delivery => (
+                                            <tr key={delivery.deliveryId}>
+                                                <td>{delivery.deliveryId}</td>
+                                                <td>{delivery.customerId}</td>
+                                                <td>{delivery.productId}</td>
+                                                <td>{delivery.quantity}</td>
+                                                <td>${delivery.totalPrice.toFixed(2)}</td>
+                                                <td>
+                                                    {delivery.deliveryAddress.fullName}, {delivery.deliveryAddress.address}, {delivery.deliveryAddress.city || ''}, {delivery.deliveryAddress.country}, {delivery.deliveryAddress.postalCode}
+                                                </td>
+                                                <td>{delivery.deliveryStatus}</td>
+                                                <td>{new Date(delivery.purchaseDate).toLocaleDateString()}</td>
+                                                <td>{delivery.invoiceId}</td>
+                                                <td>{delivery.invoiceDate !== 'N/A' ? new Date(delivery.invoiceDate).toLocaleDateString() : 'N/A'}</td>
+                                                <td>${delivery.invoiceTotalAmount !== 'N/A' ? delivery.invoiceTotalAmount.toFixed(2) : 'N/A'}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            ) : (
+                                <p>No deliveries found.</p>
                             )}
                         </div>
                     </div>

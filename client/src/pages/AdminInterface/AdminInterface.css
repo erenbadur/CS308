@@ -586,4 +586,87 @@
             height: 40px;
         }
     }
+    /* Manage Deliveries Styling */
+.manage-deliveries {
+    margin-top: 20px;
+}
+
+.filter-sort-controls {
+    display: flex;
+    justify-content: flex-start;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.sort-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.filter-sort-controls label {
+    font-weight: bold;
+}
+
+.filter-sort-controls select {
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.deliveries-list table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.deliveries-list th,
+.deliveries-list td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: center;
+}
+
+.deliveries-list th {
+    background-color: #6A0DAD;
+    color: white;
+}
+
+.deliveries-list td {
+    vertical-align: top;
+}
+
+.deliveries-list button {
+    margin: 0 3px;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: not-allowed; /* Sadece görüntüleme amaçlı olduğu için */
+    background-color: #6c757d;
+    color: #fff;
+    transition: background-color 0.3s ease;
+}
+
+.deliveries-list button:hover:not(:disabled) {
+    background-color: #5a6268;
+}
+
+/* Responsive Adjustments for Manage Deliveries */
+@media (max-width: 768px) {
+    .filter-sort-controls {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .deliveries-list table,
+    .deliveries-list th,
+    .deliveries-list td {
+        font-size: 0.8rem;
+    }
+
+    .deliveries-list img {
+        width: 40px;
+        height: 40px;
+    }
+}
 }

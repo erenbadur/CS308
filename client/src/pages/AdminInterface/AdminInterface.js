@@ -57,8 +57,8 @@ const AdminInterface = () => {
     // State for Manage Comments
     const [comments, setComments] = useState([]);
     const [filterApproved, setFilterApproved] = useState('all'); // 'all', 'approved', 'disapproved'
-    const [sortBy, setSortBy] = useState('createdAt');
-    const [order, setOrder] = useState('desc'); // 'asc' veya 'desc'
+    const [sortByComments, setSortByComments] = useState('createdAt');
+    const [orderComments, setOrderComments] = useState('desc'); // 'asc' veya 'desc'
 
     // State for Manage Deliveries
     const [deliveries, setDeliveries] = useState([]);
@@ -69,6 +69,13 @@ const AdminInterface = () => {
     const [loading, setLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
+
+    // Fetch all deliveries when activeContent changes to 'manageDeliveries'
+    useEffect(() => {
+        if (activeContent === 'manageDeliveries') {
+            fetchDeliveries();
+        }
+    }, [activeContent, sortByDeliveries, orderDeliveries]);
 
     // Fetch all categories on component mount or when activeContent changes to 'manageCategories' or 'manageProducts'
     useEffect(() => {
@@ -81,10 +88,32 @@ const AdminInterface = () => {
         if (activeContent === 'manageComments') {
             fetchComments();
         }
-        if (activeContent === 'manageDeliveries') {
-            fetchDeliveries();
+    }, [activeContent, filterApproved, sortByComments, orderComments]);
+
+    /**
+     * Fetches all deliveries from the backend with current sorting.
+     */
+    const fetchDeliveries = async () => {
+        setLoading(true);
+        try {
+            let url = '/api/manager/deliveries?';
+            url += `sortBy=${sortByDeliveries}&order=${orderDeliveries}`;
+
+            const response = await fetch(url);
+            const data = await response.json();
+            if (response.ok) {
+                setDeliveries(data.deliveries);
+                setErrorMessage('');
+            } else {
+                setErrorMessage(data.error || 'Failed to fetch deliveries.');
+            }
+        } catch (error) {
+            console.error('Error fetching deliveries:', error);
+            setErrorMessage('An error occurred while fetching deliveries.');
+        } finally {
+            setLoading(false);
         }
-    }, [activeContent, filterApproved, sortBy, order, sortByDeliveries, orderDeliveries]);
+    };
 
     /**
      * Fetches all categories from the backend.
@@ -148,7 +177,7 @@ const AdminInterface = () => {
                 url += `approved=false&`;
             }
 
-            url += `sortBy=${sortBy}&order=${order}`;
+            url += `sortBy=${sortByComments}&order=${orderComments}`;
 
             const response = await fetch(url);
             const data = await response.json();
@@ -161,31 +190,6 @@ const AdminInterface = () => {
         } catch (error) {
             console.error('Error fetching comments:', error);
             setErrorMessage('An error occurred while fetching comments.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    /**
-     * Fetches all deliveries from the backend with current sorting.
-     */
-    const fetchDeliveries = async () => {
-        setLoading(true);
-        try {
-            let url = '/api/manager/deliveries?';
-            url += `sortBy=${sortByDeliveries}&order=${orderDeliveries}`;
-
-            const response = await fetch(url);
-            const data = await response.json();
-            if (response.ok) {
-                setDeliveries(data.deliveries);
-                setErrorMessage('');
-            } else {
-                setErrorMessage(data.error || 'Failed to fetch deliveries.');
-            }
-        } catch (error) {
-            console.error('Error fetching deliveries:', error);
-            setErrorMessage('An error occurred while fetching deliveries.');
         } finally {
             setLoading(false);
         }
@@ -640,41 +644,40 @@ const AdminInterface = () => {
     const handleFilterChange = (e) => {
         setFilterApproved(e.target.value);
     };
+/**
+ * Handles changing the sort field for deliveries.
+ *
+ * @param {Event} e - The change event.
+ */
+const handleSortByDeliveriesChange = (e) => {
+    setSortByDeliveries(e.target.value);
+};
+
+/**
+ * Handles changing the sort order for deliveries.
+ *
+ * @param {Event} e - The change event.
+ */
+const handleOrderDeliveriesChange = (e) => {
+    setOrderDeliveries(e.target.value);
+};
 
     /**
-     * Handles changing the sort field.
+     * Handles changing the sort field for comments.
      *
      * @param {Event} e - The change event.
      */
     const handleSortByChange = (e) => {
-        setSortBy(e.target.value);
+        setSortByComments(e.target.value);
     };
 
     /**
-     * Handles changing the sort order.
+     * Handles changing the sort order for comments.
      *
      * @param {Event} e - The change event.
      */
     const handleOrderChange = (e) => {
-        setOrder(e.target.value);
-    };
-
-    /**
-     * Handles changing the sort field for deliveries.
-     *
-     * @param {Event} e - The change event.
-     */
-    const handleSortByDeliveriesChange = (e) => {
-        setSortByDeliveries(e.target.value);
-    };
-
-    /**
-     * Handles changing the sort order for deliveries.
-     *
-     * @param {Event} e - The change event.
-     */
-    const handleOrderDeliveriesChange = (e) => {
-        setOrderDeliveries(e.target.value);
+        setOrderComments(e.target.value);
     };
 
     /**
@@ -762,6 +765,7 @@ const AdminInterface = () => {
                             >
                                 Manage Products
                             </button>
+                            {/* Manage Comments Button */}
                             <button
                                 className={`nav-button submenu-button ${activeContent === 'manageComments' ? 'active' : 'secondary'}`}
                                 onClick={() => handleSubMenuClick('manageComments')}
@@ -770,7 +774,8 @@ const AdminInterface = () => {
                             >
                                 Manage Comments
                             </button>
-                            {/* Yeni Manage Deliveries Butonu */}
+
+                            {/* Manage Deliveries Button */}
                             <button
                                 className={`nav-button submenu-button ${activeContent === 'manageDeliveries' ? 'active' : 'secondary'}`}
                                 onClick={() => handleSubMenuClick('manageDeliveries')}
@@ -854,7 +859,116 @@ const AdminInterface = () => {
                         {/* Add Product Form */}
                         <form onSubmit={handleAddProduct} className="product-form">
                             <h4>Add New Product</h4>
-                            {/* ... (Mevcut form grupları) */}
+                            <div className="form-group">
+                                <label>Name:</label>
+                                <input
+                                    type="text"
+                                    name="name"
+                                    value={newProduct.name}
+                                    onChange={handleProductInputChange}
+                                    placeholder="Product Name"
+                                    required
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Model:</label>
+                                <input
+                                    type="text"
+                                    name="model"
+                                    value={newProduct.model}
+                                    onChange={handleProductInputChange}
+                                    placeholder="Model"
+                                    required
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Serial Number:</label>
+                                <input
+                                    type="text"
+                                    name="serialNumber"
+                                    value={newProduct.serialNumber}
+                                    onChange={handleProductInputChange}
+                                    placeholder="Serial Number"
+                                    required
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Description:</label>
+                                <textarea
+                                    name="description"
+                                    value={newProduct.description}
+                                    onChange={handleProductInputChange}
+                                    placeholder="Product Description"
+                                ></textarea>
+                            </div>
+                            <div className="form-group">
+                                <label>Category:</label>
+                                <select
+                                    name="category"
+                                    value={newProduct.category}
+                                    onChange={handleProductInputChange}
+                                    required
+                                >
+                                    <option value="" disabled>Select Category</option>
+                                    {categories.map((cat) => (
+                                        <option key={cat._id} value={cat._id}>{cat.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label>Quantity In Stock:</label>
+                                <input
+                                    type="number"
+                                    name="quantityInStock"
+                                    value={newProduct.quantityInStock}
+                                    onChange={handleProductInputChange}
+                                    min="0"
+                                    required
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Price:</label>
+                                <input
+                                    type="number"
+                                    name="price"
+                                    value={newProduct.price}
+                                    onChange={handleProductInputChange}
+                                    min="0"
+                                    step="0.01"
+                                    required
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Distributor:</label>
+                                <input
+                                    type="text"
+                                    name="distributor"
+                                    value={newProduct.distributor}
+                                    onChange={handleProductInputChange}
+                                    placeholder="Distributor Name"
+                                    required
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Warranty Status:</label>
+                                <input
+                                    type="checkbox"
+                                    name="warrantyStatus"
+                                    checked={newProduct.warrantyStatus}
+                                    onChange={handleProductInputChange}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Image URL:</label>
+                                <input
+                                    type="url"
+                                    name="imageUrl"
+                                    value={newProduct.imageUrl}
+                                    onChange={handleProductInputChange}
+                                    placeholder="https://example.com/image.jpg"
+                                    required
+                                />
+                            </div>
                             <button type="submit" disabled={loading}>Add Product</button>
                         </form>
 
@@ -936,7 +1050,6 @@ const AdminInterface = () => {
                     <div className="manage-comments">
                         <h3>Manage Comments</h3>
 
-                        {/* Filter ve Sort Ayarları */}
                         <div className="filter-sort-controls">
                             <div className="filter-group">
                                 <label>Approval Status:</label>
@@ -948,11 +1061,10 @@ const AdminInterface = () => {
                             </div>
                             <div className="sort-group">
                                 <label>Sort By:</label>
-                                <select value={sortBy} onChange={handleSortByChange}>
+                                <select value={sortByComments} onChange={handleSortByChange}>
                                     <option value="createdAt">Creation Date</option>
-                                    {/* Diğer sıralama kriterleri ekleyebilirsiniz */}
                                 </select>
-                                <select value={order} onChange={handleOrderChange}>
+                                <select value={orderComments} onChange={handleOrderChange}>
                                     <option value="asc">Ascending</option>
                                     <option value="desc">Descending</option>
                                 </select>
@@ -963,7 +1075,6 @@ const AdminInterface = () => {
                         {errorMessage && <p className="error-message">{errorMessage}</p>}
                         {successMessage && <p className="success-message">{successMessage}</p>}
 
-                        {/* Yorum Listesi */}
                         <div className="comments-list">
                             {loading ? (
                                 <p>Loading comments...</p>
@@ -1021,13 +1132,13 @@ const AdminInterface = () => {
                     <div className="manage-deliveries">
                         <h3>Manage Deliveries</h3>
 
-                        {/* Sort Ayarları */}
+                        {/* Sort Controls */}
                         <div className="filter-sort-controls">
                             <div className="sort-group">
                                 <label>Sort By:</label>
                                 <select value={sortByDeliveries} onChange={handleSortByDeliveriesChange}>
                                     <option value="purchaseDate">Purchase Date</option>
-                                    {/* Diğer sıralama kriterleri ekleyebilirsiniz */}
+                                    {/* Add more sorting options if needed */}
                                 </select>
                                 <select value={orderDeliveries} onChange={handleOrderDeliveriesChange}>
                                     <option value="asc">Ascending</option>
@@ -1040,7 +1151,7 @@ const AdminInterface = () => {
                         {errorMessage && <p className="error-message">{errorMessage}</p>}
                         {successMessage && <p className="success-message">{successMessage}</p>}
 
-                        {/* Deliveries Listesi */}
+                        {/* Deliveries List */}
                         <div className="deliveries-list">
                             {loading ? (
                                 <p>Loading deliveries...</p>

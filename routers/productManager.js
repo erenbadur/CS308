@@ -6,7 +6,7 @@ const Category = require('../models/category');
 const User = require('../models/user');
 const Order = require('../models/order');
 const Delivery = require('../models/delivery'); // Ensure this is correctly defined
-const Invoice = require('../models/Invoice');
+const Invoice = require('../models/invoice');
 // GET /categories
 router.get('/categories', async (req, res) => {
     try {

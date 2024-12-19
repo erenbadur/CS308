@@ -482,4 +482,108 @@
     .modal-content {
         padding: 15px 20px;
     }
+    .manage-comments {
+        margin-top: 20px;
+    }
+    
+    .filter-sort-controls {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    
+    .filter-group,
+    .sort-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .filter-sort-controls label {
+        font-weight: bold;
+    }
+    
+    .filter-sort-controls select {
+        padding: 6px 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
+    
+    .comments-list table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .comments-list th,
+    .comments-list td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: center;
+    }
+    
+    .comments-list th {
+        background-color: #6A0DAD;
+        color: white;
+    }
+    
+    .comments-list button {
+        margin: 0 3px;
+        padding: 5px 10px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        color: #fff;
+        transition: background-color 0.3s ease;
+    }
+    
+    .comments-list button:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+    
+    .comments-list button:nth-child(1) { /* Approve Button */
+        background-color: #28a745; /* Green */
+    }
+    
+    .comments-list button:nth-child(1):hover:not(:disabled) {
+        background-color: #218838; /* Darker Green */
+    }
+    
+    .comments-list button:nth-child(2) { /* Disapprove Button */
+        background-color: #ffc107; /* Yellow */
+        color: #212529;
+    }
+    
+    .comments-list button:nth-child(2):hover:not(:disabled) {
+        background-color: #e0a800; /* Darker Yellow */
+    }
+    
+    .comments-list button:nth-child(3) { /* Delete Button */
+        background-color: #dc3545; /* Red */
+    }
+    
+    .comments-list button:nth-child(3):hover:not(:disabled) {
+        background-color: #c82333; /* Darker Red */
+    }
+    
+    /* Responsive Adjustments for Manage Comments */
+    @media (max-width: 768px) {
+        .filter-sort-controls {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    
+        .comments-list table,
+        .comments-list th,
+        .comments-list td {
+            font-size: 0.9rem;
+        }
+    
+        .comments-list img {
+            width: 40px;
+            height: 40px;
+        }
+    }
 }

@@ -54,6 +54,12 @@ const AdminInterface = () => {
         imageUrl: '',
     });
 
+    // State for Manage Comments
+    const [comments, setComments] = useState([]);
+    const [filterApproved, setFilterApproved] = useState('all'); // 'all', 'approved', 'disapproved'
+    const [sortBy, setSortBy] = useState('createdAt');
+    const [order, setOrder] = useState('desc'); // 'asc' veya 'desc'
+
     // State for loading and messages
     const [loading, setLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
@@ -67,7 +73,10 @@ const AdminInterface = () => {
         if (activeContent === 'manageProducts') {
             fetchProducts();
         }
-    }, [activeContent]);
+        if (activeContent === 'manageComments') {
+            fetchComments();
+        }
+    }, [activeContent, filterApproved, sortBy, order]);
 
     /**
      * Fetches all categories from the backend.
@@ -112,6 +121,38 @@ const AdminInterface = () => {
         } catch (error) {
             console.error('Error fetching products:', error);
             setErrorMessage('An error occurred while fetching products.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    /**
+     * Fetches all comments from the backend with current filters and sorting.
+     */
+    const fetchComments = async () => {
+        setLoading(true);
+        try {
+            let url = '/api/manager/comments?';
+
+            if (filterApproved === 'approved') {
+                url += `approved=true&`;
+            } else if (filterApproved === 'disapproved') {
+                url += `approved=false&`;
+            }
+
+            url += `sortBy=${sortBy}&order=${order}`;
+
+            const response = await fetch(url);
+            const data = await response.json();
+            if (response.ok) {
+                setComments(data.comments);
+                setErrorMessage('');
+            } else {
+                setErrorMessage(data.error || 'Failed to fetch comments.');
+            }
+        } catch (error) {
+            console.error('Error fetching comments:', error);
+            setErrorMessage('An error occurred while fetching comments.');
         } finally {
             setLoading(false);
         }
@@ -475,6 +516,117 @@ const AdminInterface = () => {
     };
 
     /**
+     * Handles approving a comment.
+     *
+     * @param {string} productId - The ID of the product.
+     * @param {string} commentId - The ID of the comment.
+     */
+    const handleApproveComment = async (productId, commentId) => {
+        setLoading(true);
+        try {
+            const response = await fetch(`/api/manager/comments/${encodeURIComponent(productId)}/${encodeURIComponent(commentId)}/approve`, {
+                method: 'PUT',
+            });
+            const data = await response.json();
+            if (response.ok) {
+                setSuccessMessage('Comment approved successfully.');
+                fetchComments();
+            } else {
+                setErrorMessage(data.error || 'Failed to approve comment.');
+            }
+        } catch (error) {
+            console.error('Error approving comment:', error);
+            setErrorMessage('An error occurred while approving the comment.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    /**
+     * Handles disapproving a comment.
+     *
+     * @param {string} productId - The ID of the product.
+     * @param {string} commentId - The ID of the comment.
+     */
+    const handleDisapproveComment = async (productId, commentId) => {
+        setLoading(true);
+        try {
+            const response = await fetch(`/api/manager/comments/${encodeURIComponent(productId)}/${encodeURIComponent(commentId)}/disapprove`, {
+                method: 'PUT',
+            });
+            const data = await response.json();
+            if (response.ok) {
+                setSuccessMessage('Comment disapproved successfully.');
+                fetchComments();
+            } else {
+                setErrorMessage(data.error || 'Failed to disapprove comment.');
+            }
+        } catch (error) {
+            console.error('Error disapproving comment:', error);
+            setErrorMessage('An error occurred while disapproving the comment.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    /**
+     * Handles deleting a comment.
+     *
+     * @param {string} productId - The ID of the product.
+     * @param {string} commentId - The ID of the comment.
+     */
+    const handleDeleteComment = async (productId, commentId) => {
+        const confirmDeletion = window.confirm('Are you sure you want to delete this comment?');
+        if (!confirmDeletion) return;
+
+        setLoading(true);
+        try {
+            const response = await fetch(`/api/manager/comments/${encodeURIComponent(productId)}/${encodeURIComponent(commentId)}`, {
+                method: 'DELETE',
+            });
+            const data = await response.json();
+            if (response.ok) {
+                setSuccessMessage('Comment deleted successfully.');
+                fetchComments();
+            } else {
+                setErrorMessage(data.error || 'Failed to delete comment.');
+            }
+        } catch (error) {
+            console.error('Error deleting comment:', error);
+            setErrorMessage('An error occurred while deleting the comment.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    /**
+     * Handles changing the approval filter.
+     *
+     * @param {Event} e - The change event.
+     */
+    const handleFilterChange = (e) => {
+        setFilterApproved(e.target.value);
+    };
+
+    /**
+     * Handles changing the sort field.
+     *
+     * @param {Event} e - The change event.
+     */
+    const handleSortByChange = (e) => {
+        setSortBy(e.target.value);
+    };
+
+    /**
+     * Handles changing the sort order.
+     *
+     * @param {Event} e - The change event.
+     */
+    const handleOrderChange = (e) => {
+        setOrder(e.target.value);
+    };
+
+    /**
      * Gets category name by its ID.
      *
      * @param {string} categoryId - The ID of the category.
@@ -558,6 +710,15 @@ const AdminInterface = () => {
                                 title={activeContent === 'manageProducts' ? 'Manage Products is active' : ''}
                             >
                                 Manage Products
+                            </button>
+                            {/* Yeni Manage Comments Butonu */}
+                            <button
+                                className={`nav-button submenu-button ${activeContent === 'manageComments' ? 'active' : 'secondary'}`}
+                                onClick={() => handleSubMenuClick('manageComments')}
+                                disabled={activeContent === 'manageComments'}
+                                title={activeContent === 'manageComments' ? 'Manage Comments is active' : ''}
+                            >
+                                Manage Comments
                             </button>
                         </div>
                     )}
@@ -821,6 +982,91 @@ const AdminInterface = () => {
                         </div>
                     </div>
                 )}
+                {activeContent === 'manageComments' && (
+                    <div className="manage-comments">
+                        <h3>Manage Comments</h3>
+
+                        {/* Filter ve Sort Ayarları */}
+                        <div className="filter-sort-controls">
+                            <div className="filter-group">
+                                <label>Approval Status:</label>
+                                <select value={filterApproved} onChange={handleFilterChange}>
+                                    <option value="all">All</option>
+                                    <option value="approved">Approved</option>
+                                    <option value="disapproved">Disapproved</option>
+                                </select>
+                            </div>
+                            <div className="sort-group">
+                                <label>Sort By:</label>
+                                <select value={sortBy} onChange={handleSortByChange}>
+                                    <option value="createdAt">Creation Date</option>
+                                    {/* Diğer sıralama kriterleri ekleyebilirsiniz */}
+                                </select>
+                                <select value={order} onChange={handleOrderChange}>
+                                    <option value="asc">Ascending</option>
+                                    <option value="desc">Descending</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Display Success and Error Messages */}
+                        {errorMessage && <p className="error-message">{errorMessage}</p>}
+                        {successMessage && <p className="success-message">{successMessage}</p>}
+
+                        {/* Yorum Listesi */}
+                        <div className="comments-list">
+                            {loading ? (
+                                <p>Loading comments...</p>
+                            ) : comments.length > 0 ? (
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Product Name</th>
+                                            <th>User</th>
+                                            <th>Content</th>
+                                            <th>Approved</th>
+                                            <th>Created At</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {comments.map(comment => (
+                                            <tr key={comment.commentId}>
+                                                <td>{comment.productName}</td>
+                                                <td>{comment.user}</td>
+                                                <td>{comment.content}</td>
+                                                <td>{comment.approved ? 'Yes' : 'No'}</td>
+                                                <td>{new Date(comment.createdAt).toLocaleString()}</td>
+                                                <td>
+                                                    <button
+                                                        onClick={() => handleApproveComment(comment.productId, comment.commentId)}
+                                                        disabled={loading || comment.approved}
+                                                    >
+                                                        Approve
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDisapproveComment(comment.productId, comment.commentId)}
+                                                        disabled={loading || !comment.approved}
+                                                    >
+                                                        Disapprove
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteComment(comment.productId, comment.commentId)}
+                                                        disabled={loading}
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            ) : (
+                                <p>No comments found.</p>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Update Product Modal */}
@@ -946,4 +1192,4 @@ const AdminInterface = () => {
 
 }
 
-    export default AdminInterface;
+export default AdminInterface;

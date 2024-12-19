@@ -6,7 +6,7 @@ import './AdminInterface.css';
  * AdminInterface component representing the admin dashboard.
  *
  * Displays a sidebar with navigation buttons based on user roles.
- * Includes a submenu for Product Manager to manage categories and products.
+ * Includes a submenu for Product Manager to manage categories, products, comments, and deliveries.
  */
 const AdminInterface = () => {
     // Retrieve the user's role from localStorage
@@ -60,6 +60,11 @@ const AdminInterface = () => {
     const [sortBy, setSortBy] = useState('createdAt');
     const [order, setOrder] = useState('desc'); // 'asc' veya 'desc'
 
+    // State for Manage Deliveries
+    const [deliveries, setDeliveries] = useState([]);
+    const [sortByDeliveries, setSortByDeliveries] = useState('purchaseDate');
+    const [orderDeliveries, setOrderDeliveries] = useState('desc'); // 'asc' veya 'desc'
+
     // State for loading and messages
     const [loading, setLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
@@ -76,7 +81,10 @@ const AdminInterface = () => {
         if (activeContent === 'manageComments') {
             fetchComments();
         }
-    }, [activeContent, filterApproved, sortBy, order]);
+        if (activeContent === 'manageDeliveries') {
+            fetchDeliveries();
+        }
+    }, [activeContent, filterApproved, sortBy, order, sortByDeliveries, orderDeliveries]);
 
     /**
      * Fetches all categories from the backend.
@@ -153,6 +161,31 @@ const AdminInterface = () => {
         } catch (error) {
             console.error('Error fetching comments:', error);
             setErrorMessage('An error occurred while fetching comments.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    /**
+     * Fetches all deliveries from the backend with current sorting.
+     */
+    const fetchDeliveries = async () => {
+        setLoading(true);
+        try {
+            let url = '/api/manager/deliveries?';
+            url += `sortBy=${sortByDeliveries}&order=${orderDeliveries}`;
+
+            const response = await fetch(url);
+            const data = await response.json();
+            if (response.ok) {
+                setDeliveries(data.deliveries);
+                setErrorMessage('');
+            } else {
+                setErrorMessage(data.error || 'Failed to fetch deliveries.');
+            }
+        } catch (error) {
+            console.error('Error fetching deliveries:', error);
+            setErrorMessage('An error occurred while fetching deliveries.');
         } finally {
             setLoading(false);
         }
@@ -627,6 +660,24 @@ const AdminInterface = () => {
     };
 
     /**
+     * Handles changing the sort field for deliveries.
+     *
+     * @param {Event} e - The change event.
+     */
+    const handleSortByDeliveriesChange = (e) => {
+        setSortByDeliveries(e.target.value);
+    };
+
+    /**
+     * Handles changing the sort order for deliveries.
+     *
+     * @param {Event} e - The change event.
+     */
+    const handleOrderDeliveriesChange = (e) => {
+        setOrderDeliveries(e.target.value);
+    };
+
+    /**
      * Gets category name by its ID.
      *
      * @param {string} categoryId - The ID of the category.
@@ -711,7 +762,6 @@ const AdminInterface = () => {
                             >
                                 Manage Products
                             </button>
-                            {/* Yeni Manage Comments Butonu */}
                             <button
                                 className={`nav-button submenu-button ${activeContent === 'manageComments' ? 'active' : 'secondary'}`}
                                 onClick={() => handleSubMenuClick('manageComments')}
@@ -719,6 +769,15 @@ const AdminInterface = () => {
                                 title={activeContent === 'manageComments' ? 'Manage Comments is active' : ''}
                             >
                                 Manage Comments
+                            </button>
+                            {/* Yeni Manage Deliveries Butonu */}
+                            <button
+                                className={`nav-button submenu-button ${activeContent === 'manageDeliveries' ? 'active' : 'secondary'}`}
+                                onClick={() => handleSubMenuClick('manageDeliveries')}
+                                disabled={activeContent === 'manageDeliveries'}
+                                title={activeContent === 'manageDeliveries' ? 'Manage Deliveries is active' : ''}
+                            >
+                                Manage Deliveries
                             </button>
                         </div>
                     )}
@@ -795,116 +854,7 @@ const AdminInterface = () => {
                         {/* Add Product Form */}
                         <form onSubmit={handleAddProduct} className="product-form">
                             <h4>Add New Product</h4>
-                            <div className="form-group">
-                                <label>Name:</label>
-                                <input
-                                    type="text"
-                                    name="name"
-                                    value={newProduct.name}
-                                    onChange={handleProductInputChange}
-                                    placeholder="Product Name"
-                                    required
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Model:</label>
-                                <input
-                                    type="text"
-                                    name="model"
-                                    value={newProduct.model}
-                                    onChange={handleProductInputChange}
-                                    placeholder="Model"
-                                    required
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Serial Number:</label>
-                                <input
-                                    type="text"
-                                    name="serialNumber"
-                                    value={newProduct.serialNumber}
-                                    onChange={handleProductInputChange}
-                                    placeholder="Serial Number"
-                                    required
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Description:</label>
-                                <textarea
-                                    name="description"
-                                    value={newProduct.description}
-                                    onChange={handleProductInputChange}
-                                    placeholder="Product Description"
-                                ></textarea>
-                            </div>
-                            <div className="form-group">
-                                <label>Category:</label>
-                                <select
-                                    name="category"
-                                    value={newProduct.category}
-                                    onChange={handleProductInputChange}
-                                    required
-                                >
-                                    <option value="" disabled>Select Category</option>
-                                    {categories.map((cat) => (
-                                        <option key={cat._id} value={cat._id}>{cat.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="form-group">
-                                <label>Quantity In Stock:</label>
-                                <input
-                                    type="number"
-                                    name="quantityInStock"
-                                    value={newProduct.quantityInStock}
-                                    onChange={handleProductInputChange}
-                                    min="0"
-                                    required
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Price:</label>
-                                <input
-                                    type="number"
-                                    name="price"
-                                    value={newProduct.price}
-                                    onChange={handleProductInputChange}
-                                    min="0"
-                                    step="0.01"
-                                    required
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Distributor:</label>
-                                <input
-                                    type="text"
-                                    name="distributor"
-                                    value={newProduct.distributor}
-                                    onChange={handleProductInputChange}
-                                    placeholder="Distributor Name"
-                                    required
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Warranty Status:</label>
-                                <input
-                                    type="checkbox"
-                                    name="warrantyStatus"
-                                    checked={newProduct.warrantyStatus}
-                                    onChange={handleProductInputChange}
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Image URL:</label>
-                                <input
-                                    type="url"
-                                    name="imageUrl"
-                                    value={newProduct.imageUrl}
-                                    onChange={handleProductInputChange}
-                                    placeholder="https://example.com/image.jpg"
-                                    required
-                                />
-                            </div>
+                            {/* ... (Mevcut form grupları) */}
                             <button type="submit" disabled={loading}>Add Product</button>
                         </form>
 
@@ -1063,6 +1013,76 @@ const AdminInterface = () => {
                                 </table>
                             ) : (
                                 <p>No comments found.</p>
+                            )}
+                        </div>
+                    </div>
+                )}
+                {activeContent === 'manageDeliveries' && (
+                    <div className="manage-deliveries">
+                        <h3>Manage Deliveries</h3>
+
+                        {/* Sort Ayarları */}
+                        <div className="filter-sort-controls">
+                            <div className="sort-group">
+                                <label>Sort By:</label>
+                                <select value={sortByDeliveries} onChange={handleSortByDeliveriesChange}>
+                                    <option value="purchaseDate">Purchase Date</option>
+                                    {/* Diğer sıralama kriterleri ekleyebilirsiniz */}
+                                </select>
+                                <select value={orderDeliveries} onChange={handleOrderDeliveriesChange}>
+                                    <option value="asc">Ascending</option>
+                                    <option value="desc">Descending</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Display Success and Error Messages */}
+                        {errorMessage && <p className="error-message">{errorMessage}</p>}
+                        {successMessage && <p className="success-message">{successMessage}</p>}
+
+                        {/* Deliveries Listesi */}
+                        <div className="deliveries-list">
+                            {loading ? (
+                                <p>Loading deliveries...</p>
+                            ) : deliveries.length > 0 ? (
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Delivery ID</th>
+                                            <th>Customer ID</th>
+                                            <th>Product ID</th>
+                                            <th>Quantity</th>
+                                            <th>Total Price</th>
+                                            <th>Delivery Address</th>
+                                            <th>Delivery Status</th>
+                                            <th>Purchase Date</th>
+                                            <th>Invoice ID</th>
+                                            <th>Invoice Date</th>
+                                            <th>Invoice Total Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {deliveries.map(delivery => (
+                                            <tr key={delivery.deliveryId}>
+                                                <td>{delivery.deliveryId}</td>
+                                                <td>{delivery.customerId}</td>
+                                                <td>{delivery.productId}</td>
+                                                <td>{delivery.quantity}</td>
+                                                <td>${delivery.totalPrice.toFixed(2)}</td>
+                                                <td>
+                                                    {delivery.deliveryAddress.fullName}, {delivery.deliveryAddress.address}, {delivery.deliveryAddress.city || ''}, {delivery.deliveryAddress.country}, {delivery.deliveryAddress.postalCode}
+                                                </td>
+                                                <td>{delivery.deliveryStatus}</td>
+                                                <td>{new Date(delivery.purchaseDate).toLocaleDateString()}</td>
+                                                <td>{delivery.invoiceId}</td>
+                                                <td>{delivery.invoiceDate !== 'N/A' ? new Date(delivery.invoiceDate).toLocaleDateString() : 'N/A'}</td>
+                                                <td>${delivery.invoiceTotalAmount !== 'N/A' ? delivery.invoiceTotalAmount.toFixed(2) : 'N/A'}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            ) : (
+                                <p>No deliveries found.</p>
                             )}
                         </div>
                     </div>

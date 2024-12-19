@@ -199,32 +199,123 @@ router.get('/invoices', async (req, res) => {
     }
 });
 
-// Update comment approval
-router.put('/:productId/:commentId', async (req, res) => {
-    const { productId, commentId } = req.params;
-    const { approved } = req.body;
+router.get('/comments', async (req, res) => {
+    const { approved, sortBy = 'createdAt', order = 'desc' } = req.query;
 
     try {
-        // Find the product containing the comment
+      
+        const products = await Product.find().populate('category');
+
+     
+        let allComments = [];
+        products.forEach(product => {
+            product.comments.forEach(comment => {
+                allComments.push({
+                    productId: product.productId,
+                    productName: product.name,
+                    commentId: comment._id,
+                    user: comment.user,
+                    content: comment.content,
+                    approved: comment.approved,
+                    createdAt: comment.createdAt,
+                });
+            });
+        });
+
+        
+        if (approved !== undefined) {
+            const isApproved = approved === 'true';
+            allComments = allComments.filter(comment => comment.approved === isApproved);
+        }
+
+      
+        allComments.sort((a, b) => {
+            if (order === 'asc') {
+                return new Date(a[sortBy]) - new Date(b[sortBy]);
+            } else {
+                return new Date(b[sortBy]) - new Date(a[sortBy]);
+            }
+        });
+
+        res.status(200).json({ comments: allComments });
+    } catch (error) {
+        console.error('Error fetching comments:', error);
+        res.status(500).json({ error: 'An error occurred while fetching comments.' });
+    }
+});
+
+// PUT /manager/comments/:productId/:commentId/approve
+router.put('/comments/:productId/:commentId/approve', async (req, res) => {
+    const { productId, commentId } = req.params;
+
+    try {
         const product = await Product.findOne({ productId });
         if (!product) {
             return res.status(404).json({ error: 'Product not found.' });
         }
 
-        // Find the specific comment within the product's comments array
         const comment = product.comments.id(commentId);
         if (!comment) {
             return res.status(404).json({ error: 'Comment not found.' });
         }
 
-        // Update the comment's approval status
-        comment.approved = approved;
+        comment.approved = true;
         await product.save();
 
-        res.status(200).json({ message: 'Comment updated successfully.', comment });
+        res.status(200).json({ message: 'Comment approved successfully.', comment });
     } catch (error) {
-        console.error('Error updating comment:', error);
-        res.status(500).json({ error: 'An error occurred while updating the comment.' });
+        console.error('Error approving comment:', error);
+        res.status(500).json({ error: 'An error occurred while approving the comment.' });
+    }
+});
+
+// PUT /manager/comments/:productId/:commentId/disapprove
+router.put('/comments/:productId/:commentId/disapprove', async (req, res) => {
+    const { productId, commentId } = req.params;
+
+    try {
+        const product = await Product.findOne({ productId });
+        if (!product) {
+            return res.status(404).json({ error: 'Product not found.' });
+        }
+
+        const comment = product.comments.id(commentId);
+        if (!comment) {
+            return res.status(404).json({ error: 'Comment not found.' });
+        }
+
+        comment.approved = false;
+        await product.save();
+
+        res.status(200).json({ message: 'Comment disapproved successfully.', comment });
+    } catch (error) {
+        console.error('Error disapproving comment:', error);
+        res.status(500).json({ error: 'An error occurred while disapproving the comment.' });
+    }
+});
+
+// DELETE /manager/comments/:productId/:commentId
+router.delete('/comments/:productId/:commentId', async (req, res) => {
+    const { productId, commentId } = req.params;
+
+    try {
+        const product = await Product.findOne({ productId });
+        if (!product) {
+            return res.status(404).json({ error: 'Product not found.' });
+        }
+
+        const comment = product.comments.id(commentId);
+        if (!comment) {
+            return res.status(404).json({ error: 'Comment not found.' });
+        }
+
+        comment.remove();
+        await product.save();
+
+        res.status(200).json({ message: 'Comment deleted successfully.' });
+    } catch (error) {
+        console.error('Error deleting comment:', error);
+        res.status(500).json({ error: 'An error occurred while deleting the comment.' });
     }
 });
 

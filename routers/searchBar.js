@@ -3,97 +3,51 @@ const router = express.Router();
 const Product = require('../models/product');
 const stringSimilarity = require('string-similarity');
 
+const mongoose = require('mongoose');
+
 router.get('/search', async (req, res) => {
-    const { term, category } = req.query;
+    const { term, category, sortBy = 'popularity', order = 'desc', page = 1, limit = 10 } = req.query;
 
     try {
-        if (!term && !category) {
-            console.log("Error: Empty search term and category");
-            return res.status(400).json({ error: 'Either search term or category is required.' });
-        }
-
-        // Build query
         const query = {};
-        if (category) query.category = category;
+
+        // Check if the category is provided
+        if (category) {
+            // Try to find the category by name if it's not an ObjectId
+            if (!mongoose.Types.ObjectId.isValid(category)) {
+                const categoryDoc = await Category.findOne({ name: category });
+                if (categoryDoc) {
+                    query.category = categoryDoc._id; // Use the ObjectId of the category
+                } else {
+                    return res.status(404).json({ error: 'Category not found.' });
+                }
+            } else {
+                query.category = category; // Use the provided ObjectId
+            }
+        }
 
         if (term) {
             const regex = new RegExp(term, 'i'); // Case-insensitive regex
-            if (category) {
-                // Combine category and search term conditions
-                query.$and = [
-                    { category },
-                    { $or: [{ name: regex }, { description: regex }] },
-                ];
-            } else {
-                // Search term only
-                query.$or = [{ name: regex }, { description: regex }];
-            }
+            query.$or = [{ name: regex }, { description: regex }];
         }
 
-        console.log("MongoDB Query:", JSON.stringify(query));
+        const sortOrder = order === 'asc' ? 1 : -1;
+        const skip = (page - 1) * limit;
 
-        // Fetch matching products
-        const products = await Product.find(query).limit(100);
-        console.log("Fetched Products:", products.length);
+        const totalResults = await Product.countDocuments(query);
+        const products = await Product.find(query)
+            .sort({ [sortBy]: sortOrder })
+            .skip(skip)
+            .limit(parseInt(limit));
 
-        // Fuzzy matching logic
-        let filteredProducts = [];
-        if (term) {
-            filteredProducts = products
-                .map((product) => {
-                    const fieldsToCompare = [product.name, product.description].filter(Boolean);
-                    const bestMatch = stringSimilarity.findBestMatch(term, fieldsToCompare);
-                    console.log(`Product: ${product.name}, Similarity: ${bestMatch.bestMatch.rating}`);
-                    return { product, similarity: bestMatch.bestMatch.rating };
-                })
-                .sort((a, b) => b.similarity - a.similarity); // Sort by similarity score
-
-            // Keep all products for fallback but tag them with similarity scores
-            const similarityThreshold = 0.2; // Adjust threshold based on testing
-            const exactMatches = filteredProducts.filter((item) => item.similarity >= similarityThreshold);
-            const lowSimilarityMatches = filteredProducts.filter((item) => item.similarity < similarityThreshold);
-
-            console.log("Exact Matches:", exactMatches.length);
-
-            if (exactMatches.length > 0) {
-                return res.status(200).json({
-                    message: 'Search successful',
-                    results: exactMatches.map((item) => item.product),
-                    fallback: false,
-                });
-            }
-
-            if (lowSimilarityMatches.length > 0) {
-                return res.status(200).json({
-                    message: 'No high-relevance matches. Showing lower-relevance results.',
-                    results: lowSimilarityMatches.map((item) => item.product),
-                    fallback: true,
-                });
-            }
-        }
-
-        const totalResults = products.length;
         const totalPages = Math.ceil(totalResults / limit);
-        const startIndex = (page - 1) * limit;
-        const paginatedResults = products.slice(startIndex, startIndex + limit);
+
         res.status(200).json({
             message: 'Search successful',
-            results: paginatedResults,
+            results: products,
             totalResults,
             totalPages,
             currentPage: parseInt(page),
-        });
-        // Fallback: Suggest popular products in the category or globally
-        console.log("No matches. Fetching fallback products...");
-        const fallbackQuery = category ? { category } : {};
-        const fallbackProducts = await Product.find(fallbackQuery)
-            .sort({ popularity: -1 })
-            .limit(3); // Limit fallback results
-
-        return res.status(200).json({
-            message: 'No exact matches found. Showing relevant fallback products.',
-            results: fallbackProducts,
-            fallback: true,
         });
     } catch (error) {
         console.error('Error during search:', error.message);

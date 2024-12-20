@@ -8,6 +8,7 @@ const TrackPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const SHIPPING_FEE = 20; // Flat shipping fee
 
   const clearCart = async () => {
     const userId = localStorage.getItem('user');
@@ -85,53 +86,60 @@ const TrackPage = () => {
         <p>No recent orders found.</p>
       ) : (
         <div className="orders-list">
-          {orders.map((order) => (
-            <div key={order._id} className="order-card">
-              <h2>Order ID: {order._id}</h2>
-              <div>
-                <p><strong>Products:</strong></p>
-                {order.products && order.products.length > 0 ? (
-                  <ul>
-                    {order.products.map((product, index) => (
-                      <li key={index}>
-                        {product.name || 'Unknown Product'} - Quantity: {product.quantity || 0}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p>No products found for this order.</p>
+          {orders.map((order) => {
+            // Calculate total price with shipping fee
+            const totalPriceWithShipping =
+              (order.invoiceDetails?.totalAmount || 0) + SHIPPING_FEE;
+
+            return (
+              <div key={order._id} className="order-card">
+                <h2>Order ID: {order._id}</h2>
+                <div>
+                  <p><strong>Products:</strong></p>
+                  {order.products && order.products.length > 0 ? (
+                    <ul>
+                      {order.products.map((product, index) => (
+                        <li key={index}>
+                          {product.name || 'Unknown Product'} - Quantity: {product.quantity || 0}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p>No products found for this order.</p>
+                  )}
+                </div>
+                <p><strong>Status:</strong> {order.status}</p>
+
+                {order.deliveryDetails && (
+                  <div className="delivery">
+                    <p><strong>Delivery Status:</strong> {order.deliveryDetails.status}</p>
+                    <p><strong>Delivery Address:</strong></p>
+                    <ul>
+                      <li>Name: {order.deliveryDetails.deliveryAddress.fullName}</li>
+                      <li>Phone: {order.deliveryDetails.deliveryAddress.phoneNum}</li>
+                      <li>Address: {order.deliveryDetails.deliveryAddress.address}</li>
+                      <li>Country: {order.deliveryDetails.deliveryAddress.country}</li>
+                      <li>Postal Code: {order.deliveryDetails.deliveryAddress.postalCode}</li>
+                    </ul>
+                  </div>
+                )}
+
+                {order.invoiceDetails && (
+                  <div className="invoice">
+                    <p>Your invoice is ready:</p>
+                    <button
+                      onClick={() => handleInvoiceDownload(order.invoiceDetails.invoiceId, order._id)}
+                    >
+                      Download Invoice
+                    </button>
+                    <p><strong>Total Product Price:</strong> ${order.invoiceDetails.totalAmount || 'N/A'}</p>
+                    <p><strong>Invoice Date:</strong> {new Date(order.invoiceDetails.date).toLocaleDateString() || 'N/A'}</p>
+                    <p><strong>Total Price (with Shipping):</strong> ${totalPriceWithShipping.toFixed(2)}</p>
+                  </div>
                 )}
               </div>
-              <p><strong>Status:</strong> {order.status}</p>
-
-              {order.deliveryDetails && (
-                <div className="delivery">
-                  <p><strong>Delivery Status:</strong> {order.deliveryDetails.status}</p>
-                  <p><strong>Delivery Address:</strong></p>
-                  <ul>
-                    <li>Name: {order.deliveryDetails.deliveryAddress.fullName}</li>
-                    <li>Phone: {order.deliveryDetails.deliveryAddress.phoneNum}</li>
-                    <li>Address: {order.deliveryDetails.deliveryAddress.address}</li>
-                    <li>Country: {order.deliveryDetails.deliveryAddress.country}</li>
-                    <li>Postal Code: {order.deliveryDetails.deliveryAddress.postalCode}</li>
-                  </ul>
-                </div>
-              )}
-
-              {order.invoiceDetails && (
-                <div className="invoice">
-                  <p>Your invoice is ready:</p>
-                  <button
-                    onClick={() => handleInvoiceDownload(order.invoiceDetails.invoiceId, order._id)}
-                  >
-                    Download Invoice
-                  </button>
-                  <p><strong>Total Price:</strong> ${order.invoiceDetails.totalAmount || 'N/A'}</p>
-                  <p><strong>Invoice Date:</strong> {new Date(order.invoiceDetails.date).toLocaleDateString() || 'N/A'}</p>
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
       <button onClick={handleBackToMain} className="back-button">

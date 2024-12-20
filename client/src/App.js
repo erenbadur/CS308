@@ -23,9 +23,7 @@ function App() {
         <BrowserRouter>
             <Routes>
             <Route path='/' element={
-                    <PrivateRoute allowedRoles={['customer']}>
                         <MainPage/>
-                    </PrivateRoute>
                 }/>                
                 {/* Admin Interface */}
                 <Route path='/admin' element={

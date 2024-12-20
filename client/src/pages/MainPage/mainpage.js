@@ -35,8 +35,7 @@ const getUserId = () => {
 const MainPage = () => {
     const [searchTotalPages, setSearchTotalPages] = useState(1); // Total pages for search results
     const [searchCurrentPage, setSearchCurrentPage] = useState(1); // Current page in search results
-    const [activeCategory, setActiveCategory] = useState(""); // State to track the active category
-    const [products, setProducts] = useState([]); 
+    const [products, setProducts] = useState([]);
     const [currentPage, setCurrentPage] = useState(1); 
     const [totalPages, setTotalPages] = useState(1);
     const [pageSize] = useState(12);
@@ -59,6 +58,8 @@ const MainPage = () => {
     const [stockWarnings, setStockWarnings] = useState({}); // Track stock warnings for cart items
     const Swal = require('sweetalert2')
     const [userMap, setUserMap] = useState({});
+    const [categories, setCategories] = useState([]);
+    const [activeCategory, setActiveCategory] = useState("");
 
     useEffect(() => {
         const fetchUsernames = async () => {
@@ -131,10 +132,26 @@ const MainPage = () => {
             window.removeEventListener('scroll', handleScroll);
         };
     }, [currentPage, activeCategory, isLoggedIn]);
-    
 
 
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const response = await axios.get('/api/products/categories');
+                setCategories(response.data);
+            } catch (error) {
+                console.error('Error fetching categories:', error);
+            }
+        };
+
+        fetchCategories();
+    }, []);
+
+    const handleCategoryClick = (categoryName) => {
+        setActiveCategory(activeCategory === categoryName ? "" : categoryName);
+    };
     
+
     const fetchProducts = async (page = currentPage) => {
         try {
             const params = {
@@ -435,7 +452,7 @@ const MainPage = () => {
         } else {
             setActiveCategory(category);
         }
-        setCurrentPage(1);  
+        setCurrentPage(1);
     };
 
     const goToNextPage = () => {
@@ -678,129 +695,44 @@ const handleSubmitComment = async () => {
                         <button className="first-button">Product Category</button>
 
                         <div className="category-dropdown-content">
-                            {/* Category Buttons */}
-                            <div className="category-card">
-                                <img src="resimler/pone_new.webp" alt="Phone" />
-                                <p>Phone</p>
-                                <button
-                                    className={`category-button ${
-                                        activeCategory === 'mobile phone' ? 'active' : ''
-                                    }`}
-                                    onClick={() => handleButtonClick('mobile phone')}
-                                >
-                                    {activeCategory === 'mobile phone' ? 'Deselect' : 'Select'}
-                                </button>
-                            </div>
-                            <div className="category-card">
-                                <img src="resimler/computer.webp" alt="Computer" />
-                                <p>Computer</p>
-                                <button
-                                    className={`category-button ${
-                                        activeCategory === 'computer' ? 'active' : ''
-                                    }`}
-                                    onClick={() => handleButtonClick('computer')}
-                                >
-                                    {activeCategory === 'computer' ? 'Deselect' : 'Select'}
-                                </button>
-                            </div>
-                            <div className="category-card">
-                                <img src="resimler/tablet_new.webp" alt="Tablet" />
-                                <p>Tablet</p>
-                                <button
-                                    className={`category-button ${
-                                        activeCategory === 'tablet' ? 'active' : ''
-                                    }`}
-                                    onClick={() => handleButtonClick('tablet')}
-                                >
-                                    {activeCategory === 'tablet' ? 'Deselect' : 'Select'}
-                                </button>
-                            </div>
-                            <div className="category-card">
-                                <img src="resimler/accessory.webp" alt="Accessories" />
-                                <p>Accessories</p>
-                                <button
-                                    className={`category-button ${
-                                        activeCategory === 'accessories' ? 'active' : ''
-                                    }`}
-                                    onClick={() => handleButtonClick('accessories')}
-                                >
-                                    {activeCategory === 'accessories' ? 'Deselect' : 'Select'}
-                                </button>
-                            </div>
-                            <div className="category-card">
-                                <img src="resimler/headphone.webp" alt="Headphone" />
-                                <p>Headphone</p>
-                                <button
-                                    className={`category-button ${
-                                        activeCategory === 'headphone' ? 'active' : ''
-                                    }`}
-                                    onClick={() => handleButtonClick('headphone')}
-                                >
-                                    {activeCategory === 'headphone' ? 'Deselect' : 'Select'}
-                                </button>
-                            </div>
-                            <div className="category-card">
-                                <img src="resimler/smartwatch.webp" alt="Smartwatch" />
-                                <p>Smartwatch</p>
-                                <button
-                                    className={`category-button ${
-                                        activeCategory === 'smartwatch' ? 'active' : ''
-                                    }`}
-                                    onClick={() => handleButtonClick('smartwatch')}
-                                >
-                                    {activeCategory === 'smartwatch' ? 'Deselect' : 'Select'}
-                                </button>
-                            </div>
-                            <div className="category-card">
-                                <img src="resimler/tv_new.webp" alt="Television" />
-                                <p>Television</p>
-                                <button
-                                    className={`category-button ${
-                                        activeCategory === 'television' ? 'active' : ''
-                                    }`}
-                                    onClick={() => handleButtonClick('television')}
-                                >
-                                    {activeCategory === 'television' ? 'Deselect' : 'Select'}
-                                </button>
-                            </div>
-                            <div className="category-card">
-                                <img src="resimler/camera.webp" alt="Camera" />
-                                <p>Camera</p>
-                                <button
-                                    className={`category-button ${
-                                        activeCategory === 'camera' ? 'active' : ''
-                                    }`}
-                                    onClick={() => handleButtonClick('camera')}
-                                >
-                                    {activeCategory === 'camera' ? 'Deselect' : 'Select'}
-                                </button>
-                            </div>
+                            {categories.map((category) => (
+                                <div className="category-card" key={category._id}>
+                                    <p>{category.name}</p>
+                                    <button
+                                        className={`category-button ${
+                                            activeCategory === category.name ? 'active' : ''
+                                        }`}
+                                        onClick={() => handleCategoryClick(category.name)}
+                                    >
+                                        {activeCategory === category.name ? 'Deselect' : 'Select'}
+                                    </button>
+                                </div>
+                            ))}
                         </div>
                     </div>
- {/* Search Bar */}
-{/* Search Bar */}
-<div className="search-bar-container">
-    <input
-        type="text"
-        className="search-input"
-        placeholder="Search www.N308.com.tr"
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)} // Update state
-        onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-                console.log("Enter pressed. Executing search.");
-                handleSearch();
-            }
-        }}
-    />
-    <button
-        className="search-button"
-        onClick={() => {
-            console.log("Search button clicked. Executing search.");
-            handleSearch();
-        }}
-    >
-        <span className="icon">🔍</span>
+                    {/* Search Bar */}
+                    <div className="search-bar-container">
+                        <input
+                            type="text"
+                            className="search-input"
+                            placeholder="Search www.N308.com.tr"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)} // Update state
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    console.log("Enter pressed. Executing search.");
+                                    handleSearch();
+                                }
+                            }}
+                        />
+                        <button
+                            className="search-button"
+                            onClick={() => {
+                                console.log("Search button clicked. Executing search.");
+                                handleSearch();
+                            }}
+                        >
+                            <span className="icon">🔍</span>
     </button>
 </div>
 

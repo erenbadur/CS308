@@ -4,36 +4,39 @@ const Product = require('../models/product');
 const stringSimilarity = require('string-similarity');
 
 const mongoose = require('mongoose');
+const escapeRegex = (string) => {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // Escapes special characters
+};
+
 
 router.get('/search', async (req, res) => {
     const { term, category, sortBy = 'popularity', order = 'desc', page = 1, limit = 10 } = req.query;
 
     try {
-        const query = {};
+        if (!term && !category) {
+            return res.status(400).json({ error: 'Either search term or category is required.' });
+        }
 
-        // Check if the category is provided
+        const query = {};
         if (category) {
-            // Try to find the category by name if it's not an ObjectId
-            if (!mongoose.Types.ObjectId.isValid(category)) {
-                const categoryDoc = await Category.findOne({ name: category });
-                if (categoryDoc) {
-                    query.category = categoryDoc._id; // Use the ObjectId of the category
-                } else {
-                    return res.status(404).json({ error: 'Category not found.' });
-                }
+            if (mongoose.Types.ObjectId.isValid(category)) {
+                query.category = category;
             } else {
-                query.category = category; // Use the provided ObjectId
+                return res.status(400).json({ error: 'Invalid category ID.' });
             }
         }
 
         if (term) {
-            const regex = new RegExp(term, 'i'); // Case-insensitive regex
+            const escapedTerm = escapeRegex(term); // Escape special characters in the search term
+            const regex = new RegExp(escapedTerm, 'i'); // Case-insensitive regex
             query.$or = [{ name: regex }, { description: regex }];
         }
 
+        // Sorting and pagination
         const sortOrder = order === 'asc' ? 1 : -1;
         const skip = (page - 1) * limit;
 
+        // Fetch matching products
         const totalResults = await Product.countDocuments(query);
         const products = await Product.find(query)
             .sort({ [sortBy]: sortOrder })
@@ -42,7 +45,7 @@ router.get('/search', async (req, res) => {
 
         const totalPages = Math.ceil(totalResults / limit);
 
-        res.status(200).json({
+        return res.status(200).json({
             message: 'Search successful',
             results: products,
             totalResults,
@@ -54,6 +57,7 @@ router.get('/search', async (req, res) => {
         res.status(500).json({ error: 'An error occurred during the search.', details: error.message });
     }
 });
+
 
 
 

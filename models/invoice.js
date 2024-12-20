@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
+const { Schema, model } = mongoose;
 
-const invoiceSchema = new mongoose.Schema({
+const invoiceSchema = new Schema({
     invoiceId: {
         type: String,
         required: true,
@@ -9,15 +10,8 @@ const invoiceSchema = new mongoose.Schema({
             return `INV-${new mongoose.Types.ObjectId()}`;
         },
     },
-    user: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true,
-    },
-    email: {
-        type: String,
-        required: true,
-    },
+    user: { type: String, required: true },
+    email: { type: String, required: true },
     products: [
         {
             name: { type: String, required: true },
@@ -26,23 +20,16 @@ const invoiceSchema = new mongoose.Schema({
             total: { type: Number, required: true },
         },
     ],
-    totalAmount: { type: Number, required: true },
-    delivery: {
-        deliveryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Delivery' },
-        totalPrice: { type: Number }, // Total price of delivery
-        status: { type: String, enum: ["processing", "in-transit", "delivered"], default: "processing" }, // Delivery status
-        address: {
-            fullName: { type: String },
-            phoneNum: { type: String },
-            address: { type: String },
-            country: { type: String },
-            postalCode: { type: String },
-        },
-    },
+    totalAmount: { type: Number, default: 0 }, // Total invoice amount
+    delivery: { type: mongoose.Schema.Types.ObjectId, ref: 'Delivery' }, // Reference to Delivery
     date: { type: Date, default: Date.now },
     invoiceFilePath: { type: String, required: true },
 });
 
-const Invoice = mongoose.model('Invoice', invoiceSchema);
+// Pre-save hook to calculate `totalAmount`
+invoiceSchema.pre('save', function (next) {
+    this.totalAmount = this.products.reduce((sum, p) => sum + p.quantity * p.price, 0);
+    next();
+});
 
-module.exports = Invoice;
+module.exports = model('Invoice', invoiceSchema);

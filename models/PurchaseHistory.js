@@ -1,28 +1,42 @@
 const mongoose = require('mongoose');
 const { Schema, model } = mongoose;
 
-const purchaseHistorySchema = new Schema({
-    user: { type: String, required: true }, // User ID
-    products: [
-        {
-            productId: { type: String, required: true },
-            name: { type: String, required: true },
-            price: { type: Number, required: true },
-            quantity: { type: Number, required: true },
+const purchaseHistorySchema = new Schema(
+    {
+        user: { type: String, required: true }, // User ID
+        products: [
+            {
+                productId: { type: String, required: true },
+                name: { type: String, required: true },
+                price: { type: Number, required: true },
+                quantity: { type: Number, required: true },
+            },
+        ],
+        totalQuantity: { type: Number, default: 0 }, // Calculated field
+        totalRevenue: { type: Number, default: 0 }, // Calculated field
+        delivery: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Delivery', // Reference to Delivery model
         },
-    ],
-    status: { 
-        type: String, 
-        enum: ['reserved', 'confirmed', 'shipped', 'delivered'], // Added additional statuses
-        default: 'reserved',
+        invoice: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Invoice', // Reference to Invoice model
+        },
+        status: {
+            type: String,
+            enum: ['reserved', 'confirmed', 'shipped', 'delivered'],
+            default: 'reserved',
+        },
+        purchaseDate: { type: Date, default: Date.now },
     },
-    purchaseDate: { type: Date, default: Date.now },
-    totalRevenue: { type: Number }, // Total revenue (calculated as sum of product prices * quantities)
-    totalProfit: { type: Number }, // Total profit (calculated based on cost price and selling price)
-    delivery: { 
-        type: mongoose.Schema.Types.ObjectId, 
-        ref: 'Delivery', // Reference to the Delivery model
-    }, 
-}, { timestamps: true });
+    { timestamps: true }
+);
+
+// Pre-save hook to calculate `totalQuantity` and `totalRevenue`
+purchaseHistorySchema.pre('save', function (next) {
+    this.totalQuantity = this.products.reduce((sum, p) => sum + p.quantity, 0);
+    this.totalRevenue = this.products.reduce((sum, p) => sum + p.price * p.quantity, 0);
+    next();
+});
 
 module.exports = model('PurchaseHistory', purchaseHistorySchema);

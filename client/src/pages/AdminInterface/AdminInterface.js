@@ -101,12 +101,14 @@ const AdminInterface = () => {
 
             const response = await fetch(url);
             const data = await response.json();
+            console.log('API Response:', data); // Log API response
             if (response.ok) {
-                setDeliveries(data.deliveries);
-                setErrorMessage('');
+                setDeliveries(data.deliveries || []); // Ensure deliveries is an array
             } else {
+                setDeliveries([]); // Avoid undefined state
                 setErrorMessage(data.error || 'Failed to fetch deliveries.');
             }
+            
         } catch (error) {
             console.error('Error fetching deliveries:', error);
             setErrorMessage('An error occurred while fetching deliveries.');
@@ -253,7 +255,6 @@ const AdminInterface = () => {
     };
 
     /**
-     * Handles deleting a category.
      *
      * @param {Event} e - The form submission event.
      */
@@ -1173,24 +1174,70 @@ const handleOrderDeliveriesChange = (e) => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {deliveries.map(delivery => (
-                                            <tr key={delivery.deliveryId}>
-                                                <td>{delivery.deliveryId}</td>
-                                                <td>{delivery.customerId}</td>
-                                                <td>{delivery.productId}</td>
-                                                <td>{delivery.quantity}</td>
-                                                <td>${delivery.totalPrice.toFixed(2)}</td>
-                                                <td>
-                                                    {delivery.deliveryAddress.fullName}, {delivery.deliveryAddress.address}, {delivery.deliveryAddress.city || ''}, {delivery.deliveryAddress.country}, {delivery.deliveryAddress.postalCode}
-                                                </td>
-                                                <td>{delivery.deliveryStatus}</td>
-                                                <td>{new Date(delivery.purchaseDate).toLocaleDateString()}</td>
-                                                <td>{delivery.invoiceId}</td>
-                                                <td>{delivery.invoiceDate !== 'N/A' ? new Date(delivery.invoiceDate).toLocaleDateString() : 'N/A'}</td>
-                                                <td>${delivery.invoiceTotalAmount !== 'N/A' ? delivery.invoiceTotalAmount.toFixed(2) : 'N/A'}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
+    {Array.isArray(deliveries) && deliveries.length > 0 ? (
+        (() => {
+            const rows = [];
+            for (let delivery of deliveries) {
+                rows.push(
+                    <tr key={delivery.deliveryId}>
+                        {/* Delivery ID */}
+                        <td>{delivery.deliveryId}</td>
+
+                        {/* User */}
+                        <td>{delivery.user}</td>
+
+                        {/* Product IDs */}
+                        <td>{delivery.products ? delivery.products.map(product => product.productId).join(', ') : 'N/A'}</td>
+
+                        {/* Total Quantity */}
+                        <td>{delivery.products ? delivery.products.reduce((total, product) => total + product.quantity, 0) : 0}</td>
+
+                        {/* Total Price */}
+                        <td>
+                            ${typeof delivery.totalPrice === 'number' ? delivery.totalPrice.toFixed(2) : '0.00'}
+                        </td>
+
+                        {/* Delivery Address */}
+                        <td>
+                            {delivery.deliveryAddress?.address || 'N/A'}, 
+                            {delivery.deliveryAddress?.city || ''}, 
+                            {delivery.deliveryAddress?.country || 'N/A'}, 
+                            {delivery.deliveryAddress?.postalCode || 'N/A'}
+                        </td>
+
+                        {/* Delivery Status */}
+                        <td>{delivery.status || 'N/A'}</td>
+
+                        {/* Purchase Date */}
+                        <td>{delivery.purchaseDate ? new Date(delivery.purchaseDate).toLocaleDateString() : 'N/A'}</td>
+
+                       {/* Invoice ID */}
+                        <td>{delivery.invoiceId || 'N/A'}</td>
+
+                                    {/* Invoice Date */}
+            <td>
+                {delivery.invoiceDate ? new Date(delivery.invoiceDate).toLocaleDateString() : 'N/A'}
+            </td>
+
+                        {/* Invoice Total Amount */}
+<td>
+    ${typeof delivery.invoiceTotalAmount === 'number' 
+        ? delivery.invoiceTotalAmount.toFixed(2) 
+        : '0.00'}
+</td>
+                    </tr>
+                );
+            }
+            return rows;
+        })()
+    ) : (
+        <tr>
+            <td colSpan="11">No deliveries found.</td>
+        </tr>
+    )}
+</tbody>
+
+
                                 </table>
                             ) : (
                                 <p>No deliveries found.</p>

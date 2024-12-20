@@ -22,7 +22,7 @@ const transporter = nodemailer.createTransport({
     },
 });
 
-
+// add endpoint for adding products to the cart. NOTHING TO DO WITH THE PURCHASE
 router.post('/add', async (req, res) => {
     const { userId, productId, quantity } = req.body;
 
@@ -42,48 +42,37 @@ router.post('/add', async (req, res) => {
             return res.status(400).json({ error: `Not enough stock. Available: ${product.quantityInStock}` });
         }
 
-        // Create a purchase record (reserved status)
-        const purchase = new PurchaseHistory({
-            user: userId,
-            products: [
-                {
-                    productId: product.productId,
-                    name: product.name,
-                    price: product.price,
-                    quantity,
-                },
-            ],
-            status: 'reserved',
-        });
 
-        await purchase.save();
-
-        res.status(201).json({
-            message: 'Product added to cart and reserved.',
-            purchase,
-        });
     } catch (error) {
         console.error('Error adding product to cart:', error.message);
         res.status(500).json({ error: 'An error occurred while adding the product to the cart.' });
     }
 });
 
-
-
+// CONFIRMING PAYMENT FOR PURCHASE PAGE
 router.post("/confirm-payment", async (req, res) => {
     const { userId, products, shippingAddress } = req.body;
 
     console.log("Confirming payment for:", { userId, products });
 
     try {
-        // Ensure the user exists
+        console.log("Step 1: Fetching user...");
         const user = await User.findOne({ userId });
         if (!user) {
+            console.error("User not found");
             return res.status(404).json({ error: "User not found." });
         }
+        console.log("User found:", user);
 
-        // Validate products
+        if (!shippingAddress) {
+            console.error("Shipping address is missing in the request.");
+            return res.status(400).json({ error: "Shipping address is missing." });
+        }
+
+        console.log("Request Body:", req.body);
+
         if (!products || products.length === 0) {
+            console.error("Products are missing in the request.");
             return res.status(400).json({ error: "No products provided for payment confirmation." });
         }
 
@@ -98,10 +87,11 @@ router.post("/confirm-payment", async (req, res) => {
                     { $inc: { quantityInStock: -item.quantity } },
                     { new: true }
                 );
-
                 if (!product) {
+                    console.error(`Product ${item.productId} not found or insufficient stock.`);
                     throw new Error(`Product with ID ${item.productId} not found or insufficient stock.`);
                 }
+                console.log("Product validated:", product);
 
                 const revenue = product.price * item.quantity;
                 const profit = revenue - (product.costPrice || 0) * item.quantity;
@@ -119,26 +109,24 @@ router.post("/confirm-payment", async (req, res) => {
             })
         );
 
-        // Create a purchase record
+        // Calculate delivery price (can be dynamic)
+        const totalDeliveryPrice = 50; // Example delivery price
+
+        // Step 1: Create Purchase History
         const purchase = new PurchaseHistory({
             user: userId,
             products: productDetails,
             status: "confirmed",
-            purchaseDate: new Date(),
             totalRevenue,
             totalProfit,
         });
         await purchase.save();
+        console.log("Purchase history saved:", purchase);
 
-        console.log("Purchase record saved:", purchase);
-
-        // Calculate delivery price (can be dynamic)
-        const totalDeliveryPrice = 50; // Example delivery price
-
-        // Create delivery record
+        // Step 2: Create Delivery
         const delivery = new Delivery({
-            purchase: purchase._id,
             user: userId,
+            purchase: purchase._id, // Link to PurchaseHistory
             products: productDetails.map((product) => ({
                 productId: product.productId,
                 name: product.name,
@@ -146,20 +134,18 @@ router.post("/confirm-payment", async (req, res) => {
             })),
             deliveryAddress: shippingAddress,
             status: "processing",
-            totalPrice: totalDeliveryPrice, // Include the total delivery price
         });
         await delivery.save();
-
         console.log("Delivery record saved successfully:", delivery);
 
-        // Generate invoice and save to the Invoice model
-        const invoiceBuffer = await generateInvoiceFile(user, productDetails, totalRevenue, delivery);
+        // Step 3: Generate Invoice
+        const invoiceBuffer = await generateInvoiceFile(user, productDetails, totalRevenue + totalDeliveryPrice, delivery._id);
         const invoiceFilePath = `invoices/Invoice-${Date.now()}.pdf`;
 
         fs.writeFileSync(invoiceFilePath, invoiceBuffer);
 
         const newInvoice = new Invoice({
-            user: user._id,
+            user: user.userId,
             email: user.email,
             products: productDetails.map((item) => ({
                 name: item.name,
@@ -167,33 +153,37 @@ router.post("/confirm-payment", async (req, res) => {
                 price: item.price,
                 total: item.total,
             })),
-            totalAmount: totalRevenue + totalDeliveryPrice, // Include delivery price in total
-            delivery: {
-                deliveryId: delivery._id,
-                totalPrice: delivery.totalPrice,
-                status: delivery.status,
-                address: delivery.deliveryAddress,
-            },
+            totalAmount: totalRevenue + totalDeliveryPrice,
+            delivery: delivery._id, // Link to Delivery
             invoiceFilePath,
         });
         await newInvoice.save();
-
         console.log("Invoice saved successfully:", newInvoice);
 
-        // Send invoice email
+        // Step 4: Update Purchase History with Invoice and Delivery
+        purchase.delivery = delivery._id;
+        purchase.invoice = newInvoice._id;
+        await purchase.save();
+        console.log("Purchase history updated with invoice and delivery:", purchase);
+
+        // Step 5: Send Invoice Email
         await sendInvoiceEmail(user.email, user.username, invoiceBuffer);
         console.log(`Invoice email sent to ${user.email}`);
 
         // Response to client
         res.status(200).json({
             message: "Payment confirmed and invoice generated.",
+            purchase: {
+                id: purchase._id,
+                totalRevenue: purchase.totalRevenue,
+                deliveryId: delivery._id,
+                invoiceId: newInvoice.invoiceId,
+            },
+            delivery,
             invoice: {
                 id: newInvoice.invoiceId,
                 totalAmount: newInvoice.totalAmount,
-                filePath: invoiceFilePath,
-                delivery: newInvoice.delivery,
             },
-            delivery,
         });
 
         // Simulate delivery updates
@@ -203,6 +193,7 @@ router.post("/confirm-payment", async (req, res) => {
         res.status(400).json({ error: error.message });
     }
 });
+
 
 
 // Generate invoice PDF and return as buffer
@@ -322,11 +313,4 @@ router.get('/:userId/:productId', async (req, res) => {
 
 
 
-// Test endpoint
-router.get('/test', (req, res) => {
-    res.status(200).json({ message: 'Test route works!' });
-});
-
 module.exports = router;
-
-

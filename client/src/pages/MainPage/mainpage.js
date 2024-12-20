@@ -138,18 +138,27 @@ const MainPage = () => {
         const fetchCategories = async () => {
             try {
                 const response = await axios.get('/api/products/categories');
-                setCategories(response.data);
+                console.log("Fetched Categories:", response.data); // Debug categories
+                setCategories(response.data || []);
             } catch (error) {
                 console.error('Error fetching categories:', error);
             }
         };
-
+    
         fetchCategories();
     }, []);
+    
 
-    const handleCategoryClick = (categoryName) => {
-        setActiveCategory(activeCategory === categoryName ? "" : categoryName);
+    const handleCategoryClick = (categoryId) => {
+        setActiveCategory((prevCategory) => (prevCategory === categoryId ? "" : categoryId));
     };
+    useEffect(() => {
+        if (activeCategory || searchTerm) {
+            handleSearch(); // Trigger search when activeCategory changes
+        }
+    }, [activeCategory, searchTerm]);
+    
+    
     
 
     const fetchProducts = async (page = currentPage) => {
@@ -268,14 +277,14 @@ const MainPage = () => {
         try {
             const params = {
                 term: searchTerm.trim() || undefined,
-                category: activeCategory || undefined,
-                sortBy, // Maintain the current sort field
-                order: sortOrder, // Maintain the current sort order
+                category: activeCategory || undefined, // Ensure correct category is passed
+                sortBy, // Use current sort field
+                order: sortOrder, // Use current sort order
                 page,
                 limit: pageSize,
             };
     
-            console.log("Search Params:", params); // Debug log to verify parameters
+            console.log("Search Params:", params); // Debug log
     
             const response = await axios.get('/api/searchBar/search', { params });
     
@@ -286,17 +295,19 @@ const MainPage = () => {
             setCurrentPage(response.data.currentPage || 1);
         } catch (error) {
             console.error("Error during search:", error.response?.data || error.message);
-            //alert("An error occurred during the search.");
+    
             Swal.fire({
                 icon: "error",
                 title: "Oops...",
-                text: "An error occurred during the search!"
+                text: "An error occurred during the search!",
             });
-
         } finally {
             setIsSearching(false);
         }
     };
+    
+
+    
     
 
     const handleIncreaseQuantity = async (index) => {
@@ -373,11 +384,14 @@ const MainPage = () => {
                 });
     
                 if (response.status === 200) {
-                    setCartItems(response.data.cart.items); // Update the cart state
-                } else {
-                    console.error('Error updating cart:', response.data.error);
+                    setCartItems(response.data.cart.items);
+                    setStockWarnings((prev) => ({
+                        ...prev,
+                        [cartItem.productId]: '', // Clear warning
+                    }));
                 }
-            } else {
+    
+            } 
                 // Quantity is now 0, remove the item from the cart
                 // Optionally, confirm with the user
                 const confirmRemove = window.confirm('Do you want to remove this item from your cart?');
@@ -396,7 +410,7 @@ const MainPage = () => {
                     console.error('Error removing item from cart:', response.data.error);
                 }
             }
-        } catch (error) {
+        catch (error) {
             console.error('Error in handleDecreaseQuantity:', error.response?.data || error.message);
         }
     };
@@ -695,19 +709,21 @@ const handleSubmitComment = async () => {
                         <button className="first-button">Product Category</button>
 
                         <div className="category-dropdown-content">
-                            {categories.map((category) => (
-                                <div className="category-card" key={category._id}>
-                                    <p>{category.name}</p>
-                                    <button
-                                        className={`category-button ${
-                                            activeCategory === category.name ? 'active' : ''
-                                        }`}
-                                        onClick={() => handleCategoryClick(category.name)}
-                                    >
-                                        {activeCategory === category.name ? 'Deselect' : 'Select'}
-                                    </button>
-                                </div>
-                            ))}
+                        {categories.map((category) => (
+                            <div className="category-card" key={category._id}>
+                                <p>{category.name}</p>
+                                <button
+                                    className={`category-button ${
+                                        activeCategory === category._id ? 'active' : ''
+                                    }`}
+                                    onClick={() => handleCategoryClick(category._id)}
+                                >
+                                    {activeCategory === category._id ? 'Deselect' : 'Select'}
+                                </button>
+                            </div>
+                        ))}
+
+
                         </div>
                     </div>
                     {/* Search Bar */}

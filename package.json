@@ -23,6 +23,7 @@
     "react-router-dom": "^6.27.0",
     "remixicon": "^4.5.0",
     "string-similarity": "^4.0.4",
+    "sweetalert": "^2.1.2",
     "sweetalert2": "^11.15.2",
     "swiper": "^11.1.15",
     "util": "^0.12.5",

@@ -1,9 +1,10 @@
 /* src/pages/AdminInterface/AdminInterface.css */
-
 /* Container holding the sidebar and main content */
 .admin-container {
     display: flex;
     min-height: 100vh;
+    min-width: 100vw;
+    margin-top: -20px;
 }
 
 /* Sidebar Styling */

@@ -70,6 +70,18 @@ const AdminInterface = () => {
     const [errorMessage, setErrorMessage] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
 
+
+    // State for Sales Manager
+    const [discountProducts, setDiscountProducts] = useState([]);
+    const [discountPercentage, setDiscountPercentage] = useState('');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    const [invoices, setInvoices] = useState([]);
+    const [revenueReport, setRevenueReport] = useState({ totalRevenue: 0, chartData: [] });
+    const [refundRequests, setRefundRequests] = useState([]);
+
+
+
     // Fetch all deliveries when activeContent changes to 'manageDeliveries'
     useEffect(() => {
         if (activeContent === 'manageDeliveries') {
@@ -89,6 +101,13 @@ const AdminInterface = () => {
             fetchComments();
         }
     }, [activeContent, filterApproved, sortByComments, orderComments]);
+
+
+    useEffect(() => {
+        if (activeContent === 'setDiscount') {
+            fetchProducts();
+        }
+    }, [activeContent]);
 
     /**
      * Fetches all deliveries from the backend with current sorting.
@@ -714,6 +733,200 @@ const handleOrderDeliveriesChange = (e) => {
         window.location.href = '/login'; // Adjust the route as per your routing setup
     };
 
+    // !SALES MANAGER!
+    /**
+     * Handles setting discount
+     */
+
+    const handleSetDiscount = async (e) => {
+        e.preventDefault();
+        if (discountProducts.length === 0 || !discountPercentage) {
+            setErrorMessage('Please select products and enter a discount percentage.');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const response = await fetch('/api/sales/set-discount', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    products: discountProducts,
+                    discount: parseFloat(discountPercentage),
+                }),
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                setSuccessMessage('Discount applied successfully.');
+                setDiscountProducts([]);
+                setDiscountPercentage('');
+                fetchProducts(); // Fetch updated product data to reflect the new prices
+            } else {
+                setErrorMessage(data.error || 'Failed to apply discount.');
+            }
+        } catch (error) {
+            console.error('Error setting discount:', error);
+            setErrorMessage('An error occurred while applying the discount.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+
+    // FETCHING INVOICES - SALES MANAGER
+    const fetchInvoices = async () => {
+        setLoading(true);
+        try {
+            const response = await fetch(`/api/sales/invoices?startDate=${startDate}&endDate=${endDate}`);
+            const data = await response.json();
+            if (response.ok) {
+                setInvoices(data.invoices || []);
+            } else {
+                setErrorMessage(data.error || 'Failed to fetch invoices.');
+            }
+        } catch (error) {
+            console.error('Error fetching invoices:', error);
+            setErrorMessage('An error occurred while fetching invoices.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // SALES MANAGER - REVENUE REPORT
+    const fetchRevenueReport = async () => {
+        setLoading(true);
+        try {
+            const response = await fetch(`/api/sales/revenue-report?startDate=${startDate}&endDate=${endDate}`);
+            const data = await response.json();
+            if (response.ok) {
+                setRevenueReport(data);
+            } else {
+                setErrorMessage(data.error || 'Failed to generate revenue report.');
+            }
+        } catch (error) {
+            console.error('Error generating revenue report:', error);
+            setErrorMessage('An error occurred while generating the revenue report.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // SALES MANAGER
+    // REFUND EVALUTATION
+
+    const handleRefundEvaluation = async (purchaseId, productId, status) => {
+        setLoading(true);
+        try {
+            const response = await fetch('/api/sales/evaluate-refund', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ purchaseId, productId, status }),
+            });
+    
+            const data = await response.json();
+            if (response.ok) {
+                setSuccessMessage(data.message);
+                fetchRefundRequests(); // Refresh the list
+            } else {
+                setErrorMessage(data.error || 'Failed to evaluate refund.');
+            }
+        } catch (error) {
+            console.error('Error evaluating refund:', error);
+            setErrorMessage('An error occurred while evaluating the refund.');
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    // SALES MANAGER
+    // REFUND REQUESTS
+    const fetchRefundRequests = async () => {
+        setLoading(true);
+        try {
+            const response = await fetch('/api/sales/refund-requests'); // Adjust endpoint if necessary
+            const data = await response.json();
+            if (response.ok) {
+                setRefundRequests(data.refundRequests || []);
+            } else {
+                setErrorMessage(data.error || 'Failed to fetch refund requests.');
+            }
+        } catch (error) {
+            console.error('Error fetching refund requests:', error);
+            setErrorMessage('An error occurred while fetching refund requests.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+
+        // SALES MANAGER
+    // Download Invoices
+    const handleDownloadInvoices = async () => {
+        if (!startDate || !endDate) {
+            setErrorMessage('Please specify both start and end dates.');
+            return;
+        }
+    
+        setLoading(true);
+        try {
+            const response = await fetch(`/api/sales/invoices/download?startDate=${startDate}&endDate=${endDate}`, {
+                method: 'GET',
+            });
+    
+            if (response.ok) {
+                // Convert response to a Blob and create a download link
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Invoices-${startDate}-to-${endDate}.pdf`;
+                a.click();
+                window.URL.revokeObjectURL(url);
+                setSuccessMessage('Invoices downloaded successfully.');
+            } else {
+                const errorData = await response.json();
+                setErrorMessage(errorData.error || 'Failed to download invoices.');
+            }
+        } catch (error) {
+            console.error('Error downloading invoices:', error);
+            setErrorMessage('An error occurred while downloading invoices.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDownloadInvoice = async (invoiceId) => {
+        try {
+            const response = await fetch(`/api/sales/invoices/download/${invoiceId}`, {
+                method: 'GET',
+            });
+    
+            if (response.ok) {
+                // Convert response to a Blob and create a download link
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Invoice-${invoiceId}.pdf`;
+                a.click();
+                window.URL.revokeObjectURL(url);
+            } else {
+                console.error('Error downloading invoice:', response.statusText);
+            }
+        } catch (error) {
+            console.error('Error downloading invoice:', error);
+        }
+    };
+    
+
+
+    
+    
+
+    
+    
+
     return (
         <div className="admin-container">
             {/* Sidebar */}
@@ -730,13 +943,35 @@ const handleOrderDeliveriesChange = (e) => {
                     >
                         Sales Manager
                     </button>
-                    {/* Collapsible Content for Sales Manager */}
                     {role === 'salesManager' && activeSection === 'salesManager' && (
-                        <div className="collapse-content">
-                            {/* Add Sales Manager related content here */}
-                            <p>Sales Manager Dashboard</p>
-                        </div>
-                    )}
+                    <div className="submenu">
+                        <button
+                            className={`nav-button submenu-button ${activeContent === 'setDiscount' ? 'active' : 'secondary'}`}
+                            onClick={() => handleSubMenuClick('setDiscount')}
+                        >
+                            Set Discounts
+                        </button>
+                        <button
+                            className={`nav-button submenu-button ${activeContent === 'viewInvoices' ? 'active' : 'secondary'}`}
+                            onClick={() => handleSubMenuClick('viewInvoices')}
+                        >
+                            View Invoices
+                        </button>
+                        <button
+                            className={`nav-button submenu-button ${activeContent === 'revenueReport' ? 'active' : 'secondary'}`}
+                            onClick={() => handleSubMenuClick('revenueReport')}
+                        >
+                            Revenue Report
+                        </button>
+                        <button
+                            className={`nav-button submenu-button ${activeContent === 'refundRequests' ? 'active' : 'secondary'}`}
+                            onClick={() => handleSubMenuClick('refundRequests')}
+                        >
+                            Refund Requests
+                        </button>
+                    </div>
+                )}
+
 
                     {/* Product Manager Button */}
                     <button
@@ -1182,21 +1417,16 @@ const handleOrderDeliveriesChange = (e) => {
                     <tr key={delivery.deliveryId}>
                         {/* Delivery ID */}
                         <td>{delivery.deliveryId}</td>
-
                         {/* User */}
                         <td>{delivery.user}</td>
-
                         {/* Product IDs */}
                         <td>{delivery.products ? delivery.products.map(product => product.productId).join(', ') : 'N/A'}</td>
-
                         {/* Total Quantity */}
                         <td>{delivery.products ? delivery.products.reduce((total, product) => total + product.quantity, 0) : 0}</td>
-
                         {/* Total Price */}
                         <td>
                             ${typeof delivery.totalPrice === 'number' ? delivery.totalPrice.toFixed(2) : '0.00'}
                         </td>
-
                         {/* Delivery Address */}
                         <td>
                             {delivery.deliveryAddress?.address || 'N/A'}, 
@@ -1236,8 +1466,6 @@ const handleOrderDeliveriesChange = (e) => {
         </tr>
     )}
 </tbody>
-
-
                                 </table>
                             ) : (
                                 <p>No deliveries found.</p>
@@ -1246,6 +1474,234 @@ const handleOrderDeliveriesChange = (e) => {
                     </div>
                 )}
             </div>
+
+            {/* buraya sales manager ekliyorum 1. set discount */}
+            {activeContent === 'setDiscount' && (
+    <div className="set-discount">
+        <h3>Set Discounts</h3>
+
+        {/* Fetch and Display Products */}
+        {loading ? (
+            <p>Loading products...</p>
+        ) : products.length > 0 ? (
+            <form onSubmit={handleSetDiscount}>
+                <table>
+    <thead>
+        <tr>
+            <th>Select</th>
+            <th>Product Name</th>
+            <th>Original Price</th>
+            <th>Discount (%)</th>
+            <th>Discounted Price</th>
+            <th>Quantity in Stock</th>
+        </tr>
+    </thead>
+    <tbody>
+        {products.map((product) => (
+            <tr key={product.productId}>
+                <td>
+                    <input
+                        type="checkbox"
+                        value={product.productId}
+                        onChange={(e) => {
+                            const { checked, value } = e.target;
+                            setDiscountProducts((prev) =>
+                                checked
+                                    ? [...prev, value]
+                                    : prev.filter((id) => id !== value)
+                            );
+                        }}
+                    />
+                </td>
+                <td>{product.name}</td>
+                <td>${product.price.toFixed(2)}</td>
+                <td>{product.discount?.percentage || 0}%</td>
+                <td>
+                    ${product.discount
+                        ? (product.price * (1 - product.discount.percentage / 100)).toFixed(2)
+                        : product.price.toFixed(2)}
+                </td>
+                <td>{product.quantityInStock}</td>
+            </tr>
+        ))}
+    </tbody>
+</table>
+
+
+                <label>Discount Percentage:</label>
+                <input
+                    type="number"
+                    value={discountPercentage}
+                    onChange={(e) => setDiscountPercentage(e.target.value)}
+                    min="0"
+                    max="100"
+                />
+
+                <button type="submit" disabled={discountProducts.length === 0 || !discountPercentage}>
+                    Apply Discount
+                </button>
+            </form>
+        ) : (
+            <p>No products available to display.</p>
+        )}
+
+        {/* Display Success/Error Messages */}
+        {errorMessage && <p className="error-message">{errorMessage}</p>}
+        {successMessage && <p className="success-message">{successMessage}</p>}
+    </div>
+)}
+
+
+
+{/* buraya sales manager ekliyorum 3. Revenue Report*/}
+{activeContent === 'revenueReport' && (
+    <div className="revenue-report">
+        <h3>Revenue Report</h3>
+        <form onSubmit={(e) => { e.preventDefault(); fetchRevenueReport(); }}>
+            <label>Start Date:</label>
+            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            <label>End Date:</label>
+            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+            <button type="submit">Generate Report</button>
+        </form>
+        <h4>Total Revenue: ${revenueReport.totalRevenue.toFixed(2)}</h4>
+        {/* Add chart here if needed */}
+    </div>
+)}
+{/* buraya sales manager ekliyorum 4. Refund Requests */}
+{activeContent === 'refundRequests' && (
+    <div className="refund-requests">
+        <h3>Refund Requests</h3>
+        {refundRequests.length > 0 ? (
+            <table>
+                <thead>
+                    <tr>
+                        <th>Purchase ID</th>
+                        <th>Product ID</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {refundRequests.map((request) => (
+                        <tr key={request.purchaseId + request.productId}>
+                            <td>{request.purchaseId}</td>
+                            <td>{request.productId}</td>
+                            <td>{request.status}</td>
+                            <td>
+                                <button onClick={() => handleRefundEvaluation(request.purchaseId, request.productId, 'approved')}>
+                                    Approve
+                                </button>
+                                <button onClick={() => handleRefundEvaluation(request.purchaseId, request.productId, 'rejected')}>
+                                    Reject
+                                </button>
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        ) : (
+            <p>No refund requests found.</p>
+        )}
+    </div>
+)}
+{activeContent === 'viewInvoices' && (
+    <div className="view-invoices">
+        <h3>View and Download Invoices</h3>
+        
+       {/* Fetch Invoices Form */}
+<form
+    onSubmit={(e) => {
+        e.preventDefault();
+        fetchInvoices();
+    }}
+>
+    <label>Start Date:</label>
+    <input
+        type="date"
+        value={startDate}
+        onChange={(e) => setStartDate(e.target.value)}
+        required
+    />
+    <label>End Date:</label>
+    <input
+        type="date"
+        value={endDate}
+        onChange={(e) => setEndDate(e.target.value)}
+        required
+    />
+    <button type="submit" disabled={loading}>
+        Fetch Invoices
+    </button>
+</form>
+{/* Display Invoices */}
+{invoices.length > 0 ? (
+    <table>
+        <thead>
+            <tr>
+                <th>Email</th>
+                <th>Products</th>
+                <th>Total Amount</th>
+                <th>Download</th>
+            </tr>
+        </thead>
+        <tbody>
+            {invoices.map((invoice) => (
+                <tr key={invoice._id}>
+                    <td>{invoice.email}</td>
+                    <td>
+                        {invoice.products
+                            .map((product) => `${product.name} x${product.quantity}`)
+                            .join(', ')}
+                    </td>
+                    <td>${invoice.totalAmount.toFixed(2)}</td>
+                    <td>
+                        
+                    <button
+    onClick={async () => {
+        try {
+            const response = await fetch(`/api/sales/invoices/download/${invoice.invoiceId}`, {
+                method: 'GET',
+            });
+
+            if (response.ok) {
+                const blob = await response.blob(); // Convert the response to a Blob
+                const url = window.URL.createObjectURL(blob); // Create a URL for the Blob
+                const a = document.createElement('a'); // Create a temporary anchor element
+                a.href = url;
+                a.download = `INV-${invoice.invoiceId}.pdf`; // Set the file name for download
+                a.click(); // Trigger the download
+                window.URL.revokeObjectURL(url); // Clean up the Blob URL
+                setSuccessMessage(`Invoice INV-${invoice.invoiceId}.pdf downloaded successfully.`);
+            } else {
+                setErrorMessage('Failed to download invoice.');
+            }
+        } catch (error) {
+            console.error('Error downloading invoice:', error);
+            setErrorMessage('An error occurred while downloading the invoice.');
+        }
+    }}
+>
+    Download PDF
+</button>
+
+                    </td>
+                </tr>
+            ))}
+        </tbody>
+    </table>
+) : (
+    <p>No invoices found for the specified date range.</p>
+)}
+
+        {/* Error and Success Messages */}
+        {errorMessage && <p className="error-message">{errorMessage}</p>}
+        {successMessage && <p className="success-message">{successMessage}</p>}
+    </div>
+)}
+
+    
+
 
             {/* Update Product Modal */}
             {isUpdateModalOpen && productToUpdate && (

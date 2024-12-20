@@ -35,10 +35,14 @@ const TrackPage = () => {
         }
 
         const response = await axios.get(`/api/track/track/${userId}`);
-        setOrders(response.data.order ? [response.data.order] : []);
+        if (response.data.order) {
+          setOrders([response.data.order]); // Wrap the single order in an array for rendering
+        } else {
+          setOrders([]);
+        }
       } catch (err) {
-        console.error('Error fetching orders:', err);
-        setError('Failed to fetch orders. Please try again later.');
+        console.error('Error fetching the latest order:', err);
+        setError('Failed to fetch your last order. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -48,6 +52,28 @@ const TrackPage = () => {
     const interval = setInterval(fetchOrders, 10000);
     return () => clearInterval(interval);
   }, []);
+
+  const handleInvoiceDownload = async (invoiceId, orderId) => {
+    try {
+      const response = await axios({
+        url: `/api/track/download/${invoiceId}`,
+        method: 'GET',
+        responseType: 'blob', // Important for handling binary data
+      });
+
+      // Create a URL for the file
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Invoice-${orderId}.pdf`); // Provide a meaningful filename
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error('Error downloading invoice:', error);
+      alert('Failed to download the invoice. Please try again later.');
+    }
+  };
 
   if (loading) return <div className="track-page-loading">Loading your orders...</div>;
   if (error) return <div className="track-page-error">{error}</div>;
@@ -89,22 +115,21 @@ const TrackPage = () => {
                     <li>Country: {order.deliveryDetails.deliveryAddress.country}</li>
                     <li>Postal Code: {order.deliveryDetails.deliveryAddress.postalCode}</li>
                   </ul>
-                  <p><strong>Total Delivery Price:</strong> ${order.deliveryDetails.totalPrice}</p>
                 </div>
               )}
 
-{order.invoiceDetails && (
-  <div className="invoice">
-    <p>Your invoice is ready:</p>
-    <a
-      href={`/api/track/invoices/download/${order.invoiceDetails.invoiceId}`} // Use the download API endpoint
-      download={`Invoice-${order._id}.pdf`} // Provide a meaningful filename
-    >
-      Download Invoice
-    </a>
-  </div>
-)}
-
+              {order.invoiceDetails && (
+                <div className="invoice">
+                  <p>Your invoice is ready:</p>
+                  <button
+                    onClick={() => handleInvoiceDownload(order.invoiceDetails.invoiceId, order._id)}
+                  >
+                    Download Invoice
+                  </button>
+                  <p><strong>Total Price:</strong> ${order.invoiceDetails.totalAmount || 'N/A'}</p>
+                  <p><strong>Invoice Date:</strong> {new Date(order.invoiceDetails.date).toLocaleDateString() || 'N/A'}</p>
+                </div>
+              )}
             </div>
           ))}
         </div>

@@ -7,6 +7,7 @@ const User = require('../models/user');
 const Order = require('../models/order');
 const Delivery = require('../models/delivery'); // Ensure this is correctly defined
 const Invoice = require('../models/invoice');
+const delivery = require('../models/delivery');
 // GET /categories
 router.get('/categories', async (req, res) => {
     try {
@@ -332,12 +333,12 @@ router.patch('/deliveries/:deliveryId', async (req, res) => {
     }
 
     try {
-        const order = await Order.findById(deliveryId);
-        if (!order) {
+        const delivery = await delivery.findById(deliveryId);
+        if (!delivery) {
             return res.status(404).json({ error: 'Order not found.' });
         }
-        order.status = status;
-        await order.save();
+        delivery.status = status;
+        await delivery.save();
         res.status(200).json({ message: 'Delivery status updated successfully.', order });
     } catch (error) {
         console.error('Error updating delivery status:', error);
@@ -423,32 +424,54 @@ router.patch('/delivery/:orderId', async (req, res) => {
 
 // ====================== Delivery Management ======================
 
-// GET /manager/deliveries
 router.get('/deliveries', async (req, res) => {
     const { sortBy = 'purchaseDate', order = 'desc' } = req.query;
 
     try {
-        const deliveries = await PurchaseHistory.find()
-            .populate('delivery')
-            .populate('user')
+        const purchaseHistories = await PurchaseHistory.find()
+            .populate({
+                path: 'delivery',
+                populate: { path: 'invoice' }, // Populate invoice within delivery
+            })
+            .populate('invoice') // Populate invoice directly from PurchaseHistory
             .sort({ [sortBy]: order === 'asc' ? 1 : -1 });
 
-        const deliveriesWithInvoices = await Promise.all(deliveries.map(async (purchase) => {
-            const invoice = await Invoice.findOne({ user: purchase.user, delivery: purchase.delivery });
+        if (!purchaseHistories.length) {
+            return res.status(404).json({ deliveries: [], message: 'No deliveries found.' });
+        }
+
+        const deliveriesWithInvoices = purchaseHistories.map((purchase) => {
+            const delivery = purchase.delivery || {};
+            const invoiceFromDelivery = delivery.invoice || {};
+            const invoiceFromPurchase = purchase.invoice || {};
+
             return {
-                deliveryId: purchase.delivery ? purchase.delivery._id : 'N/A',
-                customerId: purchase.user,
-                productId: purchase.products.map(p => p.productId).join(', '),
-                quantity: purchase.products.reduce((total, p) => total + p.quantity, 0),
-                totalPrice: purchase.totalRevenue,
-                deliveryAddress: purchase.delivery ? purchase.delivery.deliveryAddress : 'N/A',
-                deliveryStatus: purchase.delivery ? purchase.delivery.status : 'N/A',
-                purchaseDate: purchase.purchaseDate,
-                invoiceId: invoice ? invoice.invoiceId : 'N/A',
-                invoiceDate: invoice ? invoice.date : 'N/A',
-                invoiceTotalAmount: invoice ? invoice.totalAmount : 'N/A',
+                purchaseId: purchase._id,
+                deliveryId: delivery._id || 'N/A',
+                user: purchase.user || 'N/A',
+                products: purchase.products || [],
+                totalQuantity: purchase.totalQuantity || 0,
+                totalPrice: purchase.totalRevenue || 0,
+                deliveryAddress: delivery.deliveryAddress || {
+                    fullName: 'N/A',
+                    address: 'N/A',
+                    country: 'N/A',
+                    postalCode: 'N/A',
+                },
+                status: delivery.status || 'N/A',
+                purchaseDate: purchase.purchaseDate
+                    ? new Date(purchase.purchaseDate).toISOString()
+                    : 'N/A',
+                invoiceId: invoiceFromPurchase.invoiceId || invoiceFromDelivery.invoiceId || 'N/A',
+                invoiceDate: invoiceFromPurchase.date
+                    ? new Date(invoiceFromPurchase.date).toISOString()
+                    : invoiceFromDelivery.date
+                    ? new Date(invoiceFromDelivery.date).toISOString()
+                    : 'N/A',
+                invoiceTotalAmount:
+                    invoiceFromPurchase.totalAmount || invoiceFromDelivery.totalAmount || 0,
             };
-        }));
+        });
 
         res.status(200).json({ deliveries: deliveriesWithInvoices });
     } catch (error) {
@@ -456,6 +479,9 @@ router.get('/deliveries', async (req, res) => {
         res.status(500).json({ error: 'An error occurred while fetching deliveries.' });
     }
 });
+
+
+
 
 // GET /manager/deliveries/:deliveryId
 router.get('/deliveries/:deliveryId', async (req, res) => {

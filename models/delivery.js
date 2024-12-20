@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
-const deliverySchema = new mongoose.Schema({
-    purchase: { type: mongoose.Schema.Types.ObjectId, ref: "PurchaseHistory", required: true },
+const { Schema, model } = mongoose;
+
+const deliverySchema = new Schema({
+    purchase: { type: mongoose.Schema.Types.ObjectId, ref: 'PurchaseHistory', required: true },
     user: { type: String, required: true },
     products: [
         {
@@ -15,13 +17,23 @@ const deliverySchema = new mongoose.Schema({
         address: { type: String, required: true },
         country: { type: String, required: true },
         postalCode: { type: String, required: true },
-    }, // Address as an object
+    },
     status: {
         type: String,
-        enum: ["processing", "in-transit", "delivered"],
-        default: "processing",
+        enum: ['processing', 'in-transit', 'delivered'],
+        default: 'processing',
     },
-    totalPrice: { type: Number, default: 0 }, // New field for total delivery price
+    totalPrice: { type: Number, default: 0 }, // Total delivery price
+    invoice: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Invoice', // Reference to Invoice model
+    },
+}, { timestamps: true });
+
+// Pre-save hook to calculate `totalPrice`
+deliverySchema.pre('save', function (next) {
+    this.totalPrice = this.products.reduce((sum, p) => sum + p.quantity * p.price, 0);
+    next();
 });
 
-module.exports = mongoose.model("Delivery", deliverySchema);
+module.exports = model('Delivery', deliverySchema);

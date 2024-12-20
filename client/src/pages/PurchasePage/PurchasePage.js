@@ -105,7 +105,12 @@ const UnifiedPurchasePage = () => {
     };
     const handleCompletePayment = async () => {
         const userId = localStorage.getItem("user");
+        console.log("User ID:", userId);
+        console.log("Cart Items:", cartItems);
+        console.log("Shipping Address:", shippingAddr);
+
         if (!userId) {
+            
             //alert("You must be logged in to complete the purchase.");
             Swal.fire({
                 icon: "error",
@@ -146,12 +151,7 @@ const UnifiedPurchasePage = () => {
     
         try {
             for (const item of cartItems) {
-                // Add item to purchase history
-                await axios.post("/api/purchases/add", {
-                    userId,
-                    productId: item.productId,
-                    quantity: item.quantity,
-                });
+            
     
                 // Confirm payment and send shipping address
                 await axios.post("/api/purchases/confirm-payment", {

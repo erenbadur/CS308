@@ -3,6 +3,7 @@ const router = express.Router();
 const Product = require('../models/product'); // Import Product model
 const PurchaseHistory = require('../models/PurchaseHistory');
 const User = require('../models/user'); // Import Product model
+const Category = require('../models/category'); // Category modelini import edin
 // Middleware to check if the user purchased the product
 const canCommentOrRate = async (req, res, next) => {
     const { userId } = req.body;
@@ -151,7 +152,17 @@ router.get('/sort', async (req, res) => {
     try {
         // Build the query object
         const query = {};
-        if (category) query.category = category; // Filter by category if provided
+
+        if (category) {
+            // Eğer kategori bir string ise ObjectId ile eşleştir
+            const categoryDoc = await Category.findOne({ name: category });
+            if (categoryDoc) {
+                query.category = categoryDoc._id; // ObjectId olarak ayarla
+            } else {
+                return res.status(404).json({ error: 'Category not found.' });
+            }
+        }
+
         if (term) {
             query.$or = [
                 { name: { $regex: term, $options: 'i' } }, // Match term in name
@@ -214,6 +225,16 @@ router.get('/:productId/comments', async (req, res) => {
     }
 });
 
+// Get all categories
+router.get('/categories', async (req, res) => {
+    try {
+        const categories = await Category.find(); // Tüm kategorileri getir
+        res.status(200).json(categories);
+    } catch (error) {
+        console.error('Error fetching categories:', error);
+        res.status(500).json({ error: 'An error occurred while fetching categories.' });
+    }
+});
 
 router.get('/:productId', async (req, res) => {
     const { productId } = req.params;

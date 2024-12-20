@@ -909,36 +909,43 @@ const handleSubmitComment = async () => {
                 ) : (
 
 
-                    <div className="product-details">
-                    <button className="product-details-back-button" onClick={handleBackToProducts}>
-                        &larr; Back to Products
-                        </button>
+<div className="product-details">
+    <button className="product-details-back-button" onClick={handleBackToProducts}>
+        &larr; Back to Products
+    </button>
 
-                        <div className="product-details-container">
+    <div className="product-details-container">
+        {/* Product Information */}
+        <div className="product-info">
+            <h2>{selectedProduct.name}</h2>
+            <p className="product-description">{selectedProduct.description}</p>
 
+            {/* Model */}
+            <p><strong>Model:</strong> {selectedProduct.model}</p>
 
+            {/* Serial Number */}
+            <p><strong>Serial Number:</strong> {selectedProduct.serialNumber}</p>
 
-                        {/* Right Side: Product Information */}
-                        <div className="product-info">
-                                <h2>{selectedProduct.name}</h2>
-                                <p className="product-description">{selectedProduct.description}</p>
+            {/* Quantity in Stock */}
+            <p className="product-stock" style={{ color: selectedProduct.quantityInStock > 0 ? 'black' : 'red' }}>
+                <strong>Quantity in Stock:</strong> {selectedProduct.quantityInStock} {selectedProduct.quantityInStock === 0 ? ' (Out of Stock)' : ''}
+            </p>
 
-                                {/* Rating */}
-                                <div className="product-rating-detail">
-                                <span>{'⭐️'.repeat(Math.round(selectedProduct.averageRating || 0))}</span>
-                                <span className="average-rating">({Math.round(selectedProduct.averageRating || 0)})</span>
-                                </div>
+            {/* Price */}
+            <p className="product-price-detail"><strong>Price:</strong> ${selectedProduct.price.toFixed(2)}</p>
 
-                                {/* Price */}
-                                <p className="product-price-detail">${selectedProduct.price}</p>
+            {/* Warranty Status */}
+            <p><strong>Warranty Status:</strong> {selectedProduct.warrantyStatus ? 'Valid' : 'Expired'}</p>
 
-                                {/* Stock Quantity */}
-                                <p className="product-stock" style={{ color: 'red' }}>
-                                {selectedProduct.quantityInStock} items left in stock
-                                </p>
-                                {hasPurchased && (
-    <p style={{ color: 'green' }}>You have already purchased this product.</p>
-)}
+            {/* Distributor */}
+            <p><strong>Distributor:</strong> {selectedProduct.distributor}</p>
+
+            {/* Rating */}
+            <div className="product-rating-detail">
+                <span>{'⭐️'.repeat(Math.round(selectedProduct.averageRating || 0))}</span>
+                <span className="average-rating">({Math.round(selectedProduct.averageRating || 0)})</span>
+            </div>
+
 
                                 {/* Add to Cart Button */}
                                 <button

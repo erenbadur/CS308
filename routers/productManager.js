@@ -310,7 +310,7 @@ router.delete('/comments/:productId/:commentId', async (req, res) => {
             return res.status(404).json({ error: 'Comment not found.' });
         }
 
-        comment.remove();
+        product.comments.pull(commentId);
         await product.save();
 
         res.status(200).json({ message: 'Comment deleted successfully.' });

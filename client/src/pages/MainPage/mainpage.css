@@ -7,7 +7,7 @@ html, body {
 #root {
     height: 100%; /* Ensure the app container also takes full height */
     display: flex;
-    flex-direction: column; /* Allow the content to expand and fill the space */
+    flex-direction: column; /* Allow the content to expand and fill the space */
 }
 
 /* General Styling */
@@ -21,34 +21,6 @@ body {
 /* Smooth Scroll */
 html {
     scroll-behavior: smooth;
-}
-
-
-
-.navbar .nav-items {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    flex-grow: 1;
-    justify-content: center;
-}
-
-.navbar .nav-links {
-    display: flex;
-    gap: 20px;
-    align-items: center;
-}
-
-.navbar .nav-link {
-    color: #fff;
-    text-decoration: none;
-    padding: 5px 10px;
-    cursor: pointer;
-    transition: color 0.3s;
-}
-
-.navbar .nav-link:hover {
-    color: #f3a847;
 }
 
 /* Category Dropdown */
@@ -92,6 +64,7 @@ html {
     display: flex;
 }
 
+/* Sort By Dropdown */
 .sort-by-dropdown {
     position: relative;
     display: inline-block;
@@ -170,39 +143,6 @@ html {
     color: #333;
 }
 
-
-
-.category-button {
-    margin-left: 12px;
-    margin-top: 5px;
-    padding: 8px 16px;
-    font-size: 14px;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-
-.category-button:hover{
-    background-color: #ec9c33;
-}
-
-
-
-
-/* Active button style (keeps hover effect after clicking) */
-.category-button.active {
-    background-color: #ec9c33;
-    color: white;
-    font-weight: bold;
-    outline: none;
-    border: 2px solid #0056b3;
-}
-
-
-
-
 /* Search Bar */
 .search-bar-container {
     display: flex;
@@ -247,17 +187,6 @@ html {
     font-size: 1.2em;
 }
 
-.navbar .cart, .navbar .login {
-    color: white;
-    font-size: 1.2em;
-    cursor: pointer;
-    transition: color 0.3s;
-    margin-right: 50px;
-    text-decoration: none; /* Remove underline */
-    background-color: rgba(51, 51, 51, 1);
-    border: none;
-}
-
 .add-to-cart-button.disabled {
     background-color: gray;
     color: #ffffff;
@@ -266,15 +195,13 @@ html {
     opacity: 0.6; /* Optional: dim the button for a disabled look */
 }
 
-
-
 /* Cart Panel Styles */
 .cart-panel {
     position: fixed;
-    top: 0;
+    top: 80px; /* Adjusted for AppBar height */
     right: 0;
     width: 300px;
-    height: 100%;
+    height: calc(100% - 80px);
     background-color: white;
     box-shadow: -2px 0 5px rgba(0, 0, 0, 0.5);
     z-index: 1000;
@@ -294,6 +221,7 @@ html {
     border-bottom: 1px solid #ddd;
     padding-bottom: 10px;
 }
+
 /* Comments Section */
 .comments-section {
     margin-top: 40px;
@@ -415,15 +343,6 @@ html {
     margin: 10px 0;
 }
 
-.navbar .cart {
-    margin-right: 30px;
-}
-
-.navbar .cart:hover, .navbar .login:hover {
-    color: #f3a847;
-    text-decoration: none; /* Ensure underline is not added on hover */
-}
-
 /* Carousel Styling */
 .carousel.slide {
     margin-top: 73px; /* Adjust this to match navbar height */
@@ -439,12 +358,11 @@ html {
 }
 
 .carousel-caption {
-    max-width: 80%; /* Optional: limit the caption width */;
+    max-width: 80%; /* Optional: limit the caption width */
     bottom: 20%;
     background: rgba(0, 0, 0, 0.7); /* Semi-transparent background */
     border: 5px solid #f3a847; /* Border color */
     text-align: center; /* Center-align text */
-    
 }
 
 .carousel-caption h5 {
@@ -460,25 +378,20 @@ html {
     font-size: 30px;
 }
 
-/* Popular and About Sections */
+/* Popular Section */
 .section {
     padding: 50px 20px;
     text-align: center;
 }
 
-
 #popular-section {
     background-color: #f9f9f9;
 }
 
-#about-section {
-    background-color: #e9e9e9;
-}
-
 /* Footer */
 .footer {
-    padding-block: 5rem;
-    background-color: #151823;
+    padding-block: 1rem;
+    background-color: #151823; /* Matching color */
     color: #666873;
 }
 
@@ -555,14 +468,11 @@ i {
     }
 }
 
-
-
 .product-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 20px;
     margin-top: 20px;
-
 }
 
 .product-card {
@@ -573,16 +483,13 @@ i {
     padding: 15px;
     text-align: center;
     transition: transform 0.3s;
-
-    
+    cursor: pointer;
 }
-
 
 .product-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
-            
 
 .product-image {
     width: 100%;
@@ -615,7 +522,6 @@ i {
     text-decoration: none; /* Ensure underline is not added on hover */
 }
 
-
 /* Additional Styles for Price and Rating */
 .product-price {
     font-size: 1.2em;
@@ -626,7 +532,6 @@ i {
 .product-rating{
     margin-bottom: 10px;
 }
-
 
 .product-rating span {
     font-size: 1em;
@@ -687,21 +592,21 @@ i {
     flex-direction: column;
     align-items: center;
     padding: 20px;
-  }
-  
-  .product-details-container {
+}
+
+.product-details-container {
     display: flex;
     flex-direction: row;
     width: 100%;
     max-width: 1000px;
-  }
-  
-  .product-image-container {
+}
+
+.product-image-container {
     position: relative;
     flex: 1;
-  }
-  
-  .purchased-banner {
+}
+
+.purchased-banner {
     position: absolute;
     top: 10px;
     left: 10px;
@@ -710,161 +615,69 @@ i {
     padding: 5px 10px;
     font-weight: bold;
     z-index: 1;
-  }
-  
-  .product-detail-image {
+}
+
+.product-detail-image {
     max-width: 100%;
     height: auto;
-  }
-  
-  .product-info {
+}
+
+.product-info {
     flex: 1;
     padding-left: 20px;
-  }
-  
-  .product-description {
+}
+
+.product-description {
     margin-top: 10px;
-  }
-  
-  .product-rating-detail {
+}
+
+.product-rating-detail {
     margin-top: 10px;
     font-size: 1.2em;
-  }
-  
-  .average-rating {
+}
+
+.average-rating {
     margin-left: 10px;
     font-weight: bold;
-  }
-  
-  .product-price-detail {
+}
+
+.product-price-detail {
     margin-top: 10px;
     font-size: 1.5em;
     color: green;
-  }
-  
-  .product-stock {
+}
+
+.product-stock {
     margin-top: 10px;
     font-size: 1em;
-  }
-  
-  .add-to-cart-button-detail {
+}
+
+.add-to-cart-button-detail {
     margin-top: 20px;
     padding: 10px 20px;
     font-size: 1em;
-  }
-  
-
-/* About Section Styling with Image Background */
-.about-section {
-    
-    background-image: url('../MainPage/3.jpg');
-    background-size: cover; /* Ensures the image covers the entire section */
-    background-position: center; /* Centers the image */
-    background-repeat: no-repeat;
-    color: #fff; /* Sets text color to white for better contrast */
-    padding: 60px 20px;
-    position: relative; /* Allows for overlay */
-}
-
-.about-section::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.3); /* Dark overlay for better text contrast */
-    z-index: 1;
-}
-
-.about-content {
-    max-width: 800px;
-    margin: auto;
-    text-align: center;
-    position: relative;
-    z-index: 2; /* Ensures content is above the overlay */
-}
-
-.about-content h2 {
-    font-size: 2.5em;
-    margin-bottom: 20px;
+    background-color: #f3a847;
     color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
 }
 
-
-.about-content h4 {
-    font-family: 'Times New Roman', Times, serif;
-    font-weight: bold; /* Makes the text bold */
-    /* font-style: italic;  Makes the text italic */
-    background: rgba(0, 0, 0, 0.5);
-    border-radius: 0%; /* Makes the background circular */
-    padding: 20px; /* Adds padding to give it a circular shape */
-    margin-bottom: 20px;
-    color: #fff; /* Text color */
-    display: inline-block; /* Keeps the circular shape based on content size */
-    text-align: center; /* Centers the text within the circular background */
+.add-to-cart-button-detail:hover {
+    background-color: #ec9c33;
 }
-
-
-
-.about-content p {
-    font-family: initial;
-    font-size: 1.5em;
-    line-height: 1.6;
-    margin-bottom: 40px;
-    color: #fff;
-}
-
-.about-highlights {
-    display: flex;
-    justify-content: center;
-    gap: 20px;
-    flex-wrap: wrap;
-}
-
-.highlight {
-    background-color: #fff;
-    border-radius: 10px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    padding: 20px;
-    max-width: 200px;
-    text-align: center;
-    transition: transform 0.3s;
-}
-
-.highlight:hover {
-    transform: translateY(-10px);
-}
-
-.highlight .icon {
-    font-size: 2.5em;
-    color: #f3a847;
-    margin-bottom: 10px;
-}
-
-.highlight h3 {
-    font-size: 1.3em;
-    margin-bottom: 10px;
-    color: #333;
-}
-
-.highlight p {
-    font-size: 1em;
-    color: #666;
-}
-
-
 
 /* Back to Top Button Styling */
 #backToTopBtn {
     position: fixed;
     bottom: 20px;
     right: 20px;
-    background-color:rgba(0, 0, 0, 0.4); /* Blue background color */
+    background-color:rgba(0, 0, 0, 0.4); /* Dark background color */
     color: white;
     border: none;
     padding: 10px;
-    border-radius: 30%; /* Makes it circular */
+    border-radius: 50%; /* Makes it circular */
     cursor: pointer;
     font-size: 1.5em;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
@@ -882,44 +695,30 @@ i {
     font-size: 1.2em;
 }
 
+/* Pagination Controls */
 .pagination-controls {
     display: flex;
     justify-content: center;
     align-items: center;
     margin-top: 20px;
-  }
-  
-  .pagination-controls button {
+}
+
+.pagination-controls button {
     padding: 10px 20px;
     margin: 0 10px;
     font-size: 16px;
-  }
-  
-  .pagination-controls span {
-    font-size: 16px;
-  }
+}
 
-/* Navbar */
-.navbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background-color: rgba(51, 51, 51, 1);
-    padding: 10px 20px;
-    color: #fff;
-    position: fixed; /* Ensure the navbar stays at the top */
-    width: 100%; /* Full width */
-    top: 0;
-    z-index: 10;
-    height: 90px; /* Explicit height to calculate offset */
+.pagination-controls span {
+    font-size: 16px;
 }
 
 /* Hero Section */
 .hero-section {
     position: relative;
     width: 100vw;
-    height: calc(100vh - 180px); /* Subtract the navbar height */
-    margin-top: 70px; /* Push the hero section down by navbar height */
+    height: calc(100vh - 80px); /* Subtract the navbar height */
+    margin-top: 0; /* Removed extra margin */
     overflow: hidden;
 }
 
@@ -930,11 +729,11 @@ i {
     object-position: center;
 }
 
-
 .hero-caption {
-    width: 900px;
+    width: 90%;
+    max-width: 900px;
     position: absolute;
-    top: 70%;
+    top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
     color: white;
@@ -943,9 +742,7 @@ i {
     padding: 20px;
     border-radius: 10px;
     border: 3px solid #f3a847; /* Add a border with your desired color */
-
 }
-
 
 .hero-caption h1 {
     font-size: 3rem;
@@ -958,7 +755,7 @@ i {
     text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
 }
 
-
+/* Stock Warning */
 .stock-warning {
     margin-top: 5px;
     padding: 10px;
@@ -971,3 +768,58 @@ i {
     text-align: center;
 }
 
+/* Adjusted existing button styles to accommodate MUI Buttons if needed */
+.add-comment-button:disabled {
+    background-color: #ccc;
+    color: #666;
+    cursor: not-allowed;
+}
+
+.add-comment-button {
+    background-color: #f3a847;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.add-comment-button:hover:not(:disabled) {
+    background-color: #ec9c33;
+}
+
+/* Responsive Design Adjustments */
+@media (max-width: 1024px) {
+    .product-details-container {
+        flex-direction: column;
+    }
+
+    .product-info {
+        padding-left: 0;
+    }
+
+    .search-bar-container {
+        width: 100%;
+    }
+
+    .hero-caption h1 {
+        font-size: 2rem;
+    }
+
+    .hero-caption p {
+        font-size: 1.2rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .search-bar-container {
+        width: 100%;
+    }
+    .hero-caption h1 {
+        font-size: 1.5rem;
+    }
+    .hero-caption p {
+        font-size: 1rem;
+    }
+}

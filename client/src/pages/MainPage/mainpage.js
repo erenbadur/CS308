@@ -999,6 +999,11 @@ const MainPage = () => {
                         </Button>
 
                         <div className="product-details-container">
+                            {/* Product Image */}
+                            <div className="product-image-container">
+                                <img src={selectedProduct.imageUrl} alt={selectedProduct.name} className="product-detail-image" />
+                            </div>
+
                             {/* Product Information */}
                             <div className="product-info">
                                 <Typography variant="h4">{selectedProduct.name}</Typography>

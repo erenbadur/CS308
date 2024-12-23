@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const Product = require('../models/product'); // Import Product model
+const Product = require('../models/product'); 
 const PurchaseHistory = require('../models/PurchaseHistory');
-const User = require('../models/user'); // Import Product model
-const Category = require('../models/category'); // Category modelini import edin
+const User = require('../models/user'); 
+const Category = require('../models/category'); 
 // Middleware to check if the user purchased the product
 const canCommentOrRate = async (req, res, next) => {
     const { userId } = req.body;
@@ -154,10 +154,10 @@ router.get('/sort', async (req, res) => {
         const query = {};
 
         if (category) {
-            // Eğer kategori bir string ise ObjectId ile eşleştir
+            
             const categoryDoc = await Category.findOne({ name: category });
             if (categoryDoc) {
-                query.category = categoryDoc._id; // ObjectId olarak ayarla
+                query.category = categoryDoc._id; 
             } else {
                 return res.status(404).json({ error: 'Category not found.' });
             }
@@ -228,7 +228,7 @@ router.get('/:productId/comments', async (req, res) => {
 // Get all categories
 router.get('/categories', async (req, res) => {
     try {
-        const categories = await Category.find(); // Tüm kategorileri getir
+        const categories = await Category.find(); 
         res.status(200).json(categories);
     } catch (error) {
         console.error('Error fetching categories:', error);

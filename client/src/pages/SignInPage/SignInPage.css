@@ -4,14 +4,15 @@
     box-sizing: border-box;
 }
 
-body {
-    font-family: 'Arial', sans-serif;
-    height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: linear-gradient(540deg, #426ff5, white);
-}
+html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    background: linear-gradient(900deg, #2e3a59, #426ff5);
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+  }
 
 .login-container {
     display: flex;

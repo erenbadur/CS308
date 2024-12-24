@@ -17,6 +17,12 @@ import {
     Tooltip,
     Badge,
     Divider,
+    Grid,
+    Rating,
+    Card,
+    CardMedia,
+    CardContent,
+    CardActions,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
@@ -923,7 +929,15 @@ const MainPage = () => {
                                         <Typography variant="h6" className="product-name">{product.name}</Typography>
                                         <Typography variant="body1" className="product-price">${product.price}</Typography>
                                         <div className="product-rating">
-                                            <span>{'⭐️'.repeat(Math.round(product.averageRating || 0))}</span>
+                                            <Rating
+                                                name="read-only"
+                                                value={product.averageRating}
+                                                precision={0.5}
+                                                readOnly
+                                            />
+                                            <Typography variant="body2" sx={{ ml: 1 }}>
+                                                {product.averageRating.toFixed(1)}
+                                            </Typography>
                                         </div>
 
                                         {/* Add to Cart Button */}
@@ -940,6 +954,7 @@ const MainPage = () => {
                                                 }
                                             }}
                                             disabled={product.quantityInStock === 0 || hasPurchased}
+                                            fullWidth
                                         >
                                             {hasPurchased
                                                 ? 'Already Purchased'
@@ -956,7 +971,7 @@ const MainPage = () => {
 
                         {/* Hide pagination controls when there are no products */}
                         {products.length > 0 && (
-                            <div className="pagination-controls">
+                            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 4, gap: 2 }}>
                                 <Button
                                     variant="outlined"
                                     onClick={goToPrevPage}
@@ -964,9 +979,9 @@ const MainPage = () => {
                                 >
                                     &laquo; Prev
                                 </Button>
-                                <span>
+                                <Typography variant="body1">
                                     Page {isSearching ? searchCurrentPage : currentPage} of {isSearching ? searchTotalPages : totalPages}
-                                </span>
+                                </Typography>
                                 <Button
                                     variant="outlined"
                                     onClick={goToNextPage}
@@ -974,12 +989,12 @@ const MainPage = () => {
                                 >
                                     Next &raquo;
                                 </Button>
-                            </div>
+                            </Box>
                         )}
                     </>
                 ) : (
 
-                    <div className="product-details">
+                    <Box sx={{ padding: 4 }}>
                         <Button
                             variant="contained"
                             onClick={handleBackToProducts}
@@ -998,43 +1013,66 @@ const MainPage = () => {
                             Back to Products
                         </Button>
 
-                        <div className="product-details-container">
+                        <Grid container spacing={4}>
                             {/* Product Image */}
-                            <div className="product-image-container">
-                                <img src={selectedProduct.imageUrl} alt={selectedProduct.name} className="product-detail-image" />
-                            </div>
+                            <Grid item xs={12} md={6}>
+                                <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                                    <img src={selectedProduct.imageUrl} alt={selectedProduct.name} style={{ maxWidth: '100%', maxHeight: '400px', objectFit: 'contain' }} />
+                                </Box>
+                            </Grid>
 
                             {/* Product Information */}
-                            <div className="product-info">
-                                <Typography variant="h4">{selectedProduct.name}</Typography>
-                                <Typography variant="body1" className="product-description">{selectedProduct.description}</Typography>
-
-                                {/* Model */}
-                                <Typography variant="body2"><strong>Model:</strong> {selectedProduct.model}</Typography>
-
-                                {/* Serial Number */}
-                                <Typography variant="body2"><strong>Serial Number:</strong> {selectedProduct.serialNumber}</Typography>
-
-                                {/* Quantity in Stock */}
-                                <Typography variant="body2" className="product-stock" style={{ color: selectedProduct.quantityInStock > 0 ? 'black' : 'red' }}>
-                                    <strong>Quantity in Stock:</strong> {selectedProduct.quantityInStock} {selectedProduct.quantityInStock === 0 ? ' (Out of Stock)' : ''}
-                                </Typography>
-
-                                {/* Price */}
-                                <Typography variant="h6" className="product-price-detail"><strong>Price:</strong> ${selectedProduct.price.toFixed(2)}</Typography>
-
-                                {/* Warranty Status */}
-                                <Typography variant="body2"><strong>Warranty Status:</strong> {selectedProduct.warrantyStatus ? 'Valid' : 'Expired'}</Typography>
-
-                                {/* Distributor */}
-                                <Typography variant="body2"><strong>Distributor:</strong> {selectedProduct.distributor}</Typography>
+                            <Grid item xs={12} md={6}>
+                                <Typography variant="h4" gutterBottom>{selectedProduct.name}</Typography>
+                                <Typography variant="h5" color="#28a745" gutterBottom>${selectedProduct.price.toFixed(2)}</Typography>
 
                                 {/* Rating */}
-                                <div className="product-rating-detail">
-                                    <span>{'⭐️'.repeat(Math.round(selectedProduct.averageRating || 0))}</span>
-                                    <span className="average-rating">({Math.round(selectedProduct.averageRating || 0)})</span>
-                                </div>
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
+                                    <Rating
+                                        name="read-only"
+                                        value={selectedProduct.averageRating}
+                                        precision={0.5}
+                                        readOnly
+                                    />
+                                    <Typography variant="body1" sx={{ ml: 1 }}>
+                                        {selectedProduct.averageRating.toFixed(1)}
+                                    </Typography>
+                                </Box>
 
+                                <Typography variant="body1" paragraph>{selectedProduct.description}</Typography>
+
+                                {/* Quantity in Stock */}
+                                <Typography variant="body1" sx={{ color: '#a94442', mb: 2 }}>
+                                    There are {selectedProduct.quantityInStock} products left in stock.
+                                </Typography>
+
+                                {/* Product Details in Two Columns */}
+                                <Grid container spacing={1}>
+                                    <Grid item xs={4}>
+                                        <Typography variant="body2" fontWeight="bold">Model</Typography>
+                                    </Grid>
+                                    <Grid item xs={8}>
+                                        <Typography variant="body2">{selectedProduct.model}</Typography>
+                                    </Grid>
+                                    <Grid item xs={4}>
+                                        <Typography variant="body2" fontWeight="bold">Serial Number</Typography>
+                                    </Grid>
+                                    <Grid item xs={8}>
+                                        <Typography variant="body2">{selectedProduct.serialNumber}</Typography>
+                                    </Grid>
+                                    <Grid item xs={4}>
+                                        <Typography variant="body2" fontWeight="bold">Warranty Status</Typography>
+                                    </Grid>
+                                    <Grid item xs={8}>
+                                        <Typography variant="body2">{selectedProduct.warrantyStatus ? 'Valid' : 'Expired'}</Typography>
+                                    </Grid>
+                                    <Grid item xs={4}>
+                                        <Typography variant="body2" fontWeight="bold">Distributor</Typography>
+                                    </Grid>
+                                    <Grid item xs={8}>
+                                        <Typography variant="body2">{selectedProduct.distributor}</Typography>
+                                    </Grid>
+                                </Grid>
 
                                 {/* Add to Cart Button */}
                                 <Button
@@ -1042,14 +1080,19 @@ const MainPage = () => {
                                     color="secondary"
                                     onClick={() => handleAddToCart(selectedProduct)}
                                     className="add-to-cart-button-detail"
+                                    sx={{ mt: 2, padding: '6px 12px' }}
+                                    disabled={selectedProduct.quantityInStock === 0} // Disable if out of stock
                                 >
-                                    Add to Cart
+                                    {selectedProduct.quantityInStock === 0
+                                        ? 'Out of Stock' // Display when unavailable
+                                        : 'Add to Cart'}  
                                 </Button>
-                            </div>
-                        </div>
+                            </Grid>
+                        </Grid>
+
                         {/* Comments Section */}
                         {isAddingComment ? (
-                            <div className="comment-form">
+                            <Box sx={{ mt: 4 }}>
                                 <Button
                                     variant="contained"
                                     onClick={() => setIsAddingComment(false)}
@@ -1070,18 +1113,14 @@ const MainPage = () => {
                                 {/* Rating Input */}
                                 <Box sx={{ mb: 2 }}>
                                     <Typography variant="subtitle1">Rating:</Typography>
-                                    <TextField
-                                        select
-                                        label="Select Rating"
-                                        value={newRating}
-                                        onChange={(e) => setNewRating(e.target.value)}
-                                        fullWidth
-                                    >
-                                        <MenuItem value="">Select Rating</MenuItem>
-                                        {['0', '0.5', '1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5'].map((value) => (
-                                            <MenuItem key={value} value={value}>{value}</MenuItem>
-                                        ))}
-                                    </TextField>
+                                    <Rating
+                                        name="new-rating"
+                                        value={parseFloat(newRating)}
+                                        precision={0.5}
+                                        onChange={(event, newValue) => {
+                                            setNewRating(newValue);
+                                        }}
+                                    />
                                 </Box>
                                 {/* Comment Input */}
                                 <Box sx={{ mb: 2 }}>
@@ -1112,9 +1151,9 @@ const MainPage = () => {
                                 >
                                     Submit
                                 </Button>
-                            </div>
+                            </Box>
                         ) : (
-                            <div className="comments-section">
+                            <Box sx={{ mt: 4 }}>
                                 {/* Add Comment/Rating Button */}
                                 <Button
                                     variant="outlined"
@@ -1128,7 +1167,7 @@ const MainPage = () => {
                                                 : ''
                                     }
                                     sx={{
-                                        marginBottom: '20px',
+                                        mb: 2,
                                         textTransform: 'none',
                                     }}
                                 >
@@ -1136,30 +1175,51 @@ const MainPage = () => {
                                 </Button>
 
                                 {/* Comments List */}
-                                <div className="comments-section">
+                                <Box>
                                     {comments.length > 0 ? (
                                         comments.map((comment, index) => (
-                                            <div key={index} className="comment">
-                                                <Typography variant="subtitle2">
-                                                    <strong>{userMap[comment.user] || 'Loading...'}</strong>
-                                                    {comment.createdAt ? new Date(comment.createdAt).toLocaleDateString() : 'Unknown Date'}
-                                                </Typography>
-                                                {comment.rating && <Typography variant="body2">Rating: {'⭐️'.repeat(Math.round(comment.rating))}</Typography>}
-                                                {comment.content && <Typography variant="body1">{comment.content}</Typography>}
-                                            </div>
+                                            <Box key={index} sx={{ mb: 3, p: 2, border: '1px solid #e0e0e0', borderRadius: '8px' }}>
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                                    <Typography variant="subtitle2" component="span">
+                                                        <strong>{userMap[comment.user] || 'Anonymous'}</strong>
+                                                    </Typography>
+                                                    <Typography variant="caption" color="textSecondary">
+                                                        {comment.createdAt ? new Date(comment.createdAt).toLocaleDateString() : 'Unknown Date'}
+                                                    </Typography>
+                                                </Box>
+                                                {/* Rating */}
+                                                {comment.rating && (
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                                        <Rating
+                                                            name={`rating-${index}`}
+                                                            value={comment.rating}
+                                                            precision={0.5}
+                                                            readOnly
+                                                        />
+                                                        <Typography variant="body2" sx={{ ml: 1 }}>
+                                                            {comment.rating.toFixed(1)}
+                                                        </Typography>
+                                                    </Box>
+                                                )}
+                                                {/* Comment Content */}
+                                                {comment.content && (
+                                                    <Typography variant="body1">
+                                                        {comment.content}
+                                                    </Typography>
+                                                )}
+                                            </Box>
                                         ))
                                     ) : (
                                         <Typography variant="body1">No comments available for this product yet.</Typography>
                                     )}
-                                </div>
+                                </Box>
 
                                 {/* Comments Pagination */}
-                                <div className="comments-pagination">
+                                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 2, gap: 2 }}>
                                     <Button
                                         variant="outlined"
                                         onClick={handlePrevCommentsPage}
                                         disabled={commentsPage <= 1}
-                                        sx={{ marginRight: '10px' }}
                                     >
                                         &laquo; Prev
                                     </Button>
@@ -1170,14 +1230,13 @@ const MainPage = () => {
                                         variant="outlined"
                                         onClick={handleNextCommentsPage}
                                         disabled={commentsPage >= commentsTotalPages}
-                                        sx={{ marginLeft: '10px' }}
                                     >
                                         Next &raquo;
                                     </Button>
-                                </div>
-                            </div>
+                                </Box>
+                            </Box>
                         )}
-                    </div>
+                    </Box>
 
                 )}
             </div>

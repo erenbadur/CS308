@@ -30,6 +30,11 @@ import AccountCircle from '@mui/icons-material/AccountCircle';
 import SortIcon from '@mui/icons-material/Sort';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
+
+import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+
+
 // Utility to get sessionId, when the program starts running the session Id should already be created and set by index.js file
 const getSessionId = () => {
     try {
@@ -694,6 +699,42 @@ const MainPage = () => {
         window.location.href = `/login?sessionId=${sessionId}`;
     };
 
+    const handleAddToWishlist = async (product) => {
+        const userId = localStorage.getItem('user'); // Get the logged-in user's ID
+        if (!userId) {
+            Swal.fire({
+                icon: "info",
+                title: "Please Log In",
+                text: "You must log in to add items to your wishlist.",
+            });
+            return;
+        }
+    
+        try {
+            console.log('Adding to wishlist:', { userId, productId: product.productId });
+    
+            const response = await axios.post('/api/wishlist', {
+                userId,
+                productId: product.productId, // Send only the productId to the backend
+            });
+    
+            if (response.status === 201) {
+                Swal.fire({
+                    icon: "success",
+                    title: "Added to Wishlist",
+                    text: "The product has been added to your wishlist.",
+                });
+            }
+        } catch (error) {
+            console.error("Error adding to wishlist:", error.response?.data || error.message);
+            Swal.fire({
+                icon: "error",
+                title: "Error",
+                text: "Failed to add the product to your wishlist.",
+            });
+        }
+    };
+    
     return (
         <div>
             {/* Navbar */}
@@ -925,6 +966,19 @@ const MainPage = () => {
                                         key={product._id}
                                         onClick={() => handleProductClick(product)} // Handle product click
                                     >
+
+                                        <div className="wishlist-icon-container">
+                                            <IconButton
+                                                onClick={(e) => {
+                                                    e.stopPropagation(); // Prevent card click from being triggered
+                                                    handleAddToWishlist(product);
+                                                }}
+                                                color="primary"
+                                            >
+                                                <FavoriteBorderIcon />
+                                            </IconButton>
+                                        </div>
+
                                         <img src={product.imageUrl} alt={product.name} className="product-image" />
                                         <Typography variant="h6" className="product-name">{product.name}</Typography>
                                         <Typography variant="body1" className="product-price">${product.price}</Typography>

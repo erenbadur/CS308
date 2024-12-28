@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './mainpage.css';
+import { useNavigate } from 'react-router-dom'; // Import the hook
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import { v4 as uuidv4 } from 'uuid';
@@ -48,6 +49,7 @@ const getSessionId = () => {
         return null;
     }
 };
+
 
 // Utility to get user Id from the local storage.
 const getUserId = () => {
@@ -111,6 +113,11 @@ const MainPage = () => {
         setAnchorElSort(null);
     };
 
+    const navigate = useNavigate(); // Hook for navigation
+
+    const navigateToWishlist = () => {
+        navigate('/wishlist'); // Navigate to the wishlist page
+    };
     useEffect(() => {
         const fetchUsernames = async () => {
             if (comments.length === 0) return;
@@ -804,6 +811,13 @@ const MainPage = () => {
 
                     {/* Right Section: Categories, Sort By, Cart, Login/Logout */}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        {/* Wishlist Button */}
+                        <Button
+                            color="inherit"
+                            onClick={navigateToWishlist}
+                        >
+                            Wishlist
+                        </Button>
                         {/* Category Dropdown */}
                         <Button
                             color="inherit"
@@ -879,6 +893,7 @@ const MainPage = () => {
                                 Log In
                             </Button>
                         )}
+                        
                     </Box>
                 </Toolbar>
             </AppBar>

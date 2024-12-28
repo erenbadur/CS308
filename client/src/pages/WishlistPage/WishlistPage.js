@@ -156,7 +156,7 @@ const WishlistPage = () => {
                                     <p>Price: <strong>${product.price}</strong></p>
                                     <p><strong>Description:</strong> {product.description}</p>
                                     <p><strong>Category:</strong> {product.category || 'N/A'}</p>
-                                    <p><strong>Stock:</strong> {product.quantityInStock > 0 ? `${product.quantityInStock} available` : 'Out of stock'}</p>
+                                    <p><strong>Stock:</strong> {product.quantityInStock > 0 ? `${product.quantityInStock} ` : 'Out of stock'}</p>
                                     <p><strong>Rating:</strong> {product.averageRating || 'Not rated yet'}</p>
                                 </div>
                                 <div className="wishlist-actions">

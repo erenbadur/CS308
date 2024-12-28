@@ -7,7 +7,7 @@ const User = require('../models/user');
 const Order = require('../models/order');
 const Delivery = require('../models/delivery'); // Ensure this is correctly defined
 const Invoice = require('../models/invoice');
-const delivery = require('../models/delivery');
+
 // GET /categories
 router.get('/categories', async (req, res) => {
     try {
@@ -188,6 +188,47 @@ router.put('/product/increase-stock', async (req, res) => {
     }
 });
 
+router.patch('/update-delivery-status/:id', async (req, res) => {
+    const { id } = req.params;
+    console.log('Received delivery ID:', id); // Log the ID to check what is received
+
+    const { status } = req.body;
+
+    // Validate status
+    const validStatuses = ['processing', 'in-transit', 'delivered'];
+    if (!validStatuses.includes(status)) {
+        return res.status(400).json({ error: 'Invalid status.' });
+    }
+
+    try {
+        // Find the delivery by ID
+        const delivery = await Delivery.findById(id);
+        if (!delivery) {
+            return res.status(404).json({ error: 'Delivery not found.' });
+        }
+
+        // Check the current status and ensure valid status transitions
+        const currentStatus = delivery.status;
+        if (
+            (currentStatus === 'processing' && status === 'in-transit') ||
+            (currentStatus === 'in-transit' && status === 'delivered')
+        ) {
+            delivery.status = status; // Update status
+            await delivery.save(); // Save the updated delivery
+            return res.status(200).json({ message: `Delivery status updated to: ${status}.` });
+        } else {
+            return res.status(400).json({
+                error: `Invalid status transition from ${currentStatus} to ${status}.`,
+            });
+        }
+    } catch (error) {
+        console.error('Error updating delivery status:', error.message);
+        res.status(500).json({ error: 'An error occurred while updating delivery status.' });
+    }
+});
+
+
+
 
 // Fetch all invoices
 router.get('/invoices', async (req, res) => {
@@ -321,30 +362,41 @@ router.delete('/comments/:productId/:commentId', async (req, res) => {
 });
 
 
-// Update delivery status
 router.patch('/deliveries/:deliveryId', async (req, res) => {
     const { deliveryId } = req.params;
     const { status } = req.body;
 
-    const allowedStatuses = ['Processing', 'In-Transit', 'Delivered'];
+    console.log("Received deliveryId:", deliveryId); // Debugging log
+
+    const allowedStatuses = ['processing', 'in-transit', 'delivered'];
 
     if (!allowedStatuses.includes(status)) {
         return res.status(400).json({ error: `Invalid status. Allowed statuses are: ${allowedStatuses.join(', ')}.` });
     }
 
+    if (!mongoose.Types.ObjectId.isValid(deliveryId)) {
+        return res.status(400).json({ error: 'Invalid deliveryId format.' });
+    }
+
     try {
-        const delivery = await delivery.findById(deliveryId);
+        const delivery = await Delivery.findById(deliveryId);
         if (!delivery) {
             return res.status(404).json({ error: 'Order not found.' });
         }
+
         delivery.status = status;
         await delivery.save();
-        res.status(200).json({ message: 'Delivery status updated successfully.', order });
+
+        res.status(200).json({
+            message: 'Delivery status updated successfully.',
+            delivery,
+        });
     } catch (error) {
         console.error('Error updating delivery status:', error);
         res.status(500).json({ error: 'An error occurred while updating delivery status.' });
     }
 });
+
 
 // Get pending deliveries
 router.get('/deliveries/pending', async (req, res) => {

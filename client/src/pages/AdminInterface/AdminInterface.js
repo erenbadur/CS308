@@ -79,6 +79,7 @@ const AdminInterface = () => {
     const [invoices, setInvoices] = useState([]);
     const [revenueReport, setRevenueReport] = useState({ totalRevenue: 0, chartData: [] });
     const [refundRequests, setRefundRequests] = useState([]);
+    const [statusFilter, setStatusFilter] = useState('all'); // Default filter to 'all'
 
 
 
@@ -100,7 +101,14 @@ const AdminInterface = () => {
         if (activeContent === 'manageComments') {
             fetchComments();
         }
-    }, [activeContent, filterApproved, sortByComments, orderComments]);
+        if (activeContent === 'manageStatus') {
+            fetchComments();
+        }
+        
+        if (activeContent === 'manageDeliveries') {
+            fetchDeliveries();
+        }
+    }, [activeContent, filterApproved, sortByComments, orderComments, sortByDeliveries, orderDeliveries]);
 
 
     useEffect(() => {
@@ -108,6 +116,26 @@ const AdminInterface = () => {
             fetchProducts();
         }
     }, [activeContent]);
+
+    useEffect(() => {
+        fetchDeliveries();
+    }, [statusFilter, sortByDeliveries, orderDeliveries]);
+
+
+
+    // Fetch user details for a given userId
+    const fetchUserDetails = async (userId) => {
+        try {
+            const response = await fetch(`/api/users/${userId}`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch user details');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching user details:', error);
+            return null; // Return null or a default value in case of failure
+        }
+    };
 
     /**
      * Fetches all deliveries from the backend with current sorting.
@@ -732,6 +760,39 @@ const handleOrderDeliveriesChange = (e) => {
         localStorage.clear();
         window.location.href = '/login'; // Adjust the route as per your routing setup
     };
+    // Handler to change the delivery status filter
+    const handleStatusFilterChange = (e) => {
+        setStatusFilter(e.target.value);
+    };
+
+    const updateDeliveryStatus = async (deliveryId, newStatus) => {
+        console.log("Updating delivery with ID:", deliveryId); // Debug log
+        if (!deliveryId) {
+            console.error("Invalid deliveryId passed to updateDeliveryStatus.");
+            return;
+        }
+    
+        try {
+            const response = await fetch(`/api/manager/update-delivery-status/${deliveryId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ status: newStatus }),
+            });
+    
+            const data = await response.json();
+            if (response.ok) {
+                console.log(data.message); // Success log
+            } else {
+                console.error(data.error || 'Failed to update delivery status.');
+            }
+        } catch (error) {
+            console.error('Error updating delivery status:', error);
+        }
+    };
+    
+    
 
     // !SALES MANAGER!
     /**
@@ -895,7 +956,24 @@ const handleOrderDeliveriesChange = (e) => {
             setLoading(false);
         }
     };
-
+    // Handle filtering and sorting of deliveries
+    const filteredAndSortedDeliveries = deliveries
+    .filter((delivery) => {
+        if (statusFilter === 'all') return true;
+        return delivery.status === statusFilter;
+    })
+    .sort((a, b) => {
+        if (sortByDeliveries === 'purchaseDate') {
+            return orderDeliveries === 'asc'
+                ? new Date(a.purchaseDate) - new Date(b.purchaseDate)
+                : new Date(b.purchaseDate) - new Date(a.purchaseDate);
+        } else if (sortByDeliveries === 'deliveryDate') {
+            return orderDeliveries === 'asc'
+                ? new Date(a.deliveryDate) - new Date(b.deliveryDate)
+                : new Date(b.deliveryDate) - new Date(a.deliveryDate);
+        }
+        return 0;
+    });
     const handleDownloadInvoice = async (invoiceId) => {
         try {
             const response = await fetch(`/api/sales/invoices/download/${invoiceId}`, {
@@ -1020,6 +1098,17 @@ const handleOrderDeliveriesChange = (e) => {
                             >
                                 Manage Deliveries
                             </button>
+
+                             {/* Manage Status Button */}
+                                <button
+                                    className={`nav-button submenu-button ${activeContent === 'manageStatus' ? 'active' : 'secondary'}`}
+                                    onClick={() => handleSubMenuClick('manageStatus')}
+                                    disabled={activeContent === 'manageStatus'}
+                                    title={activeContent === 'manageStatus' ? 'Manage Status is active' : ''}
+                                >
+                                    Manage Status
+                                </button>
+
                         </div>
                     )}
                 </div>
@@ -1088,6 +1177,108 @@ const handleOrderDeliveriesChange = (e) => {
                         </div>
                     </div>
                 )}
+      
+      <div className="manage-status">
+    <h3>Manage Delivery Status</h3>
+
+    {/* Filter and Sort Controls */}
+    <div className="filter-sort-controls">
+        <div className="filter-group">
+            <label>Status:</label>
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                <option value="all">All</option>
+                <option value="processing">Processing</option>
+                <option value="in-transit">In Transit</option>
+                <option value="delivered">Delivered</option>
+            </select>
+        </div>
+        <div className="sort-group">
+            <label>Sort By:</label>
+            <select value={sortByDeliveries} onChange={(e) => setSortByDeliveries(e.target.value)}>
+                <option value="purchaseDate">Purchase Date</option>
+                <option value="deliveryDate">Delivery Date</option>
+            </select>
+            <select value={orderDeliveries} onChange={(e) => setOrderDeliveries(e.target.value)}>
+                <option value="asc">Ascending</option>
+                <option value="desc">Descending</option>
+            </select>
+        </div>
+    </div>
+
+    {/* Deliveries List */}
+    <div className="delivery-list">
+        {loading ? (
+            <p>Loading deliveries...</p>
+        ) : deliveries.length > 0 ? (
+            deliveries.map((delivery) => (
+                <div key={delivery.deliveryId} className="delivery-item">
+                    {/* Delivery Details */}
+                    <p><strong>Purchase ID:</strong> {delivery.purchase?._id || 'N/A'}</p>
+                    <p><strong>Delivery Address:</strong></p>
+                    <ul>
+                        <li><strong>Name:</strong> {delivery.deliveryAddress?.fullName || 'N/A'}</li>
+                        <li><strong>Phone:</strong> {delivery.deliveryAddress?.phoneNum || 'N/A'}</li>
+                        <li><strong>Address:</strong> {delivery.deliveryAddress?.address || 'N/A'}</li>
+                        <li><strong>Country:</strong> {delivery.deliveryAddress?.country || 'N/A'}</li>
+                        <li><strong>Postal Code:</strong> {delivery.deliveryAddress?.postalCode || 'N/A'}</li>
+                    </ul>
+
+                    {/* Products Section */}
+                    <div className="delivery-products">
+                        <p><strong>Products Purchased:</strong></p>
+                        <ul>
+                            {delivery.products?.length > 0 ? (
+                                delivery.products.map((product) => (
+                                    <li key={product.productId}>
+                                        <p><strong>Product Name:</strong> {product.name}</p>
+                                        <p><strong>Quantity:</strong> {product.quantity}</p>
+                                    </li>
+                                ))
+                            ) : (
+                                <p>No products available.</p>
+                            )}
+                        </ul>
+                    </div>
+
+                    {/* Status Section */}
+                    <p><strong>Status:</strong> {delivery.status}</p>
+
+                    {/* Status Update Buttons */}
+                    <div className="status-update-buttons">
+                    <button
+    onClick={() => {
+        console.log("Updating delivery with ID:", delivery._id); // Log the ID
+        updateDeliveryStatus(delivery._id, 'processing');
+        console.log(deliveries);
+
+    }}
+    disabled={delivery.status === 'processing' || delivery.status === 'delivered'}
+>
+    Mark as Processing
+</button>
+<button
+    onClick={() => updateDeliveryStatus(delivery.deliveryId, 'in-transit')}
+    disabled={delivery.status === 'in-transit' || delivery.status === 'delivered'}
+>
+    Mark as In-Transit
+</button>
+<button
+    onClick={() => updateDeliveryStatus(delivery.deliveryId, 'delivered')}
+    disabled={delivery.status === 'delivered'}
+>
+    Mark as Delivered
+</button>
+
+                    </div>
+                </div>
+            ))
+        ) : (
+            <p>No deliveries available.</p>
+        )}
+    </div>
+</div>
+
+
                 {activeContent === 'manageProducts' && (
                     <div className="manage-products">
                         <h3>Manage Products</h3>
@@ -1450,30 +1641,33 @@ const handleOrderDeliveriesChange = (e) => {
             </td>
 
                         {/* Invoice Total Amount */}
-<td>
+    <td>
     ${typeof delivery.invoiceTotalAmount === 'number' 
-        ? delivery.invoiceTotalAmount.toFixed(2) 
-        : '0.00'}
-</td>
-                    </tr>
-                );
-            }
-            return rows;
-        })()
+    ? delivery.invoiceTotalAmount.toFixed(2) 
+    : '0.00'}
+    </td>
+            </tr>
+        );
+    }
+    return rows;
+    })()
     ) : (
-        <tr>
-            <td colSpan="11">No deliveries found.</td>
-        </tr>
+    <tr>
+    <td colSpan="11">No deliveries found.</td>
+    </tr>
     )}
 </tbody>
-                                </table>
-                            ) : (
-                                <p>No deliveries found.</p>
-                            )}
-                        </div>
-                    </div>
-                )}
-            </div>
+                </table>
+            ) : (
+                <p>No deliveries found.</p>
+            )}
+        </div>
+    </div>
+)}
+</div>
+
+
+
 
             {/* buraya sales manager ekliyorum 1. set discount */}
             {activeContent === 'setDiscount' && (
@@ -1822,6 +2016,7 @@ const handleOrderDeliveriesChange = (e) => {
                 </div>
             )}
         </div>
+        
     );
 
 }

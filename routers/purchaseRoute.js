@@ -185,9 +185,7 @@ router.post("/confirm-payment", async (req, res) => {
                 totalAmount: newInvoice.totalAmount,
             },
         });
-
-        // Simulate delivery updates
-        simulateDeliveryStatusUpdate(delivery._id);
+      
     } catch (error) {
         console.error("Error confirming payment:", error.message);
         res.status(400).json({ error: error.message });

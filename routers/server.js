@@ -17,6 +17,8 @@ const productManagerRoutes = require('./productManager');
 const notificationsRoutes = require('./notifications');
 const wishlistRoutes = require('./wishlistRoute');
 const salesManagerRoute = require('./salesManager');
+const emailService = require('./email');
+const createRefund = require('./create-refund')
 // Models (all in the `models` folder, one level up)
 const Cart = require('../models/cartModel');
 const User = require('../models/user');
@@ -24,6 +26,7 @@ const Product = require('../models/product');
 const Order = require('../models/order');
 const Invoice = require('../models/invoice');
 const Delivery = require('../models/delivery');
+const Refund = require('../models/refund');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -52,6 +55,8 @@ app.use('/api/manager', productManagerRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/sales', salesManagerRoute)
+app.use('/api/mail', emailService)
+app.use('/api/create-refund', createRefund)
 // Start Server
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

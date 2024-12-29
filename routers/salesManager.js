@@ -7,6 +7,7 @@ const fs = require('fs');
 const pdf = require('pdfkit');
 const path = require('path');
 const nodemailer = require('nodemailer');
+const sendEmail = require('./email');
 const Invoice = require('../models/invoice');
 // Nodemailer setup
 const transporter = nodemailer.createTransport({
@@ -207,7 +208,9 @@ router.get('/invoices', async (req, res) => {
     }
 });
 
-// Generate revenue report with chart data
+
+
+// Calculate revenue and profit/loss in a date range
 router.get('/revenue-report', async (req, res) => {
     const { startDate, endDate } = req.query;
 
@@ -216,6 +219,7 @@ router.get('/revenue-report', async (req, res) => {
             return res.status(400).json({ error: 'Start and end dates are required.' });
         }
 
+        // Fetch invoices in the date range
         const invoices = await Invoice.find({
             date: { $gte: new Date(startDate), $lte: new Date(endDate) },
         });
@@ -224,74 +228,141 @@ router.get('/revenue-report', async (req, res) => {
             return res.status(404).json({ error: 'No invoices found in the specified date range.' });
         }
 
-        const totalRevenue = invoices.reduce((sum, invoice) => sum + invoice.totalAmount, 0);
-        const chartData = invoices.map((invoice) => ({
-            date: invoice.date.toISOString().split('T')[0],
-            totalAmount: invoice.totalAmount,
+        // Initialize variables
+        let totalRevenue = 0;
+        let totalProfit = 0;
+        const dailyData = {};
+
+        for (const invoice of invoices) {
+            const dateKey = invoice.date.toISOString().split('T')[0];
+
+            // Calculate revenue and profit for each invoice
+            const revenue = invoice.totalAmount;
+            const cost = invoice.products.reduce((sum, product) => sum + (product.price / 2) * product.quantity, 0);
+            const profit = revenue - cost;
+
+            // Accumulate totals
+            totalRevenue += revenue;
+            totalProfit += profit;
+
+            // Aggregate daily data
+            if (!dailyData[dateKey]) {
+                dailyData[dateKey] = { revenue: 0, profit: 0 };
+            }
+            dailyData[dateKey].revenue += revenue;
+            dailyData[dateKey].profit += profit;
+        }
+
+        // Prepare data for chart
+        const chartData = Object.entries(dailyData).map(([date, data]) => ({
+            date,
+            revenue: data.revenue,
+            profit: data.profit,
         }));
 
-        res.status(200).json({ message: 'Revenue report generated successfully.', totalRevenue, chartData });
+        res.status(200).json({
+            message: 'Revenue and profit/loss report generated successfully.',
+            totalRevenue,
+            totalProfit,
+            chartData,
+        });
     } catch (error) {
-        console.error('Error generating revenue report:', error.message);
-        res.status(500).json({ error: 'Failed to generate revenue report.' });
+        console.error(error.message);
+        res.status(500).json({ error: 'Failed to generate revenue and profit/loss report.' });
     }
 });
 
+
+// Evaluate refund requests
 router.post('/evaluate-refund', async (req, res) => {
-    const { purchaseId, productId, status } = req.body;
+    const { purchaseId, productId, quantity, status } = req.body;
 
     try {
-        if (!purchaseId || !productId || !status) {
-            return res.status(400).json({ error: 'Purchase ID, Product ID, and status are required.' });
+        if (!purchaseId || !productId || !quantity || !status) {
+            return res.status(400).json({ error: 'Purchase ID, Product ID, quantity, and status are required.' });
         }
 
         if (status !== 'approved') {
-            return res.status(200).json({ message: `Refund for purchase ${purchaseId}, product ${productId}, has been ${status}.` });
+            return res.status(200).json({ message: `Refund for product ${productId} in purchase ${purchaseId} has been ${status}.` });
         }
 
-        // Fetch the invoice and product details
+        // Fetch the invoice
         const invoice = await Invoice.findOne({ _id: purchaseId, 'products.productId': productId });
         if (!invoice) {
             return res.status(404).json({ error: 'Purchase not found.' });
         }
 
         const productDetails = invoice.products.find((product) => product.productId === productId);
-        if (!productDetails) {
-            return res.status(404).json({ error: 'Product not found in the purchase.' });
+        if (!productDetails || productDetails.quantity < quantity) {
+            return res.status(400).json({ error: 'Invalid product or quantity for refund.' });
         }
 
-        const purchasedPrice = productDetails.total;
-
-        // Restock the product
-        const product = await Product.findOneAndUpdate(
-            { productId },
-            { $inc: { quantityInStock: productDetails.quantity } },
-            { new: true }
-        );
-
+        // Update stock and restock the product
+        const product = await Product.findOne({ productId });
         if (!product) {
             return res.status(404).json({ error: 'Product not found in inventory.' });
         }
 
-        // Update user's account (Simulate refund)
-        const user = await User.findOne({ userId: invoice.user });
-        if (!user) {
-            return res.status(404).json({ error: 'User not found.' });
-        }
+        // Increase stock (for refund)
+        const updatedProduct = await product.increaseStock(quantity, 'refund', invoice.email);  // Send email if reason is refund
 
-        // Simulate refund to user's account
-        console.log(`Refunding $${purchasedPrice} to user ${user.userId}`);
+        // Simulate refund to user
+        const refundedAmount = (productDetails.price * quantity).toFixed(2);
+        console.log(`Refunding $${refundedAmount} to user ${invoice.user}`);
+
+        // Send refund notification email (to user)
+        const emailSubject = `Refund Processed for ${productDetails.name}`;
+        const emailText = `Dear ${invoice.user},\n\nYour refund of ${quantity} units of ${productDetails.name} has been successfully processed.\n\nRefunded amount: $${refundedAmount}`;
+        const emailHtml = `
+            <p>Dear ${invoice.user},</p>
+            <p>Your refund of <strong>${quantity} units</strong> of <strong>${productDetails.name}</strong> has been successfully processed.</p>
+            <p><strong>Refunded amount:</strong> $${refundedAmount}</p>
+            <p>Thank you for shopping with us!</p>
+        `;
+
+        await sendEmail(invoice.email, emailSubject, emailText, emailHtml);  // Sending the refund email to the user
 
         res.status(200).json({
-            message: `Refund for product ${productId} in purchase ${purchaseId} has been approved.`,
-            refundedAmount: purchasedPrice,
-            restockedQuantity: productDetails.quantity,
+            message: `Refund for product ${productId} has been approved.`,
+            refundedAmount,
+            restockedQuantity: quantity,
         });
     } catch (error) {
-        console.error('Error evaluating refund:', error.message);
+        console.error(error.message);
         res.status(500).json({ error: 'Failed to evaluate refund.' });
     }
 });
 
+// Cancel discounts
+router.post('/cancel-discount', async (req, res) => {
+    const { products } = req.body;
 
+    try {
+        if (!products || !Array.isArray(products) || products.length === 0) {
+            return res.status(400).json({ error: 'Products array is required.' });
+        }
 
+        const updatedProducts = [];
+        for (const productId of products) {
+            const product = await Product.findOne({ productId });
+            if (!product) continue;
+
+            product.discount = {
+                percentage: 0,
+                validUntil: null,
+            };
+            await product.save();
+            updatedProducts.push(product);
+        }
+
+        res.status(200).json({
+            message: 'Discounts canceled successfully.',
+            updatedProducts,
+        });
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).json({ error: 'An error occurred while canceling discounts.' });
+    }
+});
+
+module.exports = router;

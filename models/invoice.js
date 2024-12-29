@@ -14,6 +14,8 @@ const invoiceSchema = new Schema({
     email: { type: String, required: true },
     products: [
         {
+            productId: { type: String, required: true }, // Unique identifier for the product
+            name: { type: String, required: true },
             name: { type: String, required: true },
             quantity: { type: Number, required: true },
             price: { type: Number, required: true },

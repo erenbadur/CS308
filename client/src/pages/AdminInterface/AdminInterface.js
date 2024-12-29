@@ -82,14 +82,6 @@ const AdminInterface = () => {
     const [statusFilter, setStatusFilter] = useState('all'); // Default filter to 'all'
 
 
-
-    // Fetch all deliveries when activeContent changes to 'manageDeliveries'
-    useEffect(() => {
-        if (activeContent === 'manageDeliveries') {
-            fetchDeliveries();
-        }
-    }, [activeContent, sortByDeliveries, orderDeliveries]);
-
     // Fetch all categories on component mount or when activeContent changes to 'manageCategories' or 'manageProducts'
     useEffect(() => {
         if (activeContent === 'manageCategories' || activeContent === 'manageProducts') {
@@ -108,18 +100,12 @@ const AdminInterface = () => {
         if (activeContent === 'manageDeliveries') {
             fetchDeliveries();
         }
-    }, [activeContent, filterApproved, sortByComments, orderComments, sortByDeliveries, orderDeliveries]);
-
-
-    useEffect(() => {
         if (activeContent === 'setDiscount') {
             fetchProducts();
         }
-    }, [activeContent]);
+    }, [activeContent, filterApproved, sortByComments, orderComments, sortByDeliveries, orderDeliveries, statusFilter]);
 
-    useEffect(() => {
-        fetchDeliveries();
-    }, [statusFilter, sortByDeliveries, orderDeliveries]);
+
 
 
 
@@ -692,23 +678,23 @@ const AdminInterface = () => {
     const handleFilterChange = (e) => {
         setFilterApproved(e.target.value);
     };
-/**
- * Handles changing the sort field for deliveries.
- *
- * @param {Event} e - The change event.
- */
-const handleSortByDeliveriesChange = (e) => {
-    setSortByDeliveries(e.target.value);
-};
+    /**
+     * Handles changing the sort field for deliveries.
+     *
+     * @param {Event} e - The change event.
+     */
+    const handleSortByDeliveriesChange = (e) => {
+        setSortByDeliveries(e.target.value);
+    };
 
-/**
- * Handles changing the sort order for deliveries.
- *
- * @param {Event} e - The change event.
- */
-const handleOrderDeliveriesChange = (e) => {
-    setOrderDeliveries(e.target.value);
-};
+    /**
+     * Handles changing the sort order for deliveries.
+     *
+     * @param {Event} e - The change event.
+     */
+    const handleOrderDeliveriesChange = (e) => {
+        setOrderDeliveries(e.target.value);
+    };
 
     /**
      * Handles changing the sort field for comments.
@@ -974,28 +960,7 @@ const handleOrderDeliveriesChange = (e) => {
         }
         return 0;
     });
-    const handleDownloadInvoice = async (invoiceId) => {
-        try {
-            const response = await fetch(`/api/sales/invoices/download/${invoiceId}`, {
-                method: 'GET',
-            });
-    
-            if (response.ok) {
-                // Convert response to a Blob and create a download link
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `Invoice-${invoiceId}.pdf`;
-                a.click();
-                window.URL.revokeObjectURL(url);
-            } else {
-                console.error('Error downloading invoice:', response.statusText);
-            }
-        } catch (error) {
-            console.error('Error downloading invoice:', error);
-        }
-    };
+
     
 
 
@@ -1178,105 +1143,104 @@ const handleOrderDeliveriesChange = (e) => {
                     </div>
                 )}
       
-      <div className="manage-status">
-    <h3>Manage Delivery Status</h3>
+      {activeContent === 'manageStatus' && (
+  <div className="manage-status">
 
     {/* Filter and Sort Controls */}
     <div className="filter-sort-controls">
-        <div className="filter-group">
-            <label>Status:</label>
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                <option value="all">All</option>
-                <option value="processing">Processing</option>
-                <option value="in-transit">In Transit</option>
-                <option value="delivered">Delivered</option>
-            </select>
-        </div>
-        <div className="sort-group">
-            <label>Sort By:</label>
-            <select value={sortByDeliveries} onChange={(e) => setSortByDeliveries(e.target.value)}>
-                <option value="purchaseDate">Purchase Date</option>
-                <option value="deliveryDate">Delivery Date</option>
-            </select>
-            <select value={orderDeliveries} onChange={(e) => setOrderDeliveries(e.target.value)}>
-                <option value="asc">Ascending</option>
-                <option value="desc">Descending</option>
-            </select>
-        </div>
+      <div className="filter-group">
+        <label>Status:</label>
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <option value="all">All</option>
+          <option value="processing">Processing</option>
+          <option value="in-transit">In Transit</option>
+          <option value="delivered">Delivered</option>
+        </select>
+      </div>
+      <div className="sort-group">
+        <label>Sort By:</label>
+        <select value={sortByDeliveries} onChange={(e) => setSortByDeliveries(e.target.value)}>
+          <option value="purchaseDate">Purchase Date</option>
+          <option value="deliveryDate">Delivery Date</option>
+        </select>
+        <select value={orderDeliveries} onChange={(e) => setOrderDeliveries(e.target.value)}>
+          <option value="asc">Ascending</option>
+          <option value="desc">Descending</option>
+        </select>
+      </div>
     </div>
 
     {/* Deliveries List */}
     <div className="delivery-list">
-        {loading ? (
-            <p>Loading deliveries...</p>
-        ) : deliveries.length > 0 ? (
-            deliveries.map((delivery) => (
-                <div key={delivery.deliveryId} className="delivery-item">
-                    {/* Delivery Details */}
-                    <p><strong>Purchase ID:</strong> {delivery.purchase?._id || 'N/A'}</p>
-                    <p><strong>Delivery Address:</strong></p>
-                    <ul>
-                        <li><strong>Name:</strong> {delivery.deliveryAddress?.fullName || 'N/A'}</li>
-                        <li><strong>Phone:</strong> {delivery.deliveryAddress?.phoneNum || 'N/A'}</li>
-                        <li><strong>Address:</strong> {delivery.deliveryAddress?.address || 'N/A'}</li>
-                        <li><strong>Country:</strong> {delivery.deliveryAddress?.country || 'N/A'}</li>
-                        <li><strong>Postal Code:</strong> {delivery.deliveryAddress?.postalCode || 'N/A'}</li>
-                    </ul>
+      {loading ? (
+        <p>Loading deliveries...</p>
+      ) : deliveries.length > 0 ? (
+        deliveries.map((delivery) => (
+          <div key={delivery.deliveryId} className="delivery-item">
+            {/* Delivery Details */}
+            <p><strong>Purchase ID:</strong> {delivery.purchase?._id || 'N/A'}</p>
+            <p><strong>Delivery Address:</strong></p>
+            <ul>
+              <li><strong>Name:</strong> {delivery.deliveryAddress?.fullName || 'N/A'}</li>
+              <li><strong>Phone:</strong> {delivery.deliveryAddress?.phoneNum || 'N/A'}</li>
+              <li><strong>Address:</strong> {delivery.deliveryAddress?.address || 'N/A'}</li>
+              <li><strong>Country:</strong> {delivery.deliveryAddress?.country || 'N/A'}</li>
+              <li><strong>Postal Code:</strong> {delivery.deliveryAddress?.postalCode || 'N/A'}</li>
+            </ul>
 
-                    {/* Products Section */}
-                    <div className="delivery-products">
-                        <p><strong>Products Purchased:</strong></p>
-                        <ul>
-                            {delivery.products?.length > 0 ? (
-                                delivery.products.map((product) => (
-                                    <li key={product.productId}>
-                                        <p><strong>Product Name:</strong> {product.name}</p>
-                                        <p><strong>Quantity:</strong> {product.quantity}</p>
-                                    </li>
-                                ))
-                            ) : (
-                                <p>No products available.</p>
-                            )}
-                        </ul>
-                    </div>
+            {/* Products Section */}
+            <div className="delivery-products">
+              <p><strong>Products Purchased:</strong></p>
+              <ul>
+                {delivery.products?.length > 0 ? (
+                  delivery.products.map((product) => (
+                    <li key={product.productId}>
+                      <p><strong>Product Name:</strong> {product.name}</p>
+                      <p><strong>Quantity:</strong> {product.quantity}</p>
+                    </li>
+                  ))
+                ) : (
+                  <p>No products available.</p>
+                )}
+              </ul>
+            </div>
 
-                    {/* Status Section */}
-                    <p><strong>Status:</strong> {delivery.status}</p>
+            {/* Status Section */}
+            <p><strong>Status:</strong> {delivery.status}</p>
 
-                    {/* Status Update Buttons */}
-                    <div className="status-update-buttons">
-                    <button
-    onClick={() => {
-        console.log("Updating delivery with ID:", delivery._id); // Log the ID
-        updateDeliveryStatus(delivery._id, 'processing');
-        console.log(deliveries);
-
-    }}
-    disabled={delivery.status === 'processing' || delivery.status === 'delivered'}
->
-    Mark as Processing
-</button>
-<button
-    onClick={() => updateDeliveryStatus(delivery.deliveryId, 'in-transit')}
-    disabled={delivery.status === 'in-transit' || delivery.status === 'delivered'}
->
-    Mark as In-Transit
-</button>
-<button
-    onClick={() => updateDeliveryStatus(delivery.deliveryId, 'delivered')}
-    disabled={delivery.status === 'delivered'}
->
-    Mark as Delivered
-</button>
-
-                    </div>
-                </div>
-            ))
-        ) : (
-            <p>No deliveries available.</p>
-        )}
+            {/* Status Update Buttons */}
+            <div className="status-update-buttons">
+              <button
+                onClick={() => {
+                  console.log("Updating delivery with ID:", delivery._id);
+                  updateDeliveryStatus(delivery._id, 'processing');
+                  console.log(deliveries);
+                }}
+                disabled={delivery.status === 'processing' || delivery.status === 'delivered'}
+              >
+                Mark as Processing
+              </button>
+              <button
+                onClick={() => updateDeliveryStatus(delivery.deliveryId, 'in-transit')}
+                disabled={delivery.status === 'in-transit' || delivery.status === 'delivered'}
+              >
+                Mark as In-Transit
+              </button>
+              <button
+                onClick={() => updateDeliveryStatus(delivery.deliveryId, 'delivered')}
+                disabled={delivery.status === 'delivered'}
+              >
+                Mark as Delivered
+              </button>
+            </div>
+          </div>
+        ))
+      ) : (
+        <p>No deliveries available.</p>
+      )}
     </div>
-</div>
+  </div>
+)}
 
 
                 {activeContent === 'manageProducts' && (

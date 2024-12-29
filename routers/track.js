@@ -99,6 +99,60 @@ router.get('/track/:userId', async (req, res) => {
   }
 });
 
+// get all purchases for spesific user
+router.get('/orders/:userId', async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    // Fetch all orders for the user, sorted by purchaseDate in descending order
+    const orders = await PurchaseHistory.find({ user: userId })
+        .sort({ purchaseDate: -1 }) // Sort by purchaseDate in descending order
+        .populate({
+            path: 'delivery',
+            populate: { path: 'invoice' }, // Populate invoice within delivery
+        })
+        .populate('invoice'); // Populate invoice directly from PurchaseHistory
+
+    console.log('Fetched orders:', orders);
+
+    if (!orders || orders.length === 0) {
+        return res.status(404).json({ error: 'No orders found for this user.' });
+    }
+
+    // Format the response
+    const formattedOrders = orders.map(order => {
+        const delivery = order.delivery || {};
+        const invoice = order.invoice || {};
+
+        return {
+            _id: order._id,
+            products: order.products,
+            status: order.status,
+            purchaseDate: order.purchaseDate,
+            deliveryDetails: delivery._id
+                ? {
+                    status: delivery.status,
+                    deliveryAddress: delivery.deliveryAddress,
+                    totalPrice: delivery.totalPrice || 0,
+                }
+                : null,
+            invoiceDetails: invoice._id
+                ? {
+                    invoiceId: invoice.invoiceId,
+                    totalAmount: invoice.totalAmount,
+                    date: invoice.date,
+                }
+                : null,
+        };
+    });
+
+    res.status(200).json({ orders: formattedOrders });
+} catch (error) {
+    console.error('Error fetching orders:', error.message);
+    res.status(500).json({ error: 'An error occurred while fetching the orders.' });
+}
+
+});
 
 
 module.exports = router;

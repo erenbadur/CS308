@@ -148,6 +148,7 @@ router.post("/confirm-payment", async (req, res) => {
             user: user.userId,
             email: user.email,
             products: productDetails.map((item) => ({
+                productId: item.productId,
                 name: item.name,
                 quantity: item.quantity,
                 price: item.price,

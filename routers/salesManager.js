@@ -7,6 +7,7 @@ const fs = require('fs');
 const pdf = require('pdfkit');
 const path = require('path');
 const nodemailer = require('nodemailer');
+const sendEmail = require('./email');
 const Invoice = require('../models/invoice');
 // Nodemailer setup
 const transporter = nodemailer.createTransport({
@@ -207,7 +208,9 @@ router.get('/invoices', async (req, res) => {
     }
 });
 
-// Generate revenue report with chart data
+
+
+// Calculate revenue and profit/loss in a date range
 router.get('/revenue-report', async (req, res) => {
     const { startDate, endDate } = req.query;
 
@@ -216,6 +219,7 @@ router.get('/revenue-report', async (req, res) => {
             return res.status(400).json({ error: 'Start and end dates are required.' });
         }
 
+        // Fetch invoices in the date range
         const invoices = await Invoice.find({
             date: { $gte: new Date(startDate), $lte: new Date(endDate) },
         });
@@ -224,74 +228,174 @@ router.get('/revenue-report', async (req, res) => {
             return res.status(404).json({ error: 'No invoices found in the specified date range.' });
         }
 
-        const totalRevenue = invoices.reduce((sum, invoice) => sum + invoice.totalAmount, 0);
-        const chartData = invoices.map((invoice) => ({
-            date: invoice.date.toISOString().split('T')[0],
-            totalAmount: invoice.totalAmount,
+        // Initialize variables
+        let totalRevenue = 0;
+        let totalProfit = 0;
+        const dailyData = {};
+
+        for (const invoice of invoices) {
+            const dateKey = invoice.date.toISOString().split('T')[0];
+
+            // Calculate revenue and profit for each invoice
+            const revenue = invoice.totalAmount;
+            const cost = invoice.products.reduce((sum, product) => sum + (product.price / 2) * product.quantity, 0);
+            const profit = revenue - cost;
+
+            // Accumulate totals
+            totalRevenue += revenue;
+            totalProfit += profit;
+
+            // Aggregate daily data
+            if (!dailyData[dateKey]) {
+                dailyData[dateKey] = { revenue: 0, profit: 0 };
+            }
+            dailyData[dateKey].revenue += revenue;
+            dailyData[dateKey].profit += profit;
+        }
+
+        // Prepare data for chart
+        const chartData = Object.entries(dailyData).map(([date, data]) => ({
+            date,
+            revenue: data.revenue,
+            profit: data.profit,
         }));
 
-        res.status(200).json({ message: 'Revenue report generated successfully.', totalRevenue, chartData });
+        res.status(200).json({
+            message: 'Revenue and profit/loss report generated successfully.',
+            totalRevenue,
+            totalProfit,
+            chartData,
+        });
     } catch (error) {
-        console.error('Error generating revenue report:', error.message);
-        res.status(500).json({ error: 'Failed to generate revenue report.' });
+        console.error(error.message);
+        res.status(500).json({ error: 'Failed to generate revenue and profit/loss report.' });
     }
 });
 
 router.post('/evaluate-refund', async (req, res) => {
-    const { purchaseId, productId, status } = req.body;
+    const { deliveryId, productId, quantity, status } = req.body;
 
     try {
-        if (!purchaseId || !productId || !status) {
-            return res.status(400).json({ error: 'Purchase ID, Product ID, and status are required.' });
+        console.log('--- /evaluate-refund Debug Start ---');
+        console.log('Incoming request body:', req.body);
+
+        // Validate required fields
+        if (!deliveryId || !productId || !quantity || !status) {
+            console.error('Missing required fields. Request body:', req.body);
+            return res.status(400).json({
+                error: 'Delivery ID, Product ID, quantity, and status are required.'
+            });
         }
 
+        console.log(`Check if refund status is "approved": ${status}`);
+
+        // Early return if status is not "approved"
         if (status !== 'approved') {
-            return res.status(200).json({ message: `Refund for purchase ${purchaseId}, product ${productId}, has been ${status}.` });
+            console.log(`Refund status is not approved. Current status: ${status}`);
+            return res.status(200).json({
+                message: `Refund for product ${productId} in delivery ${deliveryId} has been ${status}.`
+            });
         }
 
-        // Fetch the invoice and product details
-        const invoice = await Invoice.findOne({ _id: purchaseId, 'products.productId': productId });
+        console.log('Fetching Invoice using deliveryId & productId...');
+        // Fetch the invoice (assumes "delivery" field on Invoice references the Delivery _id)
+        const invoice = await Invoice.findOne({ delivery: deliveryId, 'products.productId': productId });
         if (!invoice) {
-            return res.status(404).json({ error: 'Purchase not found.' });
+            console.error(`Invoice not found for deliveryId: ${deliveryId}, productId: ${productId}`);
+            return res.status(404).json({
+                error: 'Delivery not found (no matching invoice).'
+            });
         }
+        console.log('Invoice found:', invoice);
 
-        const productDetails = invoice.products.find((product) => product.productId === productId);
+        console.log('Extracting product details from the invoice...');
+        const productDetails = invoice.products.find((prod) => prod.productId === productId);
         if (!productDetails) {
-            return res.status(404).json({ error: 'Product not found in the purchase.' });
+            console.error('Product not found in invoice:', productId);
+            return res.status(400).json({ error: 'Invalid product or quantity for refund.' });
         }
 
-        const purchasedPrice = productDetails.total;
+        if (productDetails.quantity < quantity) {
+            console.error(`Requested refund quantity exceeds purchased quantity. Purchased: ${productDetails.quantity}, Requested: ${quantity}`);
+            return res.status(400).json({ error: 'Invalid product or quantity for refund.' });
+        }
 
-        // Restock the product
-        const product = await Product.findOneAndUpdate(
-            { productId },
-            { $inc: { quantityInStock: productDetails.quantity } },
-            { new: true }
-        );
-
+        console.log('Fetching product from inventory...');
+        // Find the product in your Product collection
+        const product = await Product.findOne({ productId });
         if (!product) {
+            console.error(`Product not found in inventory for productId: ${productId}`);
             return res.status(404).json({ error: 'Product not found in inventory.' });
         }
+        console.log('Product found in inventory:', product.name);
 
-        // Update user's account (Simulate refund)
-        const user = await User.findOne({ userId: invoice.user });
-        if (!user) {
-            return res.status(404).json({ error: 'User not found.' });
-        }
+        console.log(`Increasing stock by ${quantity} for productId: ${productId} due to refund...`);
+        // Increase stock (for refund)
+        const updatedProduct = await product.increaseStock(quantity, 'refund', invoice.email);
+        console.log('Updated product stock:', updatedProduct.quantityInStock);
 
-        // Simulate refund to user's account
-        console.log(`Refunding $${purchasedPrice} to user ${user.userId}`);
+        // Simulate refund to user
+        const refundedAmount = (productDetails.price * quantity).toFixed(2);
+        console.log(`Refunding $${refundedAmount} to user: ${invoice.user} (Email: ${invoice.email})`);
 
-        res.status(200).json({
-            message: `Refund for product ${productId} in purchase ${purchaseId} has been approved.`,
-            refundedAmount: purchasedPrice,
-            restockedQuantity: productDetails.quantity,
+        // Prepare refund email details
+        const emailSubject = `Refund Processed for ${productDetails.name}`;
+        const emailText = `Dear Customer,\n\nYour refund of ${quantity} units of ${productDetails.name} has been successfully processed.\n\nRefunded amount: $${refundedAmount}`;
+        const emailHtml = `
+            <p>Dear ${invoice.user},</p>
+            <p>Your refund of <strong>${quantity} units</strong> of <strong>${productDetails.name}</strong> has been successfully processed.</p>
+            <p><strong>Refunded amount:</strong> $${refundedAmount}</p>
+            <p>Thank you for shopping with us!</p>
+        `;
+
+        console.log('Sending refund confirmation email...');
+        await sendEmail(invoice.email, emailSubject, emailText, emailHtml);
+        console.log('Refund confirmation email sent successfully.');
+
+        console.log('--- /evaluate-refund Debug End ---');
+        return res.status(200).json({
+            message: `Refund for product ${productId} has been approved.`,
+            refundedAmount,
+            restockedQuantity: quantity,
         });
     } catch (error) {
-        console.error('Error evaluating refund:', error.message);
-        res.status(500).json({ error: 'Failed to evaluate refund.' });
+        console.error('Error evaluating refund request:', error.message);
+        return res.status(500).json({ error: 'Failed to evaluate refund.' });
     }
 });
 
 
 
+// Cancel discounts
+router.post('/cancel-discount', async (req, res) => {
+    const { products } = req.body;
+
+    try {
+        if (!products || !Array.isArray(products) || products.length === 0) {
+            return res.status(400).json({ error: 'Products array is required.' });
+        }
+
+        const updatedProducts = [];
+        for (const productId of products) {
+            const product = await Product.findOne({ productId });
+            if (!product) continue;
+
+            product.discount = {
+                percentage: 0,
+                validUntil: null,
+            };
+            await product.save();
+            updatedProducts.push(product);
+        }
+
+        res.status(200).json({
+            message: 'Discounts canceled successfully.',
+            updatedProducts,
+        });
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).json({ error: 'An error occurred while canceling discounts.' });
+    }
+});
+
+module.exports = router;

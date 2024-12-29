@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const { Schema, model } = mongoose;
 
 const refundRequestSchema = new Schema({
-    purchaseHistoryId: {
+    purchaseId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'PurchaseHistory',
         required: true, // Link to the purchase history

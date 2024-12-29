@@ -272,47 +272,75 @@ router.get('/revenue-report', async (req, res) => {
     }
 });
 
-
-// Evaluate refund requests
 router.post('/evaluate-refund', async (req, res) => {
-    const { purchaseId, productId, quantity, status } = req.body;
+    const { deliveryId, productId, quantity, status } = req.body;
 
     try {
-        if (!purchaseId || !productId || !quantity || !status) {
-            return res.status(400).json({ error: 'Purchase ID, Product ID, quantity, and status are required.' });
+        console.log('--- /evaluate-refund Debug Start ---');
+        console.log('Incoming request body:', req.body);
+
+        // Validate required fields
+        if (!deliveryId || !productId || !quantity || !status) {
+            console.error('Missing required fields. Request body:', req.body);
+            return res.status(400).json({
+                error: 'Delivery ID, Product ID, quantity, and status are required.'
+            });
         }
 
+        console.log(`Check if refund status is "approved": ${status}`);
+
+        // Early return if status is not "approved"
         if (status !== 'approved') {
-            return res.status(200).json({ message: `Refund for product ${productId} in purchase ${purchaseId} has been ${status}.` });
+            console.log(`Refund status is not approved. Current status: ${status}`);
+            return res.status(200).json({
+                message: `Refund for product ${productId} in delivery ${deliveryId} has been ${status}.`
+            });
         }
 
-        // Fetch the invoice
-        const invoice = await Invoice.findOne({ _id: purchaseId, 'products.productId': productId });
+        console.log('Fetching Invoice using deliveryId & productId...');
+        // Fetch the invoice (assumes "delivery" field on Invoice references the Delivery _id)
+        const invoice = await Invoice.findOne({ delivery: deliveryId, 'products.productId': productId });
         if (!invoice) {
-            return res.status(404).json({ error: 'Purchase not found.' });
+            console.error(`Invoice not found for deliveryId: ${deliveryId}, productId: ${productId}`);
+            return res.status(404).json({
+                error: 'Delivery not found (no matching invoice).'
+            });
         }
+        console.log('Invoice found:', invoice);
 
-        const productDetails = invoice.products.find((product) => product.productId === productId);
-        if (!productDetails || productDetails.quantity < quantity) {
+        console.log('Extracting product details from the invoice...');
+        const productDetails = invoice.products.find((prod) => prod.productId === productId);
+        if (!productDetails) {
+            console.error('Product not found in invoice:', productId);
             return res.status(400).json({ error: 'Invalid product or quantity for refund.' });
         }
 
-        // Update stock and restock the product
-        const product = await Product.findOne({ productId });
-        if (!product) {
-            return res.status(404).json({ error: 'Product not found in inventory.' });
+        if (productDetails.quantity < quantity) {
+            console.error(`Requested refund quantity exceeds purchased quantity. Purchased: ${productDetails.quantity}, Requested: ${quantity}`);
+            return res.status(400).json({ error: 'Invalid product or quantity for refund.' });
         }
 
+        console.log('Fetching product from inventory...');
+        // Find the product in your Product collection
+        const product = await Product.findOne({ productId });
+        if (!product) {
+            console.error(`Product not found in inventory for productId: ${productId}`);
+            return res.status(404).json({ error: 'Product not found in inventory.' });
+        }
+        console.log('Product found in inventory:', product.name);
+
+        console.log(`Increasing stock by ${quantity} for productId: ${productId} due to refund...`);
         // Increase stock (for refund)
-        const updatedProduct = await product.increaseStock(quantity, 'refund', invoice.email);  // Send email if reason is refund
+        const updatedProduct = await product.increaseStock(quantity, 'refund', invoice.email);
+        console.log('Updated product stock:', updatedProduct.quantityInStock);
 
         // Simulate refund to user
         const refundedAmount = (productDetails.price * quantity).toFixed(2);
-        console.log(`Refunding $${refundedAmount} to user ${invoice.user}`);
+        console.log(`Refunding $${refundedAmount} to user: ${invoice.user} (Email: ${invoice.email})`);
 
-        // Send refund notification email (to user)
+        // Prepare refund email details
         const emailSubject = `Refund Processed for ${productDetails.name}`;
-        const emailText = `Dear ${invoice.user},\n\nYour refund of ${quantity} units of ${productDetails.name} has been successfully processed.\n\nRefunded amount: $${refundedAmount}`;
+        const emailText = `Dear Customer,\n\nYour refund of ${quantity} units of ${productDetails.name} has been successfully processed.\n\nRefunded amount: $${refundedAmount}`;
         const emailHtml = `
             <p>Dear ${invoice.user},</p>
             <p>Your refund of <strong>${quantity} units</strong> of <strong>${productDetails.name}</strong> has been successfully processed.</p>
@@ -320,18 +348,23 @@ router.post('/evaluate-refund', async (req, res) => {
             <p>Thank you for shopping with us!</p>
         `;
 
-        await sendEmail(invoice.email, emailSubject, emailText, emailHtml);  // Sending the refund email to the user
+        console.log('Sending refund confirmation email...');
+        await sendEmail(invoice.email, emailSubject, emailText, emailHtml);
+        console.log('Refund confirmation email sent successfully.');
 
-        res.status(200).json({
+        console.log('--- /evaluate-refund Debug End ---');
+        return res.status(200).json({
             message: `Refund for product ${productId} has been approved.`,
             refundedAmount,
             restockedQuantity: quantity,
         });
     } catch (error) {
-        console.error(error.message);
-        res.status(500).json({ error: 'Failed to evaluate refund.' });
+        console.error('Error evaluating refund request:', error.message);
+        return res.status(500).json({ error: 'Failed to evaluate refund.' });
     }
 });
+
+
 
 // Cancel discounts
 router.post('/cancel-discount', async (req, res) => {

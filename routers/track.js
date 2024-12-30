@@ -131,6 +131,7 @@ router.get('/orders/:userId', async (req, res) => {
             purchaseDate: order.purchaseDate,
             deliveryDetails: delivery._id
                 ? {
+                    deliveryId: delivery._id,
                     status: delivery.status,
                     deliveryAddress: delivery.deliveryAddress,
                     totalPrice: delivery.totalPrice || 0,

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './PurchasePage.css';
 import axios from 'axios';
-import Swal from "sweetalert2";
 import { 
     Stepper, 
     Step, 

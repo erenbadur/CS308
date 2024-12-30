@@ -11,12 +11,14 @@ import {
   Divider,
   Paper,
   Chip,
-  Avatar,
   Button,
   Skeleton
 } from '@mui/material';
 import { ExpandMore, ExpandLess, LocalShipping } from '@mui/icons-material';
-import { useTheme } from '@mui/material/styles';
+import Swal from 'sweetalert2';
+import { useNavigate } from 'react-router-dom';
+
+
 
 const isReturnEligible = (order) => {
   if (!order.deliveryDetails?.status) return false;
@@ -32,76 +34,109 @@ const isReturnEligible = (order) => {
   return daysDifference <= 30;
 };
 
-const isCancellable = (order) => {
-  return order.deliveryDetails?.status?.toLowerCase() === 'processing';
-};
+const handleReturn = async (productId, deliveryId, quantity, setReturnStatus) => {
+  const result = await Swal.fire({
+    title: 'Return Item',
+    text: 'Are you sure you want to return this item?',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonColor: '#3085d6',
+    cancelButtonColor: '#d33',
+    confirmButtonText: 'Yes, return it',
+    cancelButtonText: 'Cancel'
+  });
 
-const handleReturn = (productId) => {
-  const initiateReturn = async () => {
+  if (result.isConfirmed) {
     try {
-      const response = await fetch('/api/returns', {
+      const response = await fetch('/api/create-refund/create-refund-request', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          deliveryId,
           productId,
-          userId: localStorage.getItem('user'),
-          returnReason: 'customer_request'
+          quantity,
+          userId: localStorage.getItem('user')
         })
       });
 
+      const data = await response.json();
+
       if (response.ok) {
-        alert('Return request initiated successfully');
-        window.location.reload();
+        setReturnStatus(productId, 'pending');
+        // Show success message
+        await Swal.fire({
+          icon: 'success',
+          title: 'Return Initiated',
+          text: 'Your return request has been submitted successfully',
+          timer: 2000,
+          showConfirmButton: false
+        });
       } else {
-        alert('Failed to initiate return. Please try again.');
+        // Show error message
+        await Swal.fire({
+          icon: 'error',
+          title: 'Oops...',
+          text: data.error || 'Failed to initiate return. Please try again.'
+        });
       }
     } catch (error) {
       console.error('Return request failed:', error);
-      alert('Failed to initiate return. Please try again.');
+      await Swal.fire({
+        icon: 'error',
+        title: 'Oops...',
+        text: 'Failed to initiate return. Please try again.'
+      });
     }
-  };
-
-  if (window.confirm('Are you sure you want to return this item?')) {
-    initiateReturn();
   }
 };
 
+const isCancellable = (order) => {
+  return order.deliveryDetails?.status?.toLowerCase() === 'processing';
+};
+
 const handleCancel = async (orderId) => {
-  if (!window.confirm('Are you sure you want to cancel this order?')) {
-    return;
-  }
+  const result = await Swal.fire({
+    title: 'Cancel Order',
+    text: 'Are you sure you want to cancel this order?',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonColor: '#3085d6',
+    cancelButtonColor: '#d33',
+    confirmButtonText: 'Yes, cancel order',
+    cancelButtonText: 'No'
+  });
+};
 
-  try {
-    const response = await fetch(`/api/orders/${orderId}/cancel`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        userId: localStorage.getItem('user')
-      })
-    });
-
-    if (response.ok) {
-      alert('Order cancelled successfully');
-      window.location.reload();
-    } else {
-      const data = await response.json();
-      alert(data.error || 'Failed to cancel order. Please try again.');
-    }
-  } catch (error) {
-    console.error('Cancel order failed:', error);
-    alert('Failed to cancel order. Please try again.');
-  }
+const ReturnStatus = ({ status }) => {
+  if (status !== 'pending') return null;
+  
+  return (
+    <Typography variant="body2" color="info" sx={{ mt: 1 }}>
+      Item returned. Paid amount will be refunded when approved.
+    </Typography>
+  );
 };
 
 const OrderCard = ({ order }) => {
   const [expanded, setExpanded] = useState(false);
-
+  const [returnStatuses, setReturnStatuses] = useState(
+    order.products.reduce((acc, product) => {
+      acc[product.productId] = null;
+      return acc;
+    }, {})
+  );
+  
   const handleExpandClick = () => {
     setExpanded(!expanded);
+  };
+
+  const setReturnStatus = (productId, status) => {
+    setReturnStatuses(prev => ({
+      ...prev,
+      [productId]: status
+    }));
   };
 
   const formatDate = (dateString) => {
@@ -120,8 +155,6 @@ const OrderCard = ({ order }) => {
         return 'success';
       case 'processing':
         return 'info';
-      case 'cancelled':
-        return 'error';
       default:
         return 'default';
     }
@@ -205,37 +238,34 @@ const OrderCard = ({ order }) => {
             <Grid container spacing={2}>
               {order.products.map((product, index) => {
                 const eligible = isReturnEligible(order);
-                console.log('Order eligibility check:', {
-                  orderId: order._id,
-                  status: order.deliveryDetails?.status,
-                  purchaseDate: order.purchaseDate,
-                  isEligible: eligible
-                });
-
+                const currentReturnStatus = returnStatuses[product.productId];
+                
                 return (
                   <Grid item xs={12} key={index}>
-                    <Paper
-                      elevation={0}
-                      sx={{ p: 2, bgcolor: 'background.default' }}
-                    >
+                    <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default' }}>
                       <Box display="flex" alignItems="center" justifyContent="space-between">
                         <Box flexGrow={1}>
                           <Typography variant="subtitle1">{product.name}</Typography>
                           <Typography variant="body2" color="text.secondary">
                             Quantity: {product.quantity}
                           </Typography>
-                          {eligible && (
+                          {eligible && !currentReturnStatus && (
                             <Button
                               variant="outlined"
                               color="error"
-                              onClick={() => handleReturn(product.id)}
+                              onClick={() => handleReturn(
+                                product.productId,
+                                order.deliveryDetails.deliveryId,
+                                product.quantity,
+                                setReturnStatus
+                              )}
                               sx={{ mt: 1 }}
                             >
                               Return
                             </Button>
                           )}
+                          <ReturnStatus status={currentReturnStatus} />
                         </Box>
-
                         <Box>
                           <Typography variant="subtitle1">
                             ${product.price.toFixed(2)}
@@ -269,10 +299,17 @@ const OrderCard = ({ order }) => {
   );
 };
 
+
+
 const OrdersPage = () => {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const navigateToMain = () => {
+    navigate('/');
+  };
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -317,8 +354,8 @@ const OrdersPage = () => {
     boxShadow: 1,
     p: 4,
     my: 4,
-    height: '80vh',
-    width: '100%',
+    height: '90vh',
+    width: '100vh',
     overflowY: 'auto',
     '&::-webkit-scrollbar': {
       width: '8px',
@@ -338,44 +375,46 @@ const OrdersPage = () => {
 
   if (loading) {
     return (
-      <Box sx={containerStyles}>
         <Container maxWidth="lg" sx={contentStyles}>
           {Array.from({ length: 3 }).map((_, idx) => (
             <Skeleton key={idx} variant="rectangular" height={100} sx={{ mb: 2 }} />
           ))}
         </Container>
-      </Box>
     );
   }
 
   if (error) {
     return (
-      <Box sx={containerStyles}>
         <Container maxWidth="lg" sx={contentStyles}>
+          <button onClick={navigateToMain} className="back-arrow" title="Go Back">
+            ←
+          </button>
           <Typography color="error" gutterBottom>
             {error}
           </Typography>
-          <Button variant="contained" onClick={() => window.location.reload()}>
-            Retry
+          <Button variant="contained" onClick={() => navigate('/login')}>
+            Login
           </Button>
         </Container>
-      </Box>
     );
   }
 
   return (
-      <Container maxWidth="lg" sx={contentStyles}>
-        <Typography variant="h4" gutterBottom sx={{ mb: 4 }}>
-          Your Orders
+    <Container maxWidth="lg" sx={contentStyles}>
+    <button onClick={navigateToMain} className="back-arrow" title="Go Back">
+    ←
+    </button>
+      <Typography variant="h4" gutterBottom sx={{ mb: 4 }}>
+        Your Orders
+      </Typography>
+      {orders.length === 0 ? (
+        <Typography variant="body1" color="text.secondary" align="center">
+          No orders found
         </Typography>
-        {orders.length === 0 ? (
-          <Typography variant="body1" color="text.secondary" align="center">
-            No orders found
-          </Typography>
-        ) : (
-          orders.map((order) => <OrderCard key={order._id} order={order} />)
-        )}
-      </Container>
+      ) : (
+        orders.map((order) => <OrderCard key={order._id} order={order} />)
+      )}
+    </Container>
   );
 };
 

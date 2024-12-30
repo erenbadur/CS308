@@ -118,6 +118,11 @@ const MainPage = () => {
     const navigateToWishlist = () => {
         navigate('/wishlist'); // Navigate to the wishlist page
     };
+
+    const navigateToOrders = () => {
+        navigate('/Orders'); // Navigate to the wishlist page
+    };
+
     useEffect(() => {
         const fetchUsernames = async () => {
             if (comments.length === 0) return;
@@ -817,6 +822,12 @@ const MainPage = () => {
                             onClick={navigateToWishlist}
                         >
                             Wishlist
+                        </Button>
+                        <Button
+                            color="inherit"
+                            onClick={navigateToOrders}
+                        >
+                            Previous Orders
                         </Button>
                         {/* Category Dropdown */}
                         <Button

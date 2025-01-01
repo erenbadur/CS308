@@ -218,20 +218,16 @@ const UnifiedPurchasePage = () => {
     setIsProcessing(true);
 
     try {
-        for (const item of cartItems) {
         
-
-            // Confirm payment and send shipping address
-            await axios.post("/api/purchases/confirm-payment", {
-                userId,
-                products: cartItems.map((item) => ({
-                    productId: item.productId,
-                    quantity: item.quantity, // This is inside the map and works properly
-                })),
-                shippingAddress: shippingAddr, // Pass the address to the server
-            });
-            
-        }
+      // Confirm payment and send shipping address
+      await axios.post("/api/purchases/confirm-payment", {
+          userId,
+          products: cartItems.map((item) => ({
+              productId: item.productId,
+              quantity: item.quantity, // This is inside the map and works properly
+          })),
+          shippingAddress: shippingAddr, // Pass the address to the server
+      });
 
         setModalMessage("Payment completed successfully.");
         setTimeout(() => {
@@ -648,7 +644,7 @@ return (
             <Button
               variant="contained"
               sx={{ alignSelf: 'start', width: { xs: '100%', sm: 'auto' } }}
-              onClick={() => navigate("/track")}
+              onClick={() => navigate("/orders")}
             >
               Go to order tracking page
             </Button>

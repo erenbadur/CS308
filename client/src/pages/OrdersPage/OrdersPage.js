@@ -17,13 +17,37 @@ import {
 import { ExpandMore, ExpandLess, LocalShipping } from '@mui/icons-material';
 import Swal from 'sweetalert2';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
+const SHIPPING_FEE = 20;
 
+const handleInvoiceDownload = async (invoiceId, orderId) => {
+  try {
+    const response = await axios({
+      url: `/api/track/download/${invoiceId}`,
+      method: 'GET',
+      responseType: 'blob', // Important for handling binary data
+    });
+
+    // Create a URL for the file
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Invoice-${orderId}.pdf`); // Provide a meaningful filename
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  } catch (error) {
+    console.error('Error downloading invoice:', error);
+    alert('Failed to download the invoice. Please try again later.');
+  }
+};
 
 const isReturnEligible = (order) => {
   if (!order.deliveryDetails?.status) return false;
   if (order.deliveryDetails.status.toLowerCase() !== 'delivered') return false;
   if (!order.purchaseDate) return false;
+
 
   const purchaseDate = new Date(order.purchaseDate);
   const currentDate = new Date();
@@ -34,7 +58,7 @@ const isReturnEligible = (order) => {
   return daysDifference <= 30;
 };
 
-const handleReturn = async (productId, deliveryId, quantity, setReturnStatus) => {
+const handleReturn = async (productId, deliveryId, quantity, orderId) => {
   const result = await Swal.fire({
     title: 'Return Item',
     text: 'Are you sure you want to return this item?',
@@ -57,37 +81,43 @@ const handleReturn = async (productId, deliveryId, quantity, setReturnStatus) =>
           deliveryId,
           productId,
           quantity,
-          userId: localStorage.getItem('user')
+          userId: localStorage.getItem('user'),
         })
       });
 
-      const data = await response.json();
+      await response.json();
 
       if (response.ok) {
-        setReturnStatus(productId, 'pending');
-        // Show success message
-        await Swal.fire({
-          icon: 'success',
-          title: 'Return Initiated',
-          text: 'Your return request has been submitted successfully',
-          timer: 2000,
-          showConfirmButton: false
+
+        const patchResponse = await fetch(`/api/purchases/update-refundable/${orderId}/${productId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            refundable: false,
+          }),
         });
-      } else {
-        // Show error message
-        await Swal.fire({
-          icon: 'error',
-          title: 'Oops...',
-          text: data.error || 'Failed to initiate return. Please try again.'
-        });
+
+        await patchResponse.json();
+        if (patchResponse.ok) {
+          // Show success message
+          await Swal.fire({
+            icon: 'success',
+            title: 'Return Initiated',
+            text: 'Your return request has been submitted successfully',
+            timer: 2000,
+            showConfirmButton: false
+          });
+
+          window.location.reload();
+
+        } else {
+          console.error("couldn't update refundable attribute")
+        }
       }
     } catch (error) {
       console.error('Return request failed:', error);
-      await Swal.fire({
-        icon: 'error',
-        title: 'Oops...',
-        text: 'Failed to initiate return. Please try again.'
-      });
     }
   }
 };
@@ -107,36 +137,16 @@ const handleCancel = async (orderId) => {
     confirmButtonText: 'Yes, cancel order',
     cancelButtonText: 'No'
   });
+
+  // use cancel logic in here
 };
 
-const ReturnStatus = ({ status }) => {
-  if (status !== 'pending') return null;
-  
-  return (
-    <Typography variant="body2" color="info" sx={{ mt: 1 }}>
-      Item returned. Paid amount will be refunded when approved.
-    </Typography>
-  );
-};
 
 const OrderCard = ({ order }) => {
   const [expanded, setExpanded] = useState(false);
-  const [returnStatuses, setReturnStatuses] = useState(
-    order.products.reduce((acc, product) => {
-      acc[product.productId] = null;
-      return acc;
-    }, {})
-  );
   
   const handleExpandClick = () => {
     setExpanded(!expanded);
-  };
-
-  const setReturnStatus = (productId, status) => {
-    setReturnStatuses(prev => ({
-      ...prev,
-      [productId]: status
-    }));
   };
 
   const formatDate = (dateString) => {
@@ -216,7 +226,7 @@ const OrderCard = ({ order }) => {
           </Box>
           <Box textAlign="right">
             <Typography variant="h6" color="primary">
-              ${order.invoiceDetails?.totalAmount.toFixed(2)}
+              ${order.invoiceDetails?.totalAmount+ SHIPPING_FEE}
             </Typography>
             <IconButton
               onClick={handleExpandClick}
@@ -231,6 +241,13 @@ const OrderCard = ({ order }) => {
         <Collapse in={expanded} timeout="auto" unmountOnExit>
           <Box mt={2}>
             <Divider sx={{ my: 2 }} />
+            <Typography>Your invoice is ready:</Typography>
+              <Button
+                onClick={() => handleInvoiceDownload(order.invoiceDetails.invoiceId, order._id)}
+              >
+                Download Invoice
+              </Button>
+            <Divider sx={{ my: 2 }} />
 
             <Typography variant="h6" gutterBottom>
               Products
@@ -238,7 +255,9 @@ const OrderCard = ({ order }) => {
             <Grid container spacing={2}>
               {order.products.map((product, index) => {
                 const eligible = isReturnEligible(order);
-                const currentReturnStatus = returnStatuses[product.productId];
+                const currentReturnStatus = product.refundable;
+                console.log("this orderId:", order._id);
+                console.log("this prodcut is eligible:",eligible, "and returnable:", currentReturnStatus);
                 
                 return (
                   <Grid item xs={12} key={index}>
@@ -249,7 +268,7 @@ const OrderCard = ({ order }) => {
                           <Typography variant="body2" color="text.secondary">
                             Quantity: {product.quantity}
                           </Typography>
-                          {eligible && !currentReturnStatus && (
+                          {eligible && currentReturnStatus ?(
                             <Button
                               variant="outlined"
                               color="error"
@@ -257,21 +276,25 @@ const OrderCard = ({ order }) => {
                                 product.productId,
                                 order.deliveryDetails.deliveryId,
                                 product.quantity,
-                                setReturnStatus
+                                order._id,
                               )}
                               sx={{ mt: 1 }}
                             >
                               Return
                             </Button>
+                          ): currentReturnStatus === false &&
+                          (
+                            <Typography color="error" sx={{ mt: 1 }}>
+                              Item waits approval for refund.
+                            </Typography>
                           )}
-                          <ReturnStatus status={currentReturnStatus} />
                         </Box>
                         <Box>
                           <Typography variant="subtitle1">
                             ${product.price.toFixed(2)}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            Total: ${(product.price * product.quantity).toFixed(2)}
+                            Product Total: ${(product.price * product.quantity).toFixed(2)}
                           </Typography>
                         </Box>
                       </Box>
@@ -280,7 +303,13 @@ const OrderCard = ({ order }) => {
                 );
               })}
             </Grid>
-
+            <Divider sx={{ my: 2 }} />
+            <Box display="flex" justifyContent="space-between" alignItems="center">
+              <Typography variant="subtitle1">Shipping Fee:</Typography>
+              <Typography variant="subtitle1">
+                ${SHIPPING_FEE}
+              </Typography>
+            </Box>
             {order.deliveryDetails && (
               <>
                 <Divider sx={{ my: 2 }} />
@@ -392,9 +421,6 @@ const OrdersPage = () => {
           <Typography color="error" gutterBottom>
             {error}
           </Typography>
-          <Button variant="contained" onClick={() => navigate('/login')}>
-            Login
-          </Button>
         </Container>
     );
   }

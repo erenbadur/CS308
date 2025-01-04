@@ -1,74 +1,46 @@
 /* src/pages/AdminInterface/AdminInterface.css */
-/* Container holding the sidebar and main content */
+
+
+/* General Enhancements */
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: #f4f6f9;
+    margin: 0;
+    padding: 0;
+}
+
 .admin-container {
     display: flex;
     min-height: 100vh;
     min-width: 100vw;
-    margin-top: -20px;
+    margin: 0;
 }
 
-/* Sidebar Styling */
 .sidebar {
-    width: 250px;
+    width: 280px;
     padding: 20px;
-    background-color: #6A0DAD; /* Deep Purple */
-    color: #fff;
+    background-color: #2c3e50;
+    color: #ecf0f1;
     display: flex;
     flex-direction: column;
-    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    align-items: stretch; /* Ensures buttons stretch to the full width */
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+    flex-shrink: 0; /* Prevents the sidebar from shrinking */
 }
 
-/* Sidebar Title */
 .sidebar-title {
     margin-bottom: 20px;
-    font-size: 1.5rem;
+    font-size: 1.8rem;
     text-align: center;
     font-weight: bold;
-    color: #FFA500; /* Orange */
+    color: #e74c3c;
 }
 
-/* Welcome Message */
 .welcome-message {
     margin-bottom: 30px;
     text-align: center;
     font-size: 1rem;
-    color: #FFD700; /* Gold */
-}
-
-/* Navigation Buttons Container */
-.nav-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-/* General Navigation Button Styling */
-.nav-button {
-    width: 100%;
-    text-align: left;
-    padding: 12px 20px;
-    font-size: 1rem;
-    border: none;
-    border-radius: 5px;
-    transition: background-color 0.3s ease, transform 0.2s ease;
-    cursor: pointer;
-    position: relative; /* For tooltip positioning */
-    color: #fff;
-}
-
-/* Submenu Button Styling */
-.submenu-button {
-    padding-left: 40px; /* Indent submenu buttons */
-    background-color: #8B008B; /* Darker Purple */
-}
-
-/* Active Button Styling */
-.nav-button.active,
-.submenu-button.active {
-    background-color: #FFA500; /* Orange */
-    color: #fff;
-    cursor: default; /* No pointer for active button */
-    transform: scale(1.02);
+    color: #bdc3c7;
 }
 
 /* Disabled Button Styling */
@@ -80,148 +52,176 @@
     opacity: 0.7;
 }
 
-/* Hover effect for enabled buttons */
-.nav-button:not(:disabled):hover,
-.submenu-button:not(:disabled):hover {
-    background-color: #8B008B; /* Darker Purple */
-    transform: scale(1.05);
+
+.nav-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+
 }
 
-/* Tooltip for disabled buttons */
-.nav-button:disabled::after,
-.submenu-button:disabled::after {
-    content: 'You do not have permission to access this section';
-    visibility: hidden;
-    width: 220px;
-    background-color: #555;
-    color: #fff;
+.nav-button {
+    width: 100%;
     text-align: center;
-    border-radius: 6px;
-    padding: 8px 0;
-    position: absolute;
-    z-index: 1;
-    bottom: 125%; /* Position above the button */
-    left: 50%;
-    margin-left: -110px; /* Center the tooltip */
-    opacity: 0;
-    transition: opacity 0.3s;
-    font-size: 0.9rem;
+    padding: 12px 15px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    background-color: #34495e;
+    color: #ecf0f1;
+    transition: transform 0.3s, background-color 0.3s, box-shadow 0.3s;
 }
 
-/* Show the tooltip on hover */
-.nav-button:disabled:hover::after,
-.submenu-button:disabled:hover::after {
-    visibility: visible;
-    opacity: 1;
+.nav-button.active {
+    background-color: #1abc9c;
+    color: #ffffff;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
 }
 
-/* Collapsible Content Styling */
-.collapse-content {
-    margin-top: 10px;
-    padding: 15px 20px;
-    background-color: #483D8B; /* Dark Slate Blue */
-    border-radius: 5px;
-    color: #fff;
-    animation: fadeIn 0.3s ease-in-out;
+.nav-button:hover {
+    background-color: #1abc9c;
+    transform: scale(1.05);
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
 }
 
-/* Fade-in animation for collapsible content */
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
 
-/* Submenu Container */
 .submenu {
     display: flex;
     flex-direction: column;
-    gap: 5px;
-    margin-left: 10px;
+    gap: 10px;
+    margin-left: 20px;
 }
 
-/* Main Content Styling */
+.submenu-button {
+    padding: 8px 12px;
+    background-color: #2980b9;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    text-align: center;
+    color: #ecf0f1;
+    transition: background-color 0.3s;
+}
+
+.submenu-button.active {
+    background-color: #1abc9c;
+    color: #ffffff;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.submenu-button:hover {
+    background-color: #3498db;
+    color: #fff;
+    transform: scale(1.03);
+}
+
+
+/* Main Content Area */
 .main-content {
     flex: 1;
     padding: 40px;
-    background-color: #fff;
+    background-color: #ffffff;
     overflow-y: auto;
+    box-shadow: inset 0px 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-/* Dashboard Content Styling */
-.dashboard-content {
-    /* Add any specific styling for dashboard content here */
+
+
+.manage-categories, .manage-products, .manage-comments, .manage-deliveries, .manage-status {
+    margin-bottom: 30px;
+    padding: 20px;
+    border-radius: 10px;
+    background-color: #ecf0f1;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s;
 }
 
-/* Manage Categories Styling */
-.manage-categories {
-    /* Add any specific styling for manage categories here */
+.manage-categories:hover, .manage-products:hover, .manage-comments:hover, .manage-deliveries:hover{
+    transform: scale(1.02);
 }
 
-.manage-categories .category-form {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    max-width: 400px;
+h3 {
+    font-size: 1.8rem;
+    color: #2c3e50;
+    margin-bottom: 20px;
+    text-align: center;
+    border-bottom: 2px solid #2c3e50;
+    padding-bottom: 10px;
 }
 
-.manage-categories .category-form input[type="text"],
-.manage-categories .category-form select {
-    padding: 8px 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 1rem;
-}
-
-.manage-categories .category-form button {
-    padding: 10px;
-    border: none;
-    border-radius: 4px;
-    background-color: #FFA500; /* Orange */
-    color: #fff;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-.manage-categories .category-form button:hover {
-    background-color: #FF8C00; /* Dark Orange */
-}
-
-.manage-categories .delete-form {
-    margin-top: 20px;
-}
-
-.manage-categories .existing-categories {
-    margin-top: 30px;
-}
-
-.manage-categories .existing-categories ul {
-    list-style-type: disc;
-    padding-left: 20px;
-}
-
-.manage-categories .existing-categories li {
-    margin-bottom: 5px;
-}
-
-/* Manage Products Styling */
-.manage-products {
-    margin-top: 20px;
-}
-
-.product-form {
+/* Form Enhancements */
+form {
     display: flex;
     flex-direction: column;
     gap: 15px;
     max-width: 600px;
-    margin-bottom: 30px;
+    margin: 15px auto;
 }
 
-.product-form h4 {
-    margin-bottom: 10px;
+input, select, textarea {
+    padding: 12px;
+    border: 1px solid #bdc3c7;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+input:focus, select:focus, textarea:focus {
+    border-color: #1abc9c;
+    outline: none;
+    box-shadow: 0 0 5px rgba(26, 188, 156, 0.5);
+}
+
+button {
+    padding: 12px 18px;
+    margin-top: 7px;
+    border: none;
+    border-radius: 8px;
+    background-color: #2ecc71;
+    color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.3s;
+}
+
+button:hover {
+    background-color: #27ae60;
+    transform: scale(1.05);
+    
+}
+
+/* Manage Categories Specific */
+.manage-categories ul {
+    padding: 10px;
+    list-style-type: none;
+    margin: 0;
+}
+
+.manage-categories li {
+    padding: 10px 15px;
+    margin: 5px 0;
+    border: 1px solid #bdc3c7;
+    border-radius: 8px;
+    background-color: #ffffff;
+    transition: background-color 0.3s;
+}
+
+.manage-categories li:hover {
+    background-color: #e8f5e9;
+}
+
+/* Manage Products Specific */
+.product-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+    justify-content: space-between;
 }
 
 .product-form .form-group {
+    flex: 1 1 calc(50% - 20px);
     display: flex;
     flex-direction: column;
 }
@@ -229,210 +229,372 @@
 .product-form label {
     margin-bottom: 5px;
     font-weight: bold;
+    color: #34495e;
 }
 
 .product-form input[type="text"],
 .product-form input[type="number"],
 .product-form input[type="url"],
-.product-form input[type="date"],
 .product-form select,
 .product-form textarea {
-    padding: 8px 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+    padding: 12px;
+    border: 1px solid #bdc3c7;
+    border-radius: 8px;
     font-size: 1rem;
+    width: 100%;
+    box-sizing: border-box;
+    transition: border-color 0.3s;
 }
 
 .product-form textarea {
     resize: vertical;
-    height: 80px;
+    height: 100px;
+}
+
+.product-form input:focus,
+.product-form select:focus,
+.product-form textarea:focus {
+    border-color: #1abc9c;
+    outline: none;
+    box-shadow: 0 0 5px rgba(26, 188, 156, 0.5);
 }
 
 .product-form button {
-    padding: 10px;
+    width: 100%;
+    padding: 12px 18px;
     border: none;
-    border-radius: 4px;
-    background-color: #FFA500; /* Orange */
+    border-radius: 8px;
+    background-color: #2ecc71;
     color: #fff;
     font-size: 1rem;
     cursor: pointer;
-    transition: background-color 0.3s ease;
+    transition: background-color 0.3s, transform 0.3s;
+
 }
 
 .product-form button:hover {
-    background-color: #FF8C00; /* Dark Orange */
+    background-color: #27ae60;
+    transform: scale(1.05);
 }
 
-.filter-products {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 20px;
-}
-
-.filter-products label {
-    font-weight: bold;
-}
-
-.filter-products select {
-    padding: 6px 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-}
-
-.filter-products button {
-    padding: 6px 12px;
-    border: none;
-    border-radius: 4px;
-    background-color: #6A0DAD; /* Deep Purple */
-    color: #fff;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-.filter-products button:hover {
-    background-color: #8B008B; /* Darker Purple */
-}
-
+/* Manage Products Table */
 .product-list table {
     width: 100%;
     border-collapse: collapse;
+    margin-top: 20px;
 }
 
-.product-list th,
-.product-list td {
+.product-list th, .product-list td {
     border: 1px solid #ddd;
-    padding: 8px;
+    padding: 12px;
     text-align: center;
+    font-size: 1rem;
 }
 
 .product-list th {
-    background-color: #6A0DAD;
-    color: white;
+    background-color: #34495e;
+    color: #ecf0f1;
 }
 
-.product-list img {
-    border-radius: 4px;
+.product-list tr:hover {
+    background-color: #f2f2f2;
 }
 
-.product-list button {
-    margin: 0 5px;
-    padding: 5px 10px;
-    border: none;
-    border-radius: 4px;
-    background-color: #dc3545; /* Red for Delete */
+/* Manage Comments Specific */
+.manage-comments table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.manage-comments th, .manage-comments td {
+    border: 1px solid #ddd;
+    padding: 12px;
+    text-align: center;
+    font-size: 1rem;
+}
+
+.manage-comments th {
+    background-color: #2c3e50;
     color: #fff;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
 }
 
-.product-list button:hover {
-    background-color: #c82333; /* Darker Red */
+.manage-comments tr:hover {
+    background-color: #ecf0f1;
 }
 
-.product-list button:nth-child(2) {
-    background-color: #28a745; /* Green for Update */
-}
-
-.product-list button:nth-child(2):hover {
-    background-color: #218838; /* Darker Green */
-}
-
-/* Update Product Modal Styling */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-}
-
-.modal-content {
-    background: #fff;
-    padding: 20px 30px;
-    border-radius: 8px;
-    width: 90%;
-    max-width: 500px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-}
-
-.update-form .form-group {
-    display: flex;
-    flex-direction: column;
+/* Manage Deliveries Specific */
+.delivery-list .delivery-item {
     margin-bottom: 15px;
+    padding: 20px;
+    border-radius: 8px;
+    background-color: #ffffff;
+    border: 1px solid #ddd;
+    transition: transform 0.3s, background-color 0.
 }
 
-.update-form .form-group label {
-    margin-bottom: 5px;
-    font-weight: bold;
-}
 
-.update-form .form-group input[type="text"],
-.update-form .form-group input[type="number"],
-.update-form .form-group input[type="url"],
-.update-form .form-group input[type="date"],
-.update-form .form-group select,
-.update-form .form-group textarea {
-    padding: 8px 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 1rem;
-}
 
-.update-form .form-group textarea {
-    resize: vertical;
-    height: 80px;
-}
 
-.modal-actions {
+
+
+
+
+
+.main-content {
+    flex: 1;
+    padding: 0; /* Removed unnecessary padding */
+    margin: 0; /* Ensure no margin */
+    overflow-y: auto;
+    background: linear-gradient(180deg, #ffffff, #e8ecf8);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+    border-radius: 0; /* Remove unnecessary border radius */
+    width: calc(100% - 260px); /* Adjust width based on sidebar */
+    height: 100vh; /* Full viewport height */
     display: flex;
-    justify-content: flex-end;
-    gap: 10px;
+    flex-direction: column; /* Stack child elements vertically */
+    align-items: center; /* Center child elements horizontally */
+    justify-content: flex-start; /* Start from the top */
 }
 
-.modal-actions button {
-    padding: 8px 16px;
-    border: none;
-    border-radius: 4px;
-    background-color: #6A0DAD; /* Deep Purple */
-    color: #fff;
+.set-discount, 
+.view-invoices, 
+.revenue-report, 
+.refund-requests, 
+.manage-categories, 
+.manage-products, 
+.manage-comments, 
+.manage-deliveries, 
+.manage-status {
+    padding: 20px;
+    border-radius: 10px;
+    background-color: #ffffff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    margin: 0 auto; /* Ensure the content is centered horizontally */
+    max-width: 1200px; /* Optional: Limit the maximum width for readability */
+    width: 90%; /* Occupy 90% of the available width */
+    text-align: center; /* Center-align the content inside */
+    overflow-y: auto; /* Add scroll if the content exceeds height */
+}
+
+.set-discount h3 {
+    font-size: 1.8rem;
+    color: #2c3e50;
+    text-align: center;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #2c3e50;
+    padding-bottom: 10px;
+}
+
+.set-discount table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.set-discount th, .set-discount td {
+    border: 1px solid #ddd;
+    padding: 12px;
+    text-align: center;
     font-size: 1rem;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
 }
 
-.modal-actions button:hover {
-    background-color: #8B008B; /* Darker Purple */
+.set-discount th {
+    background-color: #34495e;
+    color: #ecf0f1;
 }
 
-.modal-actions button[type="button"] {
-    background-color: #dc3545; /* Red for cancel */
+.set-discount tr:nth-child(even) {
+    background-color: #f9f9f9;
 }
 
-.modal-actions button[type="button"]:hover {
-    background-color: #c82333; /* Darker Red */
+.set-discount tr:hover {
+    background-color: #e8f5e9;
 }
 
-/* Logout Button Styling */
-.logout-button {
-    margin-top: auto; /* Pushes the button to the bottom */
+.set-discount input[type="number"] {
     padding: 10px;
-    border: none;
-    border-radius: 5px;
-    background-color: #dc3545; /* Red */
-    color: #fff;
+    border: 1px solid #bdc3c7;
+    border-radius: 6px;
     font-size: 1rem;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 10px;
 }
 
-.logout-button:hover {
-    background-color: #c82333; /* Darker Red */
+.set-discount button {
+    margin-top: 20px;
+    width: 100%;
+    padding: 12px;
+    background-color: #1abc9c;
+    color: #fff;
+    font-size: 1rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.set-discount button:hover {
+    background-color: #16a085;
+    transform: scale(1.05);
+}
+
+
+.view-invoices h3 {
+    font-size: 1.8rem;
+    color: #2c3e50;
+    text-align: center;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #2c3e50;
+    padding-bottom: 10px;
+}
+
+.view-invoices form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.view-invoices input {
+    flex: 1 1 calc(50% - 20px);
+    padding: 10px;
+    border: 1px solid #bdc3c7;
+    border-radius: 6px;
+    font-size: 1rem;
+    box-sizing: border-box;
+}
+
+.view-invoices button {
+    flex: 1 1 100%;
+    padding: 12px;
+    background-color: #3498db;
+    color: #fff;
+    font-size: 1rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.view-invoices button:hover {
+    background-color: #2980b9;
+    transform: scale(1.05);
+}
+
+.view-invoices table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.view-invoices th, .view-invoices td {
+    border: 1px solid #ddd;
+    padding: 12px;
+    text-align: center;
+    font-size: 1rem;
+}
+
+.view-invoices th {
+    background-color: #34495e;
+    color: #ecf0f1;
+}
+
+.view-invoices tr:hover {
+    background-color: #e8f5e9;
+}
+
+
+
+.revenue-report h3 {
+    font-size: 1.8rem;
+    color: #2c3e50;
+    text-align: center;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #2c3e50;
+    padding-bottom: 10px;
+}
+
+.revenue-report form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.revenue-report input {
+    flex: 1 1 calc(50% - 20px);
+    padding: 10px;
+    border: 1px solid #bdc3c7;
+    border-radius: 6px;
+    font-size: 1rem;
+    box-sizing: border-box;
+}
+
+.revenue-report button {
+    flex: 1 1 100%;
+    padding: 12px;
+    background-color: #1abc9c;
+    color: #fff;
+    font-size: 1rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.revenue-report button:hover {
+    background-color: #16a085;
+    transform: scale(1.05);
+}
+
+
+.refund-requests h3 {
+    font-size: 1.8rem;
+    color: #2c3e50;
+    text-align: center;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #2c3e50;
+    padding-bottom: 10px;
+}
+
+.refund-requests table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.refund-requests th, .refund-requests td {
+    border: 1px solid #ddd;
+    padding: 12px;
+    text-align: center;
+    font-size: 1rem;
+}
+
+.refund-requests th {
+    background-color: #34495e;
+    color: #ecf0f1;
+}
+
+.refund-requests tr:hover {
+    background-color: #e8f5e9;
+}
+
+.refund-requests button {
+    padding: 8px 12px;
+    background-color: #e74c3c;
+    color: #fff;
+    font-size: 0.9rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.refund-requests button:hover {
+    background-color: #c0392b;
+    transform: scale(1.05);
 }
 
 /* Responsive Adjustments */
@@ -441,233 +603,15 @@
         flex-direction: column;
     }
 
-    .sidebar {
-        width: 100%;
-        flex-direction: row;
-        align-items: center;
-        justify-content: space-between;
+    .set-discount, .view-invoices, .revenue-report, .refund-requests {
+        padding: 15px;
     }
 
-    .nav-buttons {
-        flex-direction: row;
-        gap: 5px;
-    }
-
-    .nav-button,
-    .submenu-button {
-        padding: 10px 15px;
+    table {
         font-size: 0.9rem;
     }
 
-    .collapse-content {
-        padding: 10px 15px;
-    }
-
-    .main-content {
-        padding: 20px;
-    }
-
-    /* Adjust forms in collapsible content for smaller screens */
-    .manage-categories .category-form,
-    .manage-products .product-form {
-        flex-direction: column;
-    }
-
-    .product-list table,
-    .product-list th,
-    .product-list td {
+    button {
         font-size: 0.9rem;
     }
-
-    /* Update Modal Adjustments */
-    .modal-content {
-        padding: 15px 20px;
-    }
-    .manage-comments {
-        margin-top: 20px;
-    }
-    
-    .filter-sort-controls {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 20px;
-        flex-wrap: wrap;
-        gap: 10px;
-    }
-    
-    .filter-group,
-    .sort-group {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-    
-    .filter-sort-controls label {
-        font-weight: bold;
-    }
-    
-    .filter-sort-controls select {
-        padding: 6px 8px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-    }
-    
-    .comments-list table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-    
-    .comments-list th,
-    .comments-list td {
-        border: 1px solid #ddd;
-        padding: 8px;
-        text-align: center;
-    }
-    
-    .comments-list th {
-        background-color: #6A0DAD;
-        color: white;
-    }
-    
-    .comments-list button {
-        margin: 0 3px;
-        padding: 5px 10px;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        color: #fff;
-        transition: background-color 0.3s ease;
-    }
-    
-    .comments-list button:disabled {
-        cursor: not-allowed;
-        opacity: 0.6;
-    }
-    
-    .comments-list button:nth-child(1) { /* Approve Button */
-        background-color: #28a745; /* Green */
-    }
-    
-    .comments-list button:nth-child(1):hover:not(:disabled) {
-        background-color: #218838; /* Darker Green */
-    }
-    
-    .comments-list button:nth-child(2) { /* Disapprove Button */
-        background-color: #ffc107; /* Yellow */
-        color: #212529;
-    }
-    
-    .comments-list button:nth-child(2):hover:not(:disabled) {
-        background-color: #e0a800; /* Darker Yellow */
-    }
-    
-    .comments-list button:nth-child(3) { /* Delete Button */
-        background-color: #dc3545; /* Red */
-    }
-    
-    .comments-list button:nth-child(3):hover:not(:disabled) {
-        background-color: #c82333; /* Darker Red */
-    }
-    
-    /* Responsive Adjustments for Manage Comments */
-    @media (max-width: 768px) {
-        .filter-sort-controls {
-            flex-direction: column;
-            align-items: flex-start;
-        }
-    
-        .comments-list table,
-        .comments-list th,
-        .comments-list td {
-            font-size: 0.9rem;
-        }
-    
-        .comments-list img {
-            width: 40px;
-            height: 40px;
-        }
-    }
-    /* Manage Deliveries Styling */
-.manage-deliveries {
-    margin-top: 20px;
-}
-
-.filter-sort-controls {
-    display: flex;
-    justify-content: flex-start;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.sort-group {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.filter-sort-controls label {
-    font-weight: bold;
-}
-
-.filter-sort-controls select {
-    padding: 6px 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-}
-
-.deliveries-list table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.deliveries-list th,
-.deliveries-list td {
-    border: 1px solid #ddd;
-    padding: 8px;
-    text-align: center;
-}
-
-.deliveries-list th {
-    background-color: #6A0DAD;
-    color: white;
-}
-
-.deliveries-list td {
-    vertical-align: top;
-}
-
-.deliveries-list button {
-    margin: 0 3px;
-    padding: 5px 10px;
-    border: none;
-    border-radius: 4px;
-    cursor: not-allowed; /* Sadece görüntüleme amaçlı olduğu için */
-    background-color: #6c757d;
-    color: #fff;
-    transition: background-color 0.3s ease;
-}
-
-.deliveries-list button:hover:not(:disabled) {
-    background-color: #5a6268;
-}
-
-/* Responsive Adjustments for Manage Deliveries */
-@media (max-width: 768px) {
-    .filter-sort-controls {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .deliveries-list table,
-    .deliveries-list th,
-    .deliveries-list td {
-        font-size: 0.8rem;
-    }
-
-    .deliveries-list img {
-        width: 40px;
-        height: 40px;
-    }
-}
 }

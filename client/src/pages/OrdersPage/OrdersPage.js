@@ -95,7 +95,7 @@ const handleReturn = async (productId, deliveryId, quantity, orderId) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            refundable: false,
+            refundable: 'return_req',
           }),
         });
 
@@ -109,8 +109,6 @@ const handleReturn = async (productId, deliveryId, quantity, orderId) => {
             timer: 2000,
             showConfirmButton: false
           });
-
-          window.location.reload();
 
         } else {
           console.error("couldn't update refundable attribute")
@@ -126,7 +124,7 @@ const isCancellable = (order) => {
   return order.deliveryDetails?.status?.toLowerCase() === 'processing';
 };
 
-const handleCancel = async (orderId) => {
+const handleCancel = async (deliveryId, orderId) => {
   const result = await Swal.fire({
     title: 'Cancel Order',
     text: 'Are you sure you want to cancel this order?',
@@ -138,7 +136,42 @@ const handleCancel = async (orderId) => {
     cancelButtonText: 'No'
   });
 
-  // use cancel logic in here
+  if (result.isConfirmed) {
+    try {
+      // Call the cancel endpoint
+      const response = await fetch(`/api/track/cancel-order`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          deliveryId,
+          orderId,
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to cancel order');
+      }
+
+      // Show success message
+      await Swal.fire({
+        title: 'Order Cancelled',
+        text: `Your order has been cancelled.`,
+        icon: 'success'
+      });
+
+    } catch (error) {
+      // Show error message
+      await Swal.fire({
+        title: 'Error',
+        text: error.message || 'Something went wrong while cancelling the order',
+        icon: 'error'
+      });
+    }
+  }
 };
 
 
@@ -159,12 +192,14 @@ const OrderCard = ({ order }) => {
 
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
-      case 'pending':
+      case 'in-transit':
         return 'warning';
       case 'delivered':
         return 'success';
       case 'processing':
         return 'info';
+      case 'cancelled':
+        return 'error';
       default:
         return 'default';
     }
@@ -212,12 +247,16 @@ const OrderCard = ({ order }) => {
                   color={getStatusColor(order.deliveryDetails.status)}
                 />
               )}
-              {isCancellable(order) && (
+              {isCancellable(order) &&(
                 <Button
                   variant="outlined"
                   color="error"
                   size="small"
-                  onClick={() => handleCancel(order._id)}
+                  onClick={() => 
+                    handleCancel(
+                      order.deliveryDetails.deliveryId,
+                      order._id
+                  )}
                 >
                   Cancel Order
                 </Button>
@@ -243,7 +282,10 @@ const OrderCard = ({ order }) => {
             <Divider sx={{ my: 2 }} />
             <Typography>Your invoice is ready:</Typography>
               <Button
-                onClick={() => handleInvoiceDownload(order.invoiceDetails.invoiceId, order._id)}
+                onClick={() => 
+                  handleInvoiceDownload(
+                    order.invoiceDetails.invoiceId, 
+                    order._id)}
               >
                 Download Invoice
               </Button>
@@ -268,26 +310,35 @@ const OrderCard = ({ order }) => {
                           <Typography variant="body2" color="text.secondary">
                             Quantity: {product.quantity}
                           </Typography>
-                          {eligible && currentReturnStatus ?(
+                          {eligible && currentReturnStatus === 'no_return' ? (
                             <Button
                               variant="outlined"
                               color="error"
-                              onClick={() => handleReturn(
-                                product.productId,
-                                order.deliveryDetails.deliveryId,
-                                product.quantity,
-                                order._id,
-                              )}
+                              onClick={() =>
+                                handleReturn(
+                                  product.productId,
+                                  order.deliveryDetails.deliveryId,
+                                  product.quantity,
+                                  order._id,
+                                )
+                              }
                               sx={{ mt: 1 }}
                             >
                               Return
                             </Button>
-                          ): currentReturnStatus === false &&
-                          (
-                            <Typography color="error" sx={{ mt: 1 }}>
+                          ) : currentReturnStatus === 'return_req' ? (
+                            <Typography color="warning" sx={{ mt: 1 }}>
                               Item waits approval for refund.
                             </Typography>
-                          )}
+                          ) : currentReturnStatus === 'approved' ? (
+                            <Typography color="success" sx={{ mt: 1 }}>
+                              Refund Approved.
+                            </Typography>
+                          ) : currentReturnStatus === 'rejected' ? (
+                            <Typography color="error" sx={{ mt: 1 }}>
+                              Refund Rejected.
+                            </Typography>
+                          ) : null}
                         </Box>
                         <Box>
                           <Typography variant="subtitle1">
@@ -366,16 +417,9 @@ const OrdersPage = () => {
     };
 
     fetchOrders();
+    const interval = setInterval(fetchOrders, 10000);
+    return () => clearInterval(interval);
   }, []);
-
-  const containerStyles = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '100vh',
-    backgroundColor: '#f5f5f5',
-    p: 3,
-  };
 
   const contentStyles = {
     backgroundColor: 'white',

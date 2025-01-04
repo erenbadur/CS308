@@ -20,7 +20,7 @@ const deliverySchema = new Schema({
     },
     status: {
         type: String,
-        enum: ['processing', 'in-transit', 'delivered'],
+        enum: ['processing', 'in-transit', 'delivered', 'cancelled'],
         default: 'processing',
     },
     totalPrice: { type: Number, default: 0 }, // Total delivery price

@@ -875,6 +875,25 @@ const AdminInterface = () => {
             if (response.ok) {
                 setSuccessMessage(data.message);
                 fetchRefundRequests(); // Refresh the list
+                // changes the refundable status of products
+                try {
+                    const patchResponse = await fetch(`/api/purchases/update-refundable/${orderId}/${productId}`, {
+                        method: 'PATCH',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                          refundable: {status},
+                        }),
+                      });
+              
+                      await patchResponse.json();
+                      if (!patchResponse.ok) {
+                        console.error('Failed to update refundable status:', patchResponse.error);
+                      }
+                } catch (error) {
+                    console.error('Error logging refund action:', error);
+                }
             } else {
                 setErrorMessage(data.error || 'Failed to evaluate refund.');
             }

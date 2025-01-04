@@ -6,6 +6,7 @@ const fs = require('fs');
 const Delivery = require('../models/delivery'); // Adjust the path to the Invoice model
 const PurchaseHistory = require('../models/PurchaseHistory'); // Adjust the path to the Invoice model
 
+
 router.get('/download/:invoiceId', async (req, res) => {
   const { invoiceId } = req.params;
 
@@ -155,5 +156,53 @@ router.get('/orders/:userId', async (req, res) => {
 
 });
 
+router.patch('/cancel-order', async (req, res) => {
+  const {deliveryId, orderId} = req.body;
+    try {
+        console.log('--- /cancel-order Debug Start ---');
+        console.log('Processing cancellation for deliveryId:', deliveryId);
 
+        // Find the delivery and populate product details
+        const delivery = await Delivery.findById(deliveryId);
+        if (!delivery) {
+            console.error('Delivery not found:', deliveryId);
+            return res.status(404).json({ error: 'Delivery not found.' });
+        }
+
+        // Check if order is in 'processing' status
+        if (delivery.status !== 'processing') {
+            console.error(`Cannot cancel delivery. Current status: ${delivery.status}`);
+            return res.status(400).json({
+                error: 'Only orders in processing status can be cancelled.'
+            });
+        }
+
+        // Update order status to cancelled
+        delivery.status = 'cancelled';
+        await delivery.save();
+
+        // Find the order and populate product details
+        const order = await PurchaseHistory.findById(orderId);
+        if (!order) {
+            console.error('Order not found:', orderId);
+            return res.status(404).json({ error: 'Order not found.' });
+        }
+
+        // Calculate total refund amount
+        const totalRefundAmount = order.products.reduce((total, item) => {
+            return total + (item.price * item.quantity);
+        }, 0).toFixed(2);
+
+        console.log('--- /cancel-order Debug End ---');
+        return res.status(200).json({
+            message: 'Order cancelled successfully',
+            orderId: order._id,
+            refundAmount: totalRefundAmount
+        });
+
+    } catch (error) {
+        console.error('Error cancelling order:', error.message);
+        return res.status(500).json({ error: 'Failed to cancel order.' });
+    }
+});
 module.exports = router;

@@ -333,6 +333,49 @@ button:hover {
     transition: transform 0.3s, background-color 0.
 }
 
+/* Manage Status Specific */
+.manage-status table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.manage-status th, .manage-status td {
+    border: 1px solid #ddd;
+    padding: 12px;
+    text-align: center;
+    font-size: 1rem;
+}
+
+.manage-status th {
+    background-color: #2c3e50;
+    color: #fff;
+}
+
+.manage-status tr:hover {
+    background-color: #ecf0f1;
+}
+
+.manage-status button {
+    margin: 5px;
+    padding: 8px 12px;
+    background-color: #2ecc71;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.3s ease;
+}
+
+.manage-status button:hover {
+    background-color: #27ae60;
+}
+
+.manage-status button:disabled {
+    background-color: #bdc3c7;
+    cursor: not-allowed;
+}
 
 
 

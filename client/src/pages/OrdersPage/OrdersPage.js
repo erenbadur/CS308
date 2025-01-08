@@ -310,34 +310,40 @@ const OrderCard = ({ order }) => {
                           <Typography variant="body2" color="text.secondary">
                             Quantity: {product.quantity}
                           </Typography>
-                          {eligible && currentReturnStatus === 'no_return' ? (
-                            <Button
-                              variant="outlined"
-                              color="error"
-                              onClick={() =>
-                                handleReturn(
-                                  product.productId,
-                                  order.deliveryDetails.deliveryId,
-                                  product.quantity,
-                                  order._id,
-                                )
-                              }
-                              sx={{ mt: 1 }}
-                            >
-                              Return
-                            </Button>
-                          ) : currentReturnStatus === 'return_req' ? (
-                            <Typography color="warning" sx={{ mt: 1 }}>
-                              Item waits approval for refund.
-                            </Typography>
-                          ) : currentReturnStatus === 'approved' ? (
-                            <Typography color="success" sx={{ mt: 1 }}>
-                              Refund Approved.
-                            </Typography>
-                          ) : currentReturnStatus === 'rejected' ? (
-                            <Typography color="error" sx={{ mt: 1 }}>
-                              Refund Rejected.
-                            </Typography>
+                          {order.deliveryDetails?.status?.toLowerCase() === 'delivered' ? (
+                            currentReturnStatus === 'no_return' ? (
+                              eligible ? (
+                                <Button
+                                  variant="outlined"
+                                  color="error"
+                                  onClick={() => handleReturn(
+                                    product.productId,
+                                    order.deliveryDetails.deliveryId,
+                                    product.quantity,
+                                    order._id,
+                                  )}
+                                  sx={{ mt: 1 }}
+                                >
+                                  Return
+                                </Button>
+                              ) : (
+                                <Typography color="text.secondary" sx={{ mt: 1 }}>
+                                  Return period expired
+                                </Typography>
+                              )
+                            ) : currentReturnStatus === 'return_req' ? (
+                              <Typography color="warning" sx={{ mt: 1 }}>
+                                Item waits approval for refund.
+                              </Typography>
+                            ) : currentReturnStatus === 'approved' ? (
+                              <Typography color="success" sx={{ mt: 1 }}>
+                                Refund Approved.
+                              </Typography>
+                            ) : currentReturnStatus === 'rejected' ? (
+                              <Typography color="error" sx={{ mt: 1 }}>
+                                Refund Rejected.
+                              </Typography>
+                            ) : null
                           ) : null}
                         </Box>
                         <Box>

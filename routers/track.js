@@ -5,6 +5,8 @@ const path = require('path');
 const fs = require('fs');
 const Delivery = require('../models/delivery'); // Adjust the path to the Invoice model
 const PurchaseHistory = require('../models/PurchaseHistory'); // Adjust the path to the Invoice model
+const sendEmail = require('./email');
+const User = require('../models/user');
 
 
 router.get('/download/:invoiceId', async (req, res) => {
@@ -187,17 +189,69 @@ router.patch('/cancel-order', async (req, res) => {
             console.error('Order not found:', orderId);
             return res.status(404).json({ error: 'Order not found.' });
         }
+        const user = await User.findOne({userId: delivery.user});
+        if (!user) {
+          console.error('User not found:', delivery.user);
+          return res.status(404).json({ error: 'User not found.' });
+      }
 
         // Calculate total refund amount
-        const totalRefundAmount = order.products.reduce((total, item) => {
-            return total + (item.price * item.quantity);
-        }, 0).toFixed(2);
+      const refundAmount = delivery.totalPrice
+
+      const productsList = delivery.products
+      .map(product => `
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ddd;">${product.name}</td>
+          <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${product.quantity}</td>
+        </tr>
+      `).join('');
+    
+      const emailSubject = `Refund Processed for Order: ${delivery.purchase}`;
+      
+      const emailHtml = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <p>Dear ${delivery.user},</p>
+          
+          <p>Your refund has been successfully processed for the following items:</p>
+          
+          <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+            <thead>
+              <tr style="background-color: #f8f9fa;">
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Product</th>
+                <th style="padding: 8px; border: 1px solid #ddd;">Quantity</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${productsList}
+            </tbody>
+          </table>
+    
+          <p><strong>Total Refunded Amount:</strong> $${refundAmount}</p>
+          <p>Thank you for shopping with us!</p>
+        </div>
+      `;
+    
+      const emailText = `
+        Dear ${delivery.user},
+        
+        Your refund has been successfully processed for the following items:
+        
+        ${delivery.products.map(p => `- ${p.name} (Quantity: ${p.quantity})`).join('\n')}
+        
+        Total Refunded Amount: $${refundAmount}
+        
+        Thank you for shopping with us!
+          `;
+
+        console.log('Sending refund confirmation email...');
+        await sendEmail(user.email, emailSubject, emailText, emailHtml);
+        console.log('Refund confirmation email sent successfully.');
 
         console.log('--- /cancel-order Debug End ---');
         return res.status(200).json({
             message: 'Order cancelled successfully',
             orderId: order._id,
-            refundAmount: totalRefundAmount
+            refundAmount: refundAmount
         });
 
     } catch (error) {

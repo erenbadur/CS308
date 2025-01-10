@@ -1,6 +1,7 @@
 // src/pages/AdminInterface/AdminInterface.js
 import React, { useState, useEffect } from 'react';
 import './AdminInterface.css';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TablePagination } from '@mui/material';
 
 /**
  * AdminInterface component representing the admin dashboard.
@@ -1194,66 +1195,57 @@ const AdminInterface = () => {
       {loading ? (
         <p>Loading deliveries...</p>
       ) : deliveries.length > 0 ? (
-        deliveries.map((delivery) => (
-          <div key={delivery.deliveryId} className="delivery-item">
-            {/* Delivery Details */}
-            <p><strong>Purchase ID:</strong> {delivery.purchase?._id || 'N/A'}</p>
-            <p><strong>Delivery Address:</strong></p>
-            <ul>
-              <li><strong>Name:</strong> {delivery.deliveryAddress?.fullName || 'N/A'}</li>
-              <li><strong>Phone:</strong> {delivery.deliveryAddress?.phoneNum || 'N/A'}</li>
-              <li><strong>Address:</strong> {delivery.deliveryAddress?.address || 'N/A'}</li>
-              <li><strong>Country:</strong> {delivery.deliveryAddress?.country || 'N/A'}</li>
-              <li><strong>Postal Code:</strong> {delivery.deliveryAddress?.postalCode || 'N/A'}</li>
-            </ul>
-
-            {/* Products Section */}
-            <div className="delivery-products">
-              <p><strong>Products Purchased:</strong></p>
-              <ul>
-                {delivery.products?.length > 0 ? (
-                  delivery.products.map((product) => (
-                    <li key={product.productId}>
-                      <p><strong>Product Name:</strong> {product.name}</p>
-                      <p><strong>Quantity:</strong> {product.quantity}</p>
-                    </li>
-                  ))
-                ) : (
-                  <p>No products available.</p>
-                )}
-              </ul>
-            </div>
-
-            {/* Status Section */}
-            <p><strong>Status:</strong> {delivery.status}</p>
-
-            {/* Status Update Buttons */}
-            <div className="status-update-buttons">
-              <button
-                onClick={() => {
-                  console.log("Updating delivery with ID:", delivery._id);
-                  updateDeliveryStatus(delivery._id, 'processing');
-                  console.log(deliveries);
-                }}
-                disabled={delivery.status === 'processing' || delivery.status === 'delivered'}
-              >
-                Mark as Processing
-              </button>
-              <button
-                onClick={() => updateDeliveryStatus(delivery.deliveryId, 'in-transit')}
-                disabled={delivery.status === 'in-transit' || delivery.status === 'delivered'}
-              >
-                Mark as In-Transit
-              </button>
-              <button
-                onClick={() => updateDeliveryStatus(delivery.deliveryId, 'delivered')}
-                disabled={delivery.status === 'delivered'}
-              >
-                Mark as Delivered
-              </button>
-            </div>
-          </div>
-        ))
+        <table className="manage-status-table">
+                <thead>
+                    <tr>
+                        <th>Purchase ID</th>
+                        <th>Delivery Address</th>
+                        <th>Products</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {deliveries.map((delivery) => (
+                        <tr key={delivery.deliveryId}>
+                            <td>{delivery.purchase?._id || 'N/A'}</td>
+                            <td>
+                                {delivery.deliveryAddress?.fullName || 'N/A'}<br />
+                                {delivery.deliveryAddress?.address || 'N/A'}, {delivery.deliveryAddress?.country || ''}<br />
+                                {delivery.deliveryAddress?.postalCode || 'N/A'}
+                            </td>
+                            <td>
+                                {delivery.products?.map((product) => (
+                                    <div key={product.productId}>
+                                        {product.name} (x{product.quantity})
+                                    </div>
+                                ))}
+                            </td>
+                            <td>{delivery.status}</td>
+                            <td>
+                            <button
+                                    onClick={() => updateDeliveryStatus(delivery.deliveryId, 'processing')}
+                                    disabled={delivery.status == 'in-transit' || delivery.status === 'delivered' || delivery.status === 'processing' }
+                                >
+                                    Mark as Processing
+                                </button>
+                                <button
+                                    onClick={() => updateDeliveryStatus(delivery.deliveryId, 'in-transit')}
+                                    disabled={delivery.status === 'delivered' || delivery.status === 'in-transit'}
+                                >
+                                    Mark as In-Transit
+                                </button>
+                                <button
+                                    onClick={() => updateDeliveryStatus(delivery.deliveryId, 'delivered')}
+                                    disabled={delivery.status === 'delivered' || delivery.status === 'processing' }
+                                >
+                                    Mark as Delivered
+                                </button>
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
       ) : (
         <p>No deliveries available.</p>
       )}
@@ -1566,81 +1558,66 @@ const AdminInterface = () => {
                             {loading ? (
                                 <p>Loading deliveries...</p>
                             ) : deliveries.length > 0 ? (
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th>Delivery ID</th>
-                                            <th>Customer ID</th>
-                                            <th>Product ID</th>
-                                            <th>Quantity</th>
-                                            <th>Total Price</th>
-                                            <th>Delivery Address</th>
-                                            <th>Delivery Status</th>
-                                            <th>Purchase Date</th>
-                                            <th>Invoice ID</th>
-                                            <th>Invoice Date</th>
-                                            <th>Invoice Total Amount</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-    {Array.isArray(deliveries) && deliveries.length > 0 ? (
-        (() => {
-            const rows = [];
-            for (let delivery of deliveries) {
-                rows.push(
-                    <tr key={delivery.deliveryId}>
-                        {/* Delivery ID */}
-                        <td>{delivery.deliveryId}</td>
-                        {/* User */}
-                        <td>{delivery.user}</td>
-                        {/* Product IDs */}
-                        <td>{delivery.products ? delivery.products.map(product => product.productId).join(', ') : 'N/A'}</td>
-                        {/* Total Quantity */}
-                        <td>{delivery.products ? delivery.products.reduce((total, product) => total + product.quantity, 0) : 0}</td>
-                        {/* Total Price */}
-                        <td>
-                            ${typeof delivery.totalPrice === 'number' ? delivery.totalPrice.toFixed(2) : '0.00'}
-                        </td>
-                        {/* Delivery Address */}
-                        <td>
-                            {delivery.deliveryAddress?.address || 'N/A'}, 
-                            {delivery.deliveryAddress?.city || ''}, 
-                            {delivery.deliveryAddress?.country || 'N/A'}, 
-                            {delivery.deliveryAddress?.postalCode || 'N/A'}
-                        </td>
-
-                        {/* Delivery Status */}
-                        <td>{delivery.status || 'N/A'}</td>
-
-                        {/* Purchase Date */}
-                        <td>{delivery.purchaseDate ? new Date(delivery.purchaseDate).toLocaleDateString() : 'N/A'}</td>
-
-                       {/* Invoice ID */}
-                        <td>{delivery.invoiceId || 'N/A'}</td>
-
-                                    {/* Invoice Date */}
-            <td>
-                {delivery.invoiceDate ? new Date(delivery.invoiceDate).toLocaleDateString() : 'N/A'}
-            </td>
-
-                        {/* Invoice Total Amount */}
-    <td>
-    ${typeof delivery.invoiceTotalAmount === 'number' 
-    ? delivery.invoiceTotalAmount.toFixed(2) 
-    : '0.00'}
-    </td>
-            </tr>
-        );
-    }
-    return rows;
-    })()
-    ) : (
-    <tr>
-    <td colSpan="11">No deliveries found.</td>
-    </tr>
-    )}
-</tbody>
-                </table>
+                                <TableContainer component={Paper} style={{ marginTop: '20px' }}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell><strong>Delivery ID</strong></TableCell>
+                <TableCell><strong>Customer ID</strong></TableCell>
+                <TableCell><strong>Products</strong></TableCell>
+                <TableCell><strong>Quantity</strong></TableCell>
+                <TableCell><strong>Total Price</strong></TableCell>
+                <TableCell><strong>Delivery Address</strong></TableCell>
+                <TableCell><strong>Status</strong></TableCell>
+                <TableCell><strong>Purchase Date</strong></TableCell>
+                <TableCell><strong>Invoice ID</strong></TableCell>
+                <TableCell><strong>Invoice Date</strong></TableCell>
+                <TableCell><strong>Invoice Total Amount</strong></TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {deliveries.map((delivery) => (
+                <TableRow key={delivery.deliveryId}>
+                  <TableCell>{delivery.deliveryId}</TableCell>
+                  <TableCell>{delivery.user || 'N/A'}</TableCell>
+                  <TableCell>
+                    {delivery.products
+                      ? delivery.products.map((product) => `${product.productId}`).join(', ')
+                      : 'N/A'}
+                  </TableCell>
+                  <TableCell>
+                    {delivery.products
+                      ? delivery.products.reduce((total, product) => total + product.quantity, 0)
+                      : 0}
+                  </TableCell>
+                  <TableCell>
+                    ${typeof delivery.totalPrice === 'number' ? delivery.totalPrice.toFixed(2) : '0.00'}
+                  </TableCell>
+                  <TableCell>
+                    {delivery.deliveryAddress?.address || 'N/A'}, {delivery.deliveryAddress?.city || ''}, {delivery.deliveryAddress?.country || 'N/A'}
+                  </TableCell>
+                  <TableCell>{delivery.status || 'N/A'}</TableCell>
+                  <TableCell>
+                    {delivery.purchaseDate
+                      ? new Date(delivery.purchaseDate).toLocaleDateString()
+                      : 'N/A'}
+                  </TableCell>
+                  <TableCell>{delivery.invoiceId || 'N/A'}</TableCell>
+                  <TableCell>
+                    {delivery.invoiceDate
+                      ? new Date(delivery.invoiceDate).toLocaleDateString()
+                      : 'N/A'}
+                  </TableCell>
+                  <TableCell>
+                    ${typeof delivery.invoiceTotalAmount === 'number'
+                      ? delivery.invoiceTotalAmount.toFixed(2)
+                      : '0.00'}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
             ) : (
                 <p>No deliveries found.</p>
             )}

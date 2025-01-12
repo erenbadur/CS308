@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const Delivery = require('../models/delivery'); // Adjust the path to the Invoice model
 const PurchaseHistory = require('../models/PurchaseHistory'); // Adjust the path to the Invoice model
+const Product = require('../models/product');
 const sendEmail = require('./email');
 const User = require('../models/user');
 
@@ -179,10 +180,6 @@ router.patch('/cancel-order', async (req, res) => {
             });
         }
 
-        // Update order status to cancelled
-        delivery.status = 'cancelled';
-        await delivery.save();
-
         // Find the order and populate product details
         const order = await PurchaseHistory.findById(orderId);
         if (!order) {
@@ -195,8 +192,37 @@ router.patch('/cancel-order', async (req, res) => {
           return res.status(404).json({ error: 'User not found.' });
       }
 
+      console.log('Fetching Invoice using deliveryId');
+      // Fetch the invoice (assumes "delivery" field on Invoice references the Delivery _id)
+      const invoice = await Invoice.findOne({delivery: deliveryId});
+      if (!invoice) {
+          console.error(`Invoice not found for deliveryId: ${deliveryId}`);
+          return res.status(404).json({
+              error: 'Delivery not found (no matching invoice).'
+          });
+      }
+      console.log('Invoice found:', invoice);
+
         // Calculate total refund amount
-      const refundAmount = delivery.totalPrice
+      const refundAmount = invoice.totalAmount;
+
+      // Iterate through products to increase stock
+      for (const product of delivery.products) {
+        console.log(`Increasing stock by ${product.quantity} for productId: ${product.productId} due to order cancellation...`);
+
+        const productInInventory = await Product.findOne({ productId: product.productId });
+        if (!productInInventory) {
+          console.error(`Product not found in inventory for productId: ${product.productId}`);
+          return res.status(404).json({ error: `Product not found in inventory: ${product.productId}` });
+        }
+
+        const updatedProduct = await productInInventory.increaseStock(product.quantity, 'refund', user.email);
+        console.log('Updated product stock:', updatedProduct.quantityInStock);
+      }
+
+      // Update order status to cancelled
+      delivery.status = 'cancelled';
+      await delivery.save();
 
       const productsList = delivery.products
       .map(product => `

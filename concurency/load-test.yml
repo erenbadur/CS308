@@ -1,0 +1,53 @@
+config:
+  target: 'http://localhost:3001'  # Replace with your server URL
+  phases:
+    - duration: 30               # Test duration in seconds
+      arrivalRate: 10              # Start with 50 virtual users per second
+      rampTo: 10                 # Gradually ramp up to 200 users per second
+      name: 'Ramp up users'
+
+scenarios:
+  - name: 'Search Products'
+    flow:
+      - get:
+          url: '/api/searchBar/search?term={{ $randomWord() }}'
+      - think: 1  # Simulate user thinking time
+
+  - name: 'Confirm Payment'
+    flow:
+      - post:
+          url: '/api/purchases/confirm-payment'
+          json:
+            userId: 'USER-6748d14570f05847b082b920'
+            products:
+              - productId: 'PROD-6764333ddbb134b8382a6998'
+                quantity: 1
+            shippingAddress:
+              fullName: '{{ $randomString(10) }}'
+              phoneNum: '{{ $randomNumber(10) }}'
+              address: '123 Main Street'
+              country: 'Test Country'
+              postalCode: '{{ $randomNumber(5) }}'
+      - think: 1  # Simulate 1 second think time
+
+
+  - name: 'Add Item to Wishlist'
+    flow:
+      - post:
+          url: '/api/wishlist/'
+          json:
+            userId: 'USER-6748d14570f05847b082b920'
+            productId: 'PROD-6764333ddbb134b8382a6998'
+      - think: 1  # Simulate 1 second think time
+
+      # Scenario 2: Create New User
+  - name: 'Create New User'
+    flow:
+      - post:
+          url: '/api/createUser/user'
+          json:
+            username: '{{ $randomString(10) }}'
+            email: '{{ $randomString(5) }}@example.com'
+            password: '{{ $randomString(10) }}'
+            role: '{{ $randomPick(["user", "salesManager", "productManager"]) }}'
+      - think: 1  # Simulate 1 second think time

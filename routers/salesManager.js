@@ -9,6 +9,9 @@ const path = require('path');
 const nodemailer = require('nodemailer');
 const sendEmail = require('./email');
 const Invoice = require('../models/invoice');
+const refund = require('../models/refund');
+const PurchaseHistory = require('../models/PurchaseHistory');
+const Delivery = require('../models/delivery');
 // Nodemailer setup
 const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -85,7 +88,24 @@ router.post('/set-discount', async (req, res) => {
     }
 });
 
-module.exports = router;
+router.get('/refund-requests', async (req, res) => {
+    try {
+        // Fetch all refund requests from the database
+        const refundRequests = await refund.find();
+
+        if (!refundRequests || refundRequests.length === 0) {
+            return res.status(404).json({ error: 'No refund requests found.' });
+        }
+
+        // Return the refund requests
+        res.status(200).json({
+            refundRequests,
+        });
+    } catch (error) {
+        console.error('Error fetching refund requests:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
 
 
 
@@ -283,86 +303,103 @@ router.post('/evaluate-refund', async (req, res) => {
         if (!deliveryId || !productId || !quantity || !status) {
             console.error('Missing required fields. Request body:', req.body);
             return res.status(400).json({
-                error: 'Delivery ID, Product ID, quantity, and status are required.'
+                error: 'Delivery ID, Product ID, quantity, and status are required.',
             });
         }
 
-        console.log(`Check if refund status is "approved": ${status}`);
+        // Find the refund request
+        const refundRequest = await refund.findOne({
+            deliveryId,
+            productId,
+            status: 'pending',
+        });
 
-        // Early return if status is not "approved"
-        if (status !== 'approved') {
-            console.log(`Refund status is not approved. Current status: ${status}`);
-            return res.status(200).json({
-                message: `Refund for product ${productId} in delivery ${deliveryId} has been ${status}.`
-            });
+        if (!refundRequest) {
+            console.error('Refund request not found or already evaluated.');
+            return res.status(404).json({ error: 'Refund request not found or already processed.' });
         }
 
-        console.log('Fetching Invoice using deliveryId & productId...');
-        // Fetch the invoice (assumes "delivery" field on Invoice references the Delivery _id)
+        console.log(`Evaluating refund status: ${status}`);
+
+        // Find the associated delivery to get the purchase ID
+        const delivery = await Delivery.findById(deliveryId).populate('purchase');
+        if (!delivery) {
+            console.error(`Delivery not found for deliveryId: ${deliveryId}`);
+            return res.status(404).json({ error: 'Delivery not found.' });
+        }
+
+        // Extract the purchase ID from the delivery
+        const purchaseId = delivery.purchase._id;
+
+        // Find the associated invoice
         const invoice = await Invoice.findOne({ delivery: deliveryId, 'products.productId': productId });
         if (!invoice) {
             console.error(`Invoice not found for deliveryId: ${deliveryId}, productId: ${productId}`);
-            return res.status(404).json({
-                error: 'Delivery not found (no matching invoice).'
-            });
-        }
-        console.log('Invoice found:', invoice);
-
-        console.log('Extracting product details from the invoice...');
-        const productDetails = invoice.products.find((prod) => prod.productId === productId);
-        if (!productDetails) {
-            console.error('Product not found in invoice:', productId);
-            return res.status(400).json({ error: 'Invalid product or quantity for refund.' });
+            return res.status(404).json({ error: 'Invoice not found.' });
         }
 
-        if (productDetails.quantity < quantity) {
-            console.error(`Requested refund quantity exceeds purchased quantity. Purchased: ${productDetails.quantity}, Requested: ${quantity}`);
-            return res.status(400).json({ error: 'Invalid product or quantity for refund.' });
+        // Find the associated purchase history using the purchase ID
+        const purchase = await PurchaseHistory.findById(purchaseId);
+        if (!purchase) {
+            console.error(`Purchase history not found for purchaseId: ${purchaseId}`);
+            return res.status(404).json({ error: 'Purchase history not found.' });
         }
 
-        console.log('Fetching product from inventory...');
-        // Find the product in your Product collection
-        const product = await Product.findOne({ productId });
-        if (!product) {
-            console.error(`Product not found in inventory for productId: ${productId}`);
-            return res.status(404).json({ error: 'Product not found in inventory.' });
+        // Update the refund request with required fields
+        refundRequest.purchaseId = purchase._id;
+        refundRequest.invoiceId = invoice._id;
+        refundRequest.status = status;
+        await refundRequest.save();
+
+        if (status === 'approved') {
+            console.log('Processing approved refund...');
+
+            // Find product details from the invoice
+            const productDetails = invoice.products.find((prod) => prod.productId === productId);
+            if (!productDetails) {
+                console.error('Product not found in invoice:', productId);
+                return res.status(400).json({ error: 'Invalid product or quantity for refund.' });
+            }
+
+            // Find the product in inventory
+            const product = await Product.findOne({ productId });
+            if (!product) {
+                console.error(`Product not found in inventory for productId: ${productId}`);
+                return res.status(404).json({ error: 'Product not found in inventory.' });
+            }
+
+            // Increase stock due to refund
+            console.log(`Increasing stock by ${quantity} for productId: ${productId} due to refund...`);
+            await product.increaseStock(quantity, 'refund', purchase.user);
+
+            // Calculate refund amount
+            const refundedAmount = (productDetails.price * quantity).toFixed(2);
+            console.log(`Refunded $${refundedAmount} to user: ${purchase.user}`);
+
+            // Send refund confirmation email
+            const emailSubject = `Refund Processed for ${productDetails.name}`;
+            const emailText = `Dear Customer, your refund for ${quantity} units of ${productDetails.name} has been processed. Refunded amount: $${refundedAmount}`;
+            const emailHtml = `<p>Dear Customer,</p><p>Your refund for <strong>${quantity} units</strong> of <strong>${productDetails.name}</strong> has been processed.</p><p><strong>Refunded amount:</strong> $${refundedAmount}</p>`;
+            await sendEmail(purchase.user, emailSubject, emailText, emailHtml);
+
+            console.log('Refund process completed and email sent.');
+        } else {
+            console.log(`Refund for product ${productId} has been rejected.`);
         }
-        console.log('Product found in inventory:', product.name);
-
-        console.log(`Increasing stock by ${quantity} for productId: ${productId} due to refund...`);
-        // Increase stock (for refund)
-        const updatedProduct = await product.increaseStock(quantity, 'refund', invoice.email);
-        console.log('Updated product stock:', updatedProduct.quantityInStock);
-
-        // Simulate refund to user
-        const refundedAmount = (productDetails.price * quantity).toFixed(2);
-        console.log(`Refunding $${refundedAmount} to user: ${invoice.user} (Email: ${invoice.email})`);
-
-        // Prepare refund email details
-        const emailSubject = `Refund Processed for ${productDetails.name}`;
-        const emailText = `Dear Customer,\n\nYour refund of ${quantity} units of ${productDetails.name} has been successfully processed.\n\nRefunded amount: $${refundedAmount}`;
-        const emailHtml = `
-            <p>Dear ${invoice.user},</p>
-            <p>Your refund of <strong>${quantity} units</strong> of <strong>${productDetails.name}</strong> has been successfully processed.</p>
-            <p><strong>Refunded amount:</strong> $${refundedAmount}</p>
-            <p>Thank you for shopping with us!</p>
-        `;
-
-        console.log('Sending refund confirmation email...');
-        await sendEmail(invoice.email, emailSubject, emailText, emailHtml);
-        console.log('Refund confirmation email sent successfully.');
 
         console.log('--- /evaluate-refund Debug End ---');
-        return res.status(200).json({
-            message: `Refund for product ${productId} has been approved.`,
-            refundedAmount,
-            restockedQuantity: quantity,
+        res.status(200).json({
+            message: `Refund for product ${productId} has been ${status}.`,
+            refundRequest,
         });
     } catch (error) {
         console.error('Error evaluating refund request:', error.message);
-        return res.status(500).json({ error: 'Failed to evaluate refund.' });
+        res.status(500).json({ error: 'Failed to evaluate refund.' });
     }
 });
+
+
+
 
 
 

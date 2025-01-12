@@ -7,6 +7,16 @@ const refundRequestSchema = new Schema({
         ref: 'PurchaseHistory',
         required: true, // Link to the purchase history
     },
+    deliveryId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Delivery',
+        required: true, // Link to the delivery history
+    },
+    invoiceId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Invoice',
+        required: true, // Link to the purchase history
+    },
     productId: {
         type: String,
         required: true, // The product being returned

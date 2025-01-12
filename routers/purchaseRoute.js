@@ -3,6 +3,7 @@ const router = express.Router();
 const Product = require('../models/product');
 const Delivery = require('../models/delivery');
 const User = require('../models/user');
+const Cart = require('../models/cartModel');
 const nodemailer = require('nodemailer');
 const path = require('path');
 const pdf = require('pdfkit');
@@ -170,7 +171,7 @@ router.post("/confirm-payment", async (req, res) => {
         // Step 5: Send Invoice Email
         await sendInvoiceEmail(user.email, user.username, invoiceBuffer);
         console.log(`Invoice email sent to ${user.email}`);
-
+        await Cart.deleteMany({userId});
         // Response to client
         res.status(200).json({
             message: "Payment confirmed and invoice generated.",
@@ -311,44 +312,139 @@ router.get('/:userId/:productId', async (req, res) => {
 
 });
 
-// endpoint to update refundable attribute of the product
-router.patch('/update-refundable/:orderId/:productId', async (req,res) => {
-    const {orderId, productId} = req.params;
-    const {refundable} = req.body;
+router.patch('/update-refundable/:purchaseId/:productId', async (req, res) => {
+    const { purchaseId, productId } = req.params;
+    const { refundable } = req.body;
 
-    try{
+    console.log(`[DEBUG] Received request to update refundable status for orderId: ${purchaseId}, productId: ${productId}`);
+    console.log(`[DEBUG] Refundable value from request body: ${refundable}`);
+
+    try {
+        // Find the purchase history entry
         const purchase = await PurchaseHistory.findOne({
-            _id: orderId,
+            _id: purchaseId,
             'products.productId': productId
         });
 
+        console.log(`[DEBUG] Purchase found: ${purchase ? 'Yes' : 'No'}`);
+
         if (!purchase) {
-            return res.status(200).json({error: `There isn't a product with ${productId} for the pruchase ${orderId}`});
+            console.warn(`[WARN] No purchase found with purchaseId: ${purchaseId} and productId: ${productId}`);
+            return res.status(200).json({ error: `There isn't a product with ${productId} for the purchase ${purchaseId}` });
         }
 
-         // Find the product in the products array
-        const product = purchase.products.find(
-            (prod) => prod.productId === productId
-        );
-    
+        // Find the specific product in the products array
+        const product = purchase.products.find((prod) => prod.productId === productId);
+
+        console.log(`[DEBUG] Product found in purchase: ${product ? 'Yes' : 'No'}`);
+
         if (!product) {
-            return res.status(404).json({ error: `Product with productId ${productId} not found in the purchase`});
+            console.warn(`[WARN] Product with productId ${productId} not found in the purchase`);
+            return res.status(404).json({ error: `Product with productId ${productId} not found in the purchase` });
         }
-    
-        // Update the attribute
+
+        // Update the refundable attribute
         product.refundable = refundable;
-    
+        console.log(`[DEBUG] Updated refundable status to: ${product.refundable}`);
+
         // Save the updated document
         await purchase.save();
-    
+
+        console.log(`[DEBUG] Purchase document saved successfully`);
+
+        // Send success response
         res.status(200).json({
             message: `Product's refundable status updated successfully`,
             updatedProduct: product
-          });
+        });
 
     } catch (error) {
-        console.error('Error updating product:', error);
+        console.error(`[ERROR] Error updating product: ${error.message}`);
         res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+
+/**
+ * GET /api/deliveries
+ * Fetch all deliveries with optional query parameters for filtering and sorting.
+ */
+router.get('/', async (req, res) => {
+    const { status, sortBy = 'createdAt', order = 'desc' } = req.query;
+
+    try {
+        // Build query based on the status filter
+        const query = status ? { status } : {};
+
+        // Fetch deliveries from the database
+        const deliveries = await Delivery.find(query)
+            .populate('purchase', 'purchaseDate user') // Populate purchase details
+            .populate('invoice', 'invoiceId totalAmount invoiceDate') // Populate invoice details
+            .sort({ [sortBy]: order === 'asc' ? 1 : -1 });
+
+        if (!deliveries.length) {
+            return res.status(404).json({ message: 'No deliveries found.' });
+        }
+
+        // Send response
+        res.status(200).json({
+            message: 'Deliveries fetched successfully.',
+            deliveries,
+        });
+    } catch (error) {
+        console.error('Error fetching deliveries:', error);
+        res.status(500).json({ error: 'Failed to fetch deliveries.' });
+    }
+});
+
+
+
+router.get('/:deliveryId', async (req, res) => {
+    const { deliveryId } = req.params;
+
+    try {
+        // Fetch the delivery by ID
+        const delivery = await Delivery.findById(deliveryId)
+            .populate('purchase', 'purchaseDate user') // Populate purchase details
+            .populate('invoice', 'invoiceId totalAmount invoiceDate'); // Populate invoice details
+
+        // Check if the delivery exists
+        if (!delivery) {
+            return res.status(404).json({ error: 'Delivery not found.' });
+        }
+
+        // Send the response
+        res.status(200).json({
+            message: 'Delivery fetched successfully.',
+            delivery,
+        });
+    } catch (error) {
+        console.error('Error fetching delivery:', error);
+        res.status(500).json({ error: 'Failed to fetch the delivery.' });
+    }
+});
+
+// Fetch Refund Request by Delivery ID and Product ID
+router.get('/refunds/:deliveryId/:productId', async (req, res) => {
+    const { deliveryId, productId } = req.params;
+
+    try {
+        // Fetch the refund request based on deliveryId and productId
+        const refundRequest = await refund.findOne({ deliveryId, productId });
+
+        // Check if the refund request exists
+        if (!refundRequest) {
+            return res.status(404).json({ error: 'Refund request not found.' });
+        }
+
+        // Send the response
+        res.status(200).json({
+            message: 'Refund request fetched successfully.',
+            refundRequest,
+        });
+    } catch (error) {
+        console.error('Error fetching refund request:', error);
+        res.status(500).json({ error: 'Failed to fetch the refund request.' });
     }
 });
 

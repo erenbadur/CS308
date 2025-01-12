@@ -104,6 +104,9 @@ const AdminInterface = () => {
         if (activeContent === 'setDiscount') {
             fetchProducts();
         }
+        if (activeContent === 'refundRequests') {
+            fetchRefundRequests();
+        }
     }, [activeContent, filterApproved, sortByComments, orderComments, sortByDeliveries, orderDeliveries, statusFilter]);
 
 
@@ -861,50 +864,75 @@ const AdminInterface = () => {
     };
 
     // SALES MANAGER
-    // REFUND EVALUTATION
+// REFUND EVALUATION
+const handleRefundEvaluation = async (deliveryId, productId, status, quantity) => {
+    setLoading(true);
+    try {
+        console.log('Sending refund evaluation request...');
+        console.log('Delivery ID:', deliveryId);
+        console.log('Product ID:', productId);
+        console.log('Quantity:', quantity);
+        console.log('Status:', status);
 
-    const handleRefundEvaluation = async (purchaseId, productId, status) => {
-        setLoading(true);
-        try {
-            const response = await fetch('/api/sales/evaluate-refund', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ purchaseId, productId, status }),
-            });
-    
-            const data = await response.json();
-            if (response.ok) {
-                setSuccessMessage(data.message);
-                fetchRefundRequests(); // Refresh the list
-                // changes the refundable status of products
-                try {
-                    const patchResponse = await fetch(`/api/purchases/update-refundable/${orderId}/${productId}`, {
-                        method: 'PATCH',
-                        headers: {
-                          'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                          refundable: {status},
-                        }),
-                      });
-              
-                      await patchResponse.json();
-                      if (!patchResponse.ok) {
-                        console.error('Failed to update refundable status:', patchResponse.error);
-                      }
-                } catch (error) {
-                    console.error('Error logging refund action:', error);
+        // Step 1: Evaluate refund request
+        const response = await fetch('/api/sales/evaluate-refund', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                deliveryId,
+                productId,
+                quantity,
+                status,
+            }),
+        });
+
+        const data = await response.json();
+        console.log('Refund evaluation response:', data);
+
+        if (response.ok) {
+            setSuccessMessage(data.message);
+            fetchRefundRequests(); // Refresh the list
+
+            // Step 2: Fetch the refund request to get the associated purchase ID
+            console.log('Fetching refund request to retrieve purchase ID...');
+            const refundResponse = await fetch(`/api/purchases/${deliveryId}/${productId}`);
+            const refundData = await refundResponse.json();
+            console.log('Refund request response:', refundData);
+
+            if (refundResponse.ok && refundData?.purchaseId) {
+                console.log('Purchase ID found:', refundData.purchaseId);
+
+                // Step 3: Update refundable status using the fetched purchase ID
+                console.log('Updating refundable status...');
+                const patchResponse = await fetch(`/api/purchases/update-refundable/${refundData.purchaseId}/${productId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ refundable: status }),
+                });
+
+                const patchData = await patchResponse.json();
+                console.log('Refundable status update response:', patchData);
+
+                if (!patchResponse.ok) {
+                    console.error('Failed to update refundable status:', patchData.error);
                 }
             } else {
-                setErrorMessage(data.error || 'Failed to evaluate refund.');
+                console.error('Failed to fetch purchase ID from refund request.');
             }
-        } catch (error) {
-            console.error('Error evaluating refund:', error);
-            setErrorMessage('An error occurred while evaluating the refund.');
-        } finally {
-            setLoading(false);
+        } else {
+            setErrorMessage(data.error || 'Failed to evaluate refund.');
         }
-    };
+    } catch (error) {
+        console.error('Error evaluating refund:', error);
+        setErrorMessage('An error occurred while evaluating the refund.');
+    } finally {
+        setLoading(false);
+    }
+};
+
+
+
+    
     
     // SALES MANAGER
     // REFUND REQUESTS
@@ -1722,31 +1750,37 @@ const AdminInterface = () => {
         {/* Add chart here if needed */}
     </div>
 )}
-{/* buraya sales manager ekliyorum 4. Refund Requests */}
 {activeContent === 'refundRequests' && (
     <div className="refund-requests">
         <h3>Refund Requests</h3>
-        {refundRequests.length > 0 ? (
+
+        {loading ? (
+            <p>Loading refund requests...</p>
+        ) : errorMessage ? (
+            <p className="error-message">{errorMessage}</p>
+        ) : refundRequests.length > 0 ? (
             <table>
                 <thead>
                     <tr>
-                        <th>Purchase ID</th>
+                        <th>Delivery ID</th>
                         <th>Product ID</th>
+                        <th>Requested At</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {refundRequests.map((request) => (
-                        <tr key={request.purchaseId + request.productId}>
-                            <td>{request.purchaseId}</td>
+                        <tr key={request.deliveryId}>
+                            <td>{request.deliveryId || 'N/A'}</td>
                             <td>{request.productId}</td>
+                            <td>{new Date(request.requestedAt).toLocaleDateString()}</td>
                             <td>{request.status}</td>
                             <td>
-                                <button onClick={() => handleRefundEvaluation(request.purchaseId, request.productId, 'approved')}>
+                                <button onClick={() => handleRefundEvaluation(request.deliveryId, request.productId, 'approved', request.quantity)}>
                                     Approve
                                 </button>
-                                <button onClick={() => handleRefundEvaluation(request.purchaseId, request.productId, 'rejected')}>
+                                <button onClick={() => handleRefundEvaluation(request.deliveryId, request.productId, 'rejected', request.quantity)}>
                                     Reject
                                 </button>
                             </td>
@@ -1759,6 +1793,8 @@ const AdminInterface = () => {
         )}
     </div>
 )}
+
+
 {activeContent === 'viewInvoices' && (
     <div className="view-invoices">
         <h3>View and Download Invoices</h3>

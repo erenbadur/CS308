@@ -1,0 +1,30 @@
+config:
+  target: 'http://localhost:3000' # Replace with your server URL
+  phases:
+    - duration: 300 # Duration of the test in seconds
+      arrivalRate: 50 # Number of new virtual users per second
+      rampTo: 200 # Ramp up to 200 users per second
+      name: 'Ramp up users'
+
+scenarios:
+  - name: 'Add Product to Cart'
+    flow:
+      - post:
+          url: '/cart/add'
+          json:
+            userId: '{{ $randomString(10) }}'
+            productId: 'product123'
+            quantity: 2
+      - think: 1 # Simulate 1 second think time
+
+  - name: 'Confirm Payment'
+    flow:
+      - post:
+          url: '/cart/confirm-payment'
+          json:
+            userId: '{{ $randomString(10) }}'
+            products:
+              - productId: 'product123'
+                quantity: 2
+            shippingAddress: '123 Main Street, Test City, Test Country'
+      - think: 1 # Simulate 1 second think time

@@ -659,7 +659,6 @@ button:hover {
     }
 }
 
-
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -683,4 +682,5 @@ button:hover {
     border-radius: 8px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     overflow-y: auto; /* Scroll content if it overflows */
+
 }

@@ -16,6 +16,7 @@ import TrackPage from './pages/TrackPage/TrackPage';
 import WishlistPage from './pages/WishlistPage/WishlistPage';
 import AdminInterface from './pages/AdminInterface/AdminInterface';
 import Unauthorized from './pages/Unauthorized/Unauthorized';
+import OrdersPage from './pages/OrdersPage/OrdersPage';
 
 import PrivateRoute from './components/PrivateRoute';
 function App() {
@@ -37,6 +38,7 @@ function App() {
                 <Route path='/track' element={<TrackPage/>}/>
                 <Route path='/wishlist' element={<WishlistPage />} />
                 <Route path='/unauthorized' element={<Unauthorized />} />
+                <Route path='/orders' element={<OrdersPage/>}/>
 
             </Routes>
         </BrowserRouter>

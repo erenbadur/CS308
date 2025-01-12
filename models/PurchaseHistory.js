@@ -10,6 +10,11 @@ const purchaseHistorySchema = new Schema(
                 name: { type: String, required: true },
                 price: { type: Number, required: true },
                 quantity: { type: Number, required: true },
+                refundable: { 
+                    type: String, 
+                    enum: ['no_return', 'return_req', 'approved', 'rejected'],
+                    default: 'no_return',
+                },
             },
         ],
         totalQuantity: { type: Number, default: 0 }, // Calculated field

@@ -308,8 +308,48 @@ router.get('/:userId/:productId', async (req, res) => {
         console.error('Error checking purchase history:', error);
         res.status(500).json({ error: 'An error occurred while checking the purchase history.' });
     }
+
 });
 
+// endpoint to update refundable attribute of the product
+router.patch('/update-refundable/:orderId/:productId', async (req,res) => {
+    const {orderId, productId} = req.params;
+    const {refundable} = req.body;
 
+    try{
+        const purchase = await PurchaseHistory.findOne({
+            _id: orderId,
+            'products.productId': productId
+        });
+
+        if (!purchase) {
+            return res.status(200).json({error: `There isn't a product with ${productId} for the pruchase ${orderId}`});
+        }
+
+         // Find the product in the products array
+        const product = purchase.products.find(
+            (prod) => prod.productId === productId
+        );
+    
+        if (!product) {
+            return res.status(404).json({ error: `Product with productId ${productId} not found in the purchase`});
+        }
+    
+        // Update the attribute
+        product.refundable = refundable;
+    
+        // Save the updated document
+        await purchase.save();
+    
+        res.status(200).json({
+            message: `Product's refundable status updated successfully`,
+            updatedProduct: product
+          });
+
+    } catch (error) {
+        console.error('Error updating product:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
 
 module.exports = router;

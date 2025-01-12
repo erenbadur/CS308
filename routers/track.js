@@ -5,6 +5,10 @@ const path = require('path');
 const fs = require('fs');
 const Delivery = require('../models/delivery'); // Adjust the path to the Invoice model
 const PurchaseHistory = require('../models/PurchaseHistory'); // Adjust the path to the Invoice model
+const Product = require('../models/product');
+const sendEmail = require('./email');
+const User = require('../models/user');
+
 
 router.get('/download/:invoiceId', async (req, res) => {
   const { invoiceId } = req.params;
@@ -99,6 +103,186 @@ router.get('/track/:userId', async (req, res) => {
   }
 });
 
+// get all purchases for spesific user
+router.get('/orders/:userId', async (req, res) => {
+  const { userId } = req.params;
 
+  try {
+    // Fetch all orders for the user, sorted by purchaseDate in descending order
+    const orders = await PurchaseHistory.find({ user: userId })
+        .sort({ purchaseDate: -1 }) // Sort by purchaseDate in descending order
+        .populate({
+            path: 'delivery',
+            populate: { path: 'invoice' }, // Populate invoice within delivery
+        })
+        .populate('invoice'); // Populate invoice directly from PurchaseHistory
 
+    console.log('Fetched orders:', orders);
+
+    if (!orders || orders.length === 0) {
+        return res.status(404).json({ error: 'No orders found for this user.' });
+    }
+
+    // Format the response
+    const formattedOrders = orders.map(order => {
+        const delivery = order.delivery || {};
+        const invoice = order.invoice || {};
+
+        return {
+            _id: order._id,
+            products: order.products,
+            status: order.status,
+            purchaseDate: order.purchaseDate,
+            deliveryDetails: delivery._id
+                ? {
+                    deliveryId: delivery._id,
+                    status: delivery.status,
+                    deliveryAddress: delivery.deliveryAddress,
+                    totalPrice: delivery.totalPrice || 0,
+                }
+                : null,
+            invoiceDetails: invoice._id
+                ? {
+                    invoiceId: invoice.invoiceId,
+                    totalAmount: invoice.totalAmount,
+                    date: invoice.date,
+                }
+                : null,
+        };
+    });
+
+    res.status(200).json({ orders: formattedOrders });
+} catch (error) {
+    console.error('Error fetching orders:', error.message);
+    res.status(500).json({ error: 'An error occurred while fetching the orders.' });
+}
+
+});
+
+router.patch('/cancel-order', async (req, res) => {
+  const {deliveryId, orderId} = req.body;
+    try {
+        console.log('--- /cancel-order Debug Start ---');
+        console.log('Processing cancellation for deliveryId:', deliveryId);
+
+        // Find the delivery and populate product details
+        const delivery = await Delivery.findById(deliveryId);
+        if (!delivery) {
+            console.error('Delivery not found:', deliveryId);
+            return res.status(404).json({ error: 'Delivery not found.' });
+        }
+
+        // Check if order is in 'processing' status
+        if (delivery.status !== 'processing') {
+            console.error(`Cannot cancel delivery. Current status: ${delivery.status}`);
+            return res.status(400).json({
+                error: 'Only orders in processing status can be cancelled.'
+            });
+        }
+
+        // Find the order and populate product details
+        const order = await PurchaseHistory.findById(orderId);
+        if (!order) {
+            console.error('Order not found:', orderId);
+            return res.status(404).json({ error: 'Order not found.' });
+        }
+        const user = await User.findOne({userId: delivery.user});
+        if (!user) {
+          console.error('User not found:', delivery.user);
+          return res.status(404).json({ error: 'User not found.' });
+      }
+
+      console.log('Fetching Invoice using deliveryId');
+      // Fetch the invoice (assumes "delivery" field on Invoice references the Delivery _id)
+      const invoice = await Invoice.findOne({delivery: deliveryId});
+      if (!invoice) {
+          console.error(`Invoice not found for deliveryId: ${deliveryId}`);
+          return res.status(404).json({
+              error: 'Delivery not found (no matching invoice).'
+          });
+      }
+      console.log('Invoice found:', invoice);
+
+        // Calculate total refund amount
+      const refundAmount = invoice.totalAmount;
+
+      // Iterate through products to increase stock
+      for (const product of delivery.products) {
+        console.log(`Increasing stock by ${product.quantity} for productId: ${product.productId} due to order cancellation...`);
+
+        const productInInventory = await Product.findOne({ productId: product.productId });
+        if (!productInInventory) {
+          console.error(`Product not found in inventory for productId: ${product.productId}`);
+          return res.status(404).json({ error: `Product not found in inventory: ${product.productId}` });
+        }
+
+        const updatedProduct = await productInInventory.increaseStock(product.quantity, 'refund', user.email);
+        console.log('Updated product stock:', updatedProduct.quantityInStock);
+      }
+
+      // Update order status to cancelled
+      delivery.status = 'cancelled';
+      await delivery.save();
+
+      const productsList = delivery.products
+      .map(product => `
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ddd;">${product.name}</td>
+          <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${product.quantity}</td>
+        </tr>
+      `).join('');
+    
+      const emailSubject = `Refund Processed for Order: ${delivery.purchase}`;
+      
+      const emailHtml = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <p>Dear ${delivery.user},</p>
+          
+          <p>Your refund has been successfully processed for the following items:</p>
+          
+          <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+            <thead>
+              <tr style="background-color: #f8f9fa;">
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Product</th>
+                <th style="padding: 8px; border: 1px solid #ddd;">Quantity</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${productsList}
+            </tbody>
+          </table>
+    
+          <p><strong>Total Refunded Amount:</strong> $${refundAmount}</p>
+          <p>Thank you for shopping with us!</p>
+        </div>
+      `;
+    
+      const emailText = `
+        Dear ${delivery.user},
+        
+        Your refund has been successfully processed for the following items:
+        
+        ${delivery.products.map(p => `- ${p.name} (Quantity: ${p.quantity})`).join('\n')}
+        
+        Total Refunded Amount: $${refundAmount}
+        
+        Thank you for shopping with us!
+          `;
+
+        console.log('Sending refund confirmation email...');
+        await sendEmail(user.email, emailSubject, emailText, emailHtml);
+        console.log('Refund confirmation email sent successfully.');
+
+        console.log('--- /cancel-order Debug End ---');
+        return res.status(200).json({
+            message: 'Order cancelled successfully',
+            orderId: order._id,
+            refundAmount: refundAmount
+        });
+
+    } catch (error) {
+        console.error('Error cancelling order:', error.message);
+        return res.status(500).json({ error: 'Failed to cancel order.' });
+    }
+});
 module.exports = router;

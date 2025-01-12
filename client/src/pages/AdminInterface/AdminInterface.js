@@ -2,6 +2,18 @@
 import React, { useState, useEffect } from 'react';
 import './AdminInterface.css';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TablePagination } from '@mui/material';
+import {
+    LineChart,
+    Line,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    Legend,
+    ResponsiveContainer,
+    BarChart,
+    Bar
+} from 'recharts';
 
 /**
  * AdminInterface component representing the admin dashboard.
@@ -78,7 +90,7 @@ const AdminInterface = () => {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [invoices, setInvoices] = useState([]);
-    const [revenueReport, setRevenueReport] = useState({ totalRevenue: 0, chartData: [] });
+    const [revenueReport, setRevenueReport] = useState({ totalRevenue: 0,  totalProfit: 0, chartData: [] });
     const [refundRequests, setRefundRequests] = useState([]);
     const [statusFilter, setStatusFilter] = useState('all'); // Default filter to 'all'
 
@@ -104,6 +116,7 @@ const AdminInterface = () => {
         if (activeContent === 'setDiscount') {
             fetchProducts();
         }
+
     }, [activeContent, filterApproved, sortByComments, orderComments, sortByDeliveries, orderDeliveries, statusFilter]);
 
 
@@ -173,6 +186,16 @@ const AdminInterface = () => {
         }
     };
 
+    const RevenueReportChart = ({ data }) => {
+        return (
+            <div style={{ width: '600px', height: '300px', margin: '20px auto', border: '1px solid #ccc' }}>
+                <LineChart width={600} height={300} data={data}>
+                    <Line type="monotone" dataKey="revenue" stroke="#8884d8" />
+                    <Line type="monotone" dataKey="profit" stroke="#82ca9d" />
+                </LineChart>
+            </div>
+        );
+    };
     /**
      * Fetches all products from the backend.
      */
@@ -847,8 +870,15 @@ const AdminInterface = () => {
         try {
             const response = await fetch(`/api/sales/revenue-report?startDate=${startDate}&endDate=${endDate}`);
             const data = await response.json();
+    
+            console.log("Fetched chart data:", data.chartData); // ✅ Log the chart data
+    
             if (response.ok) {
-                setRevenueReport(data);
+                setRevenueReport({
+                    totalRevenue: data.totalRevenue || 0,
+                    totalProfit: data.totalProfit || 0,
+                    chartData: data.chartData || [],
+                });
             } else {
                 setErrorMessage(data.error || 'Failed to generate revenue report.');
             }
@@ -859,6 +889,8 @@ const AdminInterface = () => {
             setLoading(false);
         }
     };
+    
+    
 
     // SALES MANAGER
     // REFUND EVALUTATION
@@ -1686,60 +1718,37 @@ const AdminInterface = () => {
     </div>
 )}
 
-
-
-{/* buraya sales manager ekliyorum 3. Revenue Report*/}
 {activeContent === 'revenueReport' && (
     <div className="revenue-report">
         <h3>Revenue Report</h3>
         <form onSubmit={(e) => { e.preventDefault(); fetchRevenueReport(); }}>
             <label>Start Date:</label>
-            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                required
+            />
             <label>End Date:</label>
-            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-            <button type="submit">Generate Report</button>
+            <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                required
+            />
+            <button type="submit" disabled={loading}>Generate Report</button>
         </form>
-        <h4>Total Revenue: ${revenueReport.totalRevenue.toFixed(2)}</h4>
-        {/* Add chart here if needed */}
-    </div>
-)}
-{/* buraya sales manager ekliyorum 4. Refund Requests */}
-{activeContent === 'refundRequests' && (
-    <div className="refund-requests">
-        <h3>Refund Requests</h3>
-        {refundRequests.length > 0 ? (
-            <table>
-                <thead>
-                    <tr>
-                        <th>Purchase ID</th>
-                        <th>Product ID</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {refundRequests.map((request) => (
-                        <tr key={request.purchaseId + request.productId}>
-                            <td>{request.purchaseId}</td>
-                            <td>{request.productId}</td>
-                            <td>{request.status}</td>
-                            <td>
-                                <button onClick={() => handleRefundEvaluation(request.purchaseId, request.productId, 'approved')}>
-                                    Approve
-                                </button>
-                                <button onClick={() => handleRefundEvaluation(request.purchaseId, request.productId, 'rejected')}>
-                                    Reject
-                                </button>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+
+        {revenueReport && revenueReport.chartData && revenueReport.chartData.length > 0 ? (
+            <RevenueReportChart data={revenueReport.chartData} />
         ) : (
-            <p>No refund requests found.</p>
+            <p>No data available to display the chart.</p>
         )}
     </div>
 )}
+
+
+
 {activeContent === 'viewInvoices' && (
     <div className="view-invoices">
         <h3>View and Download Invoices</h3>

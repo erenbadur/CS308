@@ -893,18 +893,19 @@ const handleRefundEvaluation = async (deliveryId, productId, status, quantity) =
             setSuccessMessage(data.message);
             fetchRefundRequests(); // Refresh the list
 
-            // Step 2: Fetch the refund request to get the associated purchase ID
+            // Step 2: Fetch the delivery to get the associated purchase ID
             console.log('Fetching refund request to retrieve purchase ID...');
-            const refundResponse = await fetch(`/api/purchases/${deliveryId}/${productId}`);
+            const refundResponse = await fetch(`/api/purchases/${deliveryId}`);
             const refundData = await refundResponse.json();
             console.log('Refund request response:', refundData);
 
-            if (refundResponse.ok && refundData?.purchaseId) {
-                console.log('Purchase ID found:', refundData.purchaseId);
+            if (refundResponse.ok && refundData?.delivery.purchase._id) {
+                const purchaseId = refundData?.delivery.purchase._id;
+                console.log('Purchase ID found:', purchaseId);
 
                 // Step 3: Update refundable status using the fetched purchase ID
                 console.log('Updating refundable status...');
-                const patchResponse = await fetch(`/api/purchases/update-refundable/${refundData.purchaseId}/${productId}`, {
+                const patchResponse = await fetch(`/api/purchases/update-refundable/${purchaseId}/${productId}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ refundable: status }),

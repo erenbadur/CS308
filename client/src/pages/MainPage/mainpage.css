@@ -23,7 +23,20 @@ html {
     scroll-behavior: smooth;
 }
 
+.discount-badge-container {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 1; /* Ensure it appears above other card elements */
+    opacity: 1; /* Always visible */
+    transition: transform 0.3s; /* Optional: Add animation when hovering the heart icon */
+}
 
+.custom-chip {
+    background-color: red; /* Tailwind red-500 */
+    color: white;
+    font-weight: bold;
+}
 /* Ensure the wishlist icon is always visible */
 .wishlist-icon-container {
     position: absolute;

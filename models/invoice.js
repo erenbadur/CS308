@@ -26,6 +26,7 @@ const invoiceSchema = new Schema({
     delivery: { type: mongoose.Schema.Types.ObjectId, ref: 'Delivery' }, // Reference to Delivery
     date: { type: Date, default: Date.now },
     invoiceFilePath: { type: String, required: true },
+    invoiceHash: { type: String, required: true }, // New field for hash
 });
 
 // Pre-save hook to calculate `totalAmount`

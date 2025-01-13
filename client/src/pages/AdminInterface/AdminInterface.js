@@ -84,6 +84,8 @@ const AdminInterface = () => {
     const [refundRequests, setRefundRequests] = useState([]);
     const [statusFilter, setStatusFilter] = useState('all'); // Default filter to 'all'
     const [discountDuration, setDiscountDuration] = useState('');
+    const [newPrices, setNewPrices] = useState({});
+
 
     // Fetch all categories on component mount or when activeContent changes to 'manageCategories' or 'manageProducts'
     useEffect(() => {
@@ -108,6 +110,9 @@ const AdminInterface = () => {
         }
         if (activeContent === 'refundRequests') {
             fetchRefundRequests();
+        }
+        if (activeContent === 'setPrice') {
+            fetchProducts();
         }
     }, [activeContent, filterApproved, sortByComments, orderComments, sortByDeliveries, orderDeliveries, statusFilter]);
 
@@ -177,6 +182,50 @@ const AdminInterface = () => {
             setLoading(false);
         }
     };
+
+    // handle price
+
+    // Handle price update
+    const handleUpdatePrice = async (productId) => {
+        const newPrice = newPrices[productId];
+    
+        if (newPrice === undefined || newPrice === '') {
+            setErrorMessage('Please enter a valid price.');
+            return;
+        }
+    
+        if (newPrice <= 0) {
+            setErrorMessage('Price must be greater than 0.');
+            return;
+        }
+    
+        setLoading(true);
+        try {
+            const response = await fetch(`/api/sales/update-price/${productId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ price: newPrice }),
+            });
+    
+            const data = await response.json();
+            if (response.ok) {
+                setSuccessMessage('Price updated successfully.');
+                setNewPrices((prevPrices) => ({
+                    ...prevPrices,
+                    [productId]: '',
+                }));
+                fetchProducts(); // Refresh products list
+            } else {
+                setErrorMessage(data.error || 'Failed to update price.');
+            }
+        } catch (error) {
+            console.error('Error updating price:', error);
+            setErrorMessage('An error occurred while updating price.');
+        } finally {
+            setLoading(false);
+        }
+    };
+    
 
     /**
      * Fetches all products from the backend.
@@ -791,10 +840,42 @@ const AdminInterface = () => {
      * Handles setting discount
      */
 
+    const handleCancelDiscount = async () => {
+        if (discountProducts.length === 0) {
+            setErrorMessage('Please select products to cancel the discount.');
+            return;
+        }
+    
+        setLoading(true);
+        try {
+            const response = await fetch('/api/sales/cancel-discount', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ products: discountProducts }),
+            });
+    
+            const data = await response.json();
+            if (response.ok) {
+                setSuccessMessage('Discount canceled successfully.');
+                setDiscountProducts([]);
+                fetchProducts(); // Refresh product data
+            } else {
+                setErrorMessage(data.error || 'Failed to cancel discount.');
+            }
+        } catch (error) {
+            console.error('Error canceling discount:', error);
+            setErrorMessage('An error occurred while canceling the discount.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    
     const handleSetDiscount = async (e) => {
         e.preventDefault();
+    
         if (discountProducts.length === 0 || !discountPercentage || !discountDuration) {
-            setErrorMessage('Please select products, enter a discount percentage, and specify the duration.');
+            setErrorMessage('Please select products and enter a valid discount percentage and duration.');
             return;
         }
     
@@ -802,21 +883,24 @@ const AdminInterface = () => {
         try {
             const response = await fetch('/api/sales/set-discount', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                },
                 body: JSON.stringify({
                     products: discountProducts,
                     discount: parseFloat(discountPercentage),
-                    duration: parseInt(discountDuration), // Send discount duration in days
+                    discountDuration: parseInt(discountDuration, 10), // Number of days
                 }),
             });
     
             const data = await response.json();
+    
             if (response.ok) {
-                setSuccessMessage('Discount applied successfully.');
+                setSuccessMessage('Discount applied successfully and users are being notified.');
                 setDiscountProducts([]);
                 setDiscountPercentage('');
-                setDiscountDuration('');
-                fetchProducts(); // Fetch updated product data to reflect the new prices
+                setDiscountDuration(''); // Reset discount duration
+                fetchProducts(); // Refresh product data
             } else {
                 setErrorMessage(data.error || 'Failed to apply discount.');
             }
@@ -827,6 +911,10 @@ const AdminInterface = () => {
             setLoading(false);
         }
     };
+    
+    
+    
+    
     
 
 
@@ -1084,13 +1172,13 @@ const handleRefundEvaluation = async (deliveryId, productId, status, quantity) =
             data: revenueReport.chartData.map(item => item.revenue),
         },
         
-        /*
+        
         {
 
             name: 'Cost',
             data: revenueReport.chartData.map(item => Number(item.cost) || 0),
         },
-        */
+        
 
         {
             name: 'Profit',
@@ -1134,6 +1222,14 @@ const handleRefundEvaluation = async (deliveryId, productId, status, quantity) =
                             onClick={() => handleSubMenuClick('viewInvoices')}
                         >
                             View Invoices
+                        </button>
+
+                        <button
+                            className={`nav-button submenu-button ${activeContent === 'setPrice' ? 'active' : ''}`}
+                            onClick={() => setActiveContent('setPrice')}
+
+                        >
+                        Set Price
                         </button>
                         <button
                             className={`nav-button submenu-button ${activeContent === 'revenueReport' ? 'active' : 'secondary'}`}
@@ -1741,14 +1837,11 @@ const handleRefundEvaluation = async (deliveryId, productId, status, quantity) =
 )}
 </div>
 
-
-
 {/* Set Discounts */}
 {activeContent === 'setDiscount' && (
     <div className="set-discount">
         <h3>Set Discounts</h3>
 
-        {/* Fetch and Display Products */}
         {loading ? (
             <p>Loading products...</p>
         ) : products.length > 0 ? (
@@ -1758,77 +1851,168 @@ const handleRefundEvaluation = async (deliveryId, productId, status, quantity) =
                         <tr>
                             <th>Select</th>
                             <th>Product Name</th>
-                            <th>Original Price</th>
+                            <th>Current Price</th>
+                            <th>Original Price</th> {/* New Column */}
                             <th>Discount (%)</th>
-                            <th>Discounted Price</th>
                             <th>Quantity in Stock</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {products.map((product) => (
-                            <tr key={product.productId}>
-                                <td>
-                                    <input
-                                        type="checkbox"
-                                        value={product.productId}
-                                        onChange={(e) => {
-                                            const { checked, value } = e.target;
-                                            setDiscountProducts((prev) =>
-                                                checked
-                                                    ? [...prev, value]
-                                                    : prev.filter((id) => id !== value)
-                                            );
-                                        }}
-                                    />
-                                </td>
-                                <td>{product.name}</td>
-                                <td>${product.price.toFixed(2)}</td>
-                                <td>{product.discount?.percentage || 0}%</td>
-                                <td>
-                                    ${product.discount
-                                        ? (product.price * (1 - product.discount.percentage / 100)).toFixed(2)
-                                        : product.price.toFixed(2)}
-                                </td>
-                                <td>{product.quantityInStock}</td>
-                            </tr>
-                        ))}
+                        {products.map((product) => {
+                            const isDiscountActive =
+                                product.discount &&
+                                product.discount.percentage > 0 &&
+                                new Date(product.discount.validUntil) >= new Date();
+
+                            return (
+                                <tr key={product.productId} className={isDiscountActive ? 'active-discount' : ''}>
+                                    <td>
+                                        <input
+                                            type="checkbox"
+                                            value={product.productId}
+                                            onChange={(e) => {
+                                                const { checked, value } = e.target;
+                                                setDiscountProducts((prev) =>
+                                                    checked
+                                                        ? [...prev, value]
+                                                        : prev.filter((id) => id !== value)
+                                                );
+                                            }}
+                                        />
+                                    </td>
+                                    <td>{product.name}</td>
+                                    <td>{`$${product.price.toFixed(2)}`}</td>
+                                    <td>
+                                        {isDiscountActive ? (
+                                            <span className="original-price">{`$${product.originalPrice.toFixed(2)}`}</span>
+                                        ) : (
+                                            <span>N/A</span>
+                                        )}
+                                    </td>
+                                    <td>
+                                        {isDiscountActive
+                                            ? `${product.discount.percentage}%`
+                                            : '0%'}
+                                    </td>
+                                    <td>{product.quantityInStock}</td>
+                                </tr>
+                            );
+                        })}
                     </tbody>
                 </table>
 
-                <label>Discount Percentage:</label>
-                <input
-                    type="number"
-                    value={discountPercentage}
-                    onChange={(e) => setDiscountPercentage(e.target.value)}
-                    min="0"
-                    max="100"
-                    required
-                />
+                <div className="form-controls">
+                    <label>Discount Percentage:</label>
+                    <input
+                        type="number"
+                        value={discountPercentage}
+                        onChange={(e) => setDiscountPercentage(e.target.value)}
+                        min="0"
+                        max="100"
+                        required
+                    />
 
-                <label>Valid For (Days):</label>
-                <input
-                    type="number"
-                    value={discountDuration}
-                    onChange={(e) => setDiscountDuration(e.target.value)}
-                    min="1"
-                    required
-                />
+                    <label>Valid For (Days):</label>
+                    <input
+                        type="number"
+                        value={discountDuration}
+                        onChange={(e) => setDiscountDuration(e.target.value)}
+                        min="1"
+                        required
+                    />
 
-                <button type="submit" disabled={discountProducts.length === 0 || !discountPercentage || !discountDuration}>
-                    Apply Discount
-                </button>
+                    <button
+                        type="submit"
+                        disabled={
+                            discountProducts.length === 0 ||
+                            !discountPercentage ||
+                            !discountDuration
+                        }
+                    >
+                        Apply Discount
+                    </button>
+
+                    {/* Cancel Discount Button */}
+                    <button
+                        type="button"
+                        className="cancel-button"
+                        onClick={handleCancelDiscount}
+                        disabled={discountProducts.length === 0}
+                    >
+                        Cancel Discount
+                    </button>
+                </div>
             </form>
         ) : (
             <p>No products available to display.</p>
         )}
 
-        {/* Display Success/Error Messages */}
         {errorMessage && <p className="error-message">{errorMessage}</p>}
         {successMessage && <p className="success-message">{successMessage}</p>}
     </div>
 )}
 
 
+
+
+
+{activeContent === 'setPrice' && (
+    <div className="set-price">
+        <h3>Set Product Prices</h3>
+        {loading ? (
+            <p>Loading products...</p>
+        ) : (
+            <TableContainer component={Paper}>
+                <Table>
+                    <TableHead>
+                        <TableRow>
+                            <TableCell>Product Name</TableCell>
+                            <TableCell>Current Price</TableCell>
+                            <TableCell>New Price</TableCell>
+                            <TableCell>Actions</TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {products.map((product) => (
+                            <TableRow key={product.productId}>
+                                <TableCell>{product.name}</TableCell>
+                                <TableCell>${product.price.toFixed(2)}</TableCell>
+                                <TableCell>
+                                    <input
+                                        type="number"
+                                        placeholder="Enter new price"
+                                        value={newPrices[product.productId] || ''}
+                                        min="0"
+                                        onChange={(e) => {
+                                            const value = parseFloat(e.target.value);
+                                            setNewPrices((prevPrices) => ({
+                                                ...prevPrices,
+                                                [product.productId]: isNaN(value) ? '' : value,
+                                            }));
+                                        }}
+                                    />
+                                </TableCell>
+
+                                <TableCell>
+                                <button
+                                    className="set-price-button"
+                                    onClick={() => handleUpdatePrice(product.productId)}
+                                    disabled={loading}
+                                >
+                                    Update Price
+                                </button>
+
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </TableContainer>
+        )}
+        {errorMessage && <p className="error-message">{errorMessage}</p>}
+        {successMessage && <p className="success-message">{successMessage}</p>}
+    </div>
+)}
 
 
 {/* buraya sales manager ekliyorum 3. Revenue Report*/}

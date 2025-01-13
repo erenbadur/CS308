@@ -6,6 +6,10 @@ const transporter = nodemailer.createTransport({
         user: process.env.EMAIL_USER, // Your email
         pass: process.env.EMAIL_PASS, // Your email password or app-specific password
     },
+    pool: true, // Enable connection pooling
+    maxConnections: 5, // Maximum number of connections
+    rateLimit: 100, // Maximum num
+
 });
 
 const sendEmail = async (to, subject, text, html) => {

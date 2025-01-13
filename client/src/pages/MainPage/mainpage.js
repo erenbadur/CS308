@@ -24,6 +24,7 @@ import {
     CardMedia,
     CardContent,
     CardActions,
+    Chip
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
@@ -64,6 +65,7 @@ const getUserId = () => {
         return null;
     }
 }
+
 
 const MainPage = () => {
     const [searchTotalPages, setSearchTotalPages] = useState(1); // Total pages for search results
@@ -955,7 +957,17 @@ const MainPage = () => {
                                         key={product._id}
                                         onClick={() => handleProductClick(product)} // Handle product click
                                     >
-
+{/* Discount Badge */}
+{product.discount.percentage > 0 && (
+                                            <div className="discount-badge-container">
+                                                <Chip 
+                                                variant="filled"
+                                                size="small"
+                                                label={`-${product.discount.percentage}%`}
+                                                className="custom-chip"
+                                                />
+                                            </div>
+                                        )}
                                         <div className="wishlist-icon-container">
                                             <IconButton
                                                 onClick={(e) => {
@@ -1066,7 +1078,18 @@ const MainPage = () => {
 
                             {/* Product Information */}
                             <Grid item xs={12} md={6}>
+                                {/* Discount Badge */}
+                                {selectedProduct.discount.percentage > 0 && (
+                                                <Chip 
+                                                variant="filled"
+                                                size="small"
+                                                label={`-${selectedProduct.discount.percentage}%`}
+                                                className="custom-chip"
+                                                />
+                                         
+                                        )}
                                 <Typography variant="h4" gutterBottom>{selectedProduct.name}</Typography>
+
                                 <Typography variant="h5" color="#28a745" gutterBottom>${selectedProduct.price.toFixed(2)}</Typography>
 
                                 {/* Rating */}

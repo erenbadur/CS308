@@ -11,6 +11,7 @@ const fs = require('fs');
 const PurchaseHistory = require('../models/PurchaseHistory');
 const Invoice = require('../models/invoice'); // Import Invoice model
 const crypto = require('crypto'); // Import crypto
+const mongoose = require('mongoose');
 // Load environment variables
 require('dotenv').config({ path: path.join(__dirname, '../mail.env') });
 
@@ -21,6 +22,8 @@ const transporter = nodemailer.createTransport({
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
     },
+
+
 });
 
 // add endpoint for adding products to the cart. NOTHING TO DO WITH THE PURCHASE
@@ -50,49 +53,44 @@ router.post('/add', async (req, res) => {
     }
 });
 
-// CONFIRMING PAYMENT FOR PURCHASE PAGE
 router.post("/confirm-payment", async (req, res) => {
-    const { userId, products, shippingAddress } = req.body;
-
-    console.log("Confirming payment for:", { userId, products });
+    const session = await mongoose.startSession();
 
     try {
-        console.log("Step 1: Fetching user...");
-        const user = await User.findOne({ userId });
+        session.startTransaction();
+
+        const { userId, products, shippingAddress } = req.body;
+        console.log("Confirming payment for:", { userId, products });
+
+        // Step 1: Fetch user
+        const user = await User.findOne({ userId }).session(session);
         if (!user) {
-            console.error("User not found");
-            return res.status(404).json({ error: "User not found." });
+            throw new Error("User not found.");
         }
         console.log("User found:", user);
 
         if (!shippingAddress) {
-            console.error("Shipping address is missing in the request.");
-            return res.status(400).json({ error: "Shipping address is missing." });
+            throw new Error("Shipping address is missing.");
         }
 
-        console.log("Request Body:", req.body);
-
         if (!products || products.length === 0) {
-            console.error("Products are missing in the request.");
-            return res.status(400).json({ error: "No products provided for payment confirmation." });
+            throw new Error("No products provided for payment confirmation.");
         }
 
         let totalRevenue = 0;
         let totalProfit = 0;
 
-        // Validate stock and calculate revenue/profit
+        // Step 2: Validate stock and calculate revenue/profit
         const productDetails = await Promise.all(
             products.map(async (item) => {
                 const product = await Product.findOneAndUpdate(
                     { productId: item.productId, quantityInStock: { $gte: item.quantity } },
                     { $inc: { quantityInStock: -item.quantity } },
-                    { new: true }
+                    { new: true, session }
                 );
                 if (!product) {
-                    console.error(`Product ${item.productId} not found or insufficient stock.`);
                     throw new Error(`Product with ID ${item.productId} not found or insufficient stock.`);
                 }
-                console.log("Product validated:", product);
 
                 const revenue = product.price * item.quantity;
                 const profit = revenue - (product.costPrice || 0) * item.quantity;
@@ -110,10 +108,7 @@ router.post("/confirm-payment", async (req, res) => {
             })
         );
 
-        // Calculate delivery price (can be dynamic)
-        const totalDeliveryPrice = 50; // Example delivery price
-
-        // Step 1: Create Purchase History
+        // Step 3: Create Purchase History
         const purchase = new PurchaseHistory({
             user: userId,
             products: productDetails,
@@ -121,13 +116,12 @@ router.post("/confirm-payment", async (req, res) => {
             totalRevenue,
             totalProfit,
         });
-        await purchase.save();
-        console.log("Purchase history saved:", purchase);
+        await purchase.save({ session });
 
-        // Step 2: Create Delivery
+        // Step 4: Create Delivery
         const delivery = new Delivery({
             user: userId,
-            purchase: purchase._id, // Link to PurchaseHistory
+            purchase: purchase._id,
             products: productDetails.map((product) => ({
                 productId: product.productId,
                 name: product.name,
@@ -136,14 +130,10 @@ router.post("/confirm-payment", async (req, res) => {
             deliveryAddress: shippingAddress,
             status: "processing",
         });
-        await delivery.save();
-        console.log("Delivery record saved successfully:", delivery);
+        await delivery.save({ session });
 
-        // Step 3: Generate Invoice
-        const invoiceBuffer = await generateInvoiceFile(user, productDetails, totalRevenue + totalDeliveryPrice, delivery._id);
-        const invoiceFilePath = `invoices/Invoice-${Date.now()}.pdf`;
-
-        fs.writeFileSync(invoiceFilePath, invoiceBuffer);
+        // Step 5: Generate Invoice
+        const { filePath, hash } = await generateInvoiceFile(user, productDetails, totalRevenue + 50, delivery._id);
 
         const newInvoice = new Invoice({
             user: user.userId,
@@ -155,48 +145,61 @@ router.post("/confirm-payment", async (req, res) => {
                 price: item.price,
                 total: item.total,
             })),
-            totalAmount: totalRevenue + totalDeliveryPrice,
-            delivery: delivery._id, // Link to Delivery
-            invoiceFilePath,
+            totalAmount: totalRevenue + 50,
+            delivery: delivery._id,
+            invoiceFilePath: filePath,
+            invoiceHash: hash,
         });
-        await newInvoice.save();
-        console.log("Invoice saved successfully:", newInvoice);
+        await newInvoice.save({ session });
 
-        // Step 4: Update Purchase History with Invoice and Delivery
+        // Step 6: Update Purchase History
         purchase.delivery = delivery._id;
         purchase.invoice = newInvoice._id;
-        await purchase.save();
-        console.log("Purchase history updated with invoice and delivery:", purchase);
+        await purchase.save({ session });
 
-        // Step 5: Send Invoice Email
-        await sendInvoiceEmail(user.email, user.username, invoiceBuffer);
+        // Commit the transaction
+        await session.commitTransaction();
+
+        // Step 7: Send Invoice Email (outside transaction scope)
+        await sendInvoiceEmail(user.email, user.username, filePath);
         console.log(`Invoice email sent to ${user.email}`);
-        await Cart.deleteMany({userId});
-        // Response to client
+
+        // Step 8: Clear Cart
+        await Cart.deleteMany({ userId });
+
+        // Respond to client
         res.status(200).json({
             message: "Payment confirmed and invoice generated.",
             purchase: {
                 id: purchase._id,
                 totalRevenue: purchase.totalRevenue,
                 deliveryId: delivery._id,
-                invoiceId: newInvoice.invoiceId,
+                invoiceId: newInvoice._id,
             },
             delivery,
             invoice: {
-                id: newInvoice.invoiceId,
+                id: newInvoice._id,
                 totalAmount: newInvoice.totalAmount,
             },
         });
-      
+
     } catch (error) {
+        // Rollback the transaction in case of error
+        if (session.inTransaction()) {
+            await session.abortTransaction();
+        }
+
         console.error("Error confirming payment:", error.message);
         res.status(400).json({ error: error.message });
+    } finally {
+        // Always end the session
+        session.endSession();
     }
 });
 
 
 
-// Generate invoice PDF, hash it, and return the hashed buffer
+
 const generateInvoiceFile = (user, products, totalAmount, invoiceId) => {
     return new Promise((resolve, reject) => {
         const pdfDoc = new pdf();
@@ -210,12 +213,13 @@ const generateInvoiceFile = (user, products, totalAmount, invoiceId) => {
             const hash = crypto.createHash('sha256').update(buffer).digest('hex');
 
             // Save the hashed content as a PDF file
-            const filePath = `invoices/Invoice-${invoiceId}-${hash}.pdf`;
+            const filePath = `invoices/Invoice-${invoiceId}.pdf`;
             fs.writeFileSync(filePath, buffer);
 
-            console.log(`Invoice saved as hashed PDF: ${filePath}`);
-            resolve(filePath);
+            console.log(`Invoice saved as PDF: ${filePath}`);
+            resolve({ filePath, hash });
         });
+
         pdfDoc.on('error', (error) => reject(error));
 
         // Invoice Header
@@ -245,6 +249,7 @@ const generateInvoiceFile = (user, products, totalAmount, invoiceId) => {
         pdfDoc.end();
     });
 };
+
 
 
 

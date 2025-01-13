@@ -26,6 +26,7 @@ router.post('/set-discount', async (req, res) => {
     const { products, discount } = req.body;
 
     try {
+        // Validate input
         if (!products || !Array.isArray(products) || products.length === 0) {
             return res.status(400).json({ error: 'Products array is required.' });
         }
@@ -41,13 +42,20 @@ router.post('/set-discount', async (req, res) => {
                 continue;
             }
 
-            const originalPrice = product.price;
-            const discountedPrice = originalPrice * (1 - discount / 100);
+            // Store original price before applying the discount
+            if (!product.discount || product.discount.percentage === 0) {
+                product.originalPrice = product.price;
+            }
+
+            // Calculate the discounted price
+            const discountedPrice = product.originalPrice * (1 - discount / 100);
             product.price = parseFloat(discountedPrice.toFixed(2));
 
+            // Set the discount details
             product.discount = {
                 percentage: discount,
                 validUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+                originalPrice: product.originalPrice,
             };
 
             await product.save();
@@ -292,6 +300,7 @@ router.get('/revenue-report', async (req, res) => {
     }
 });
 
+// Evaluate refund request
 router.post('/evaluate-refund', async (req, res) => {
     const { deliveryId, productId, quantity, status } = req.body;
 
@@ -301,7 +310,7 @@ router.post('/evaluate-refund', async (req, res) => {
 
         // Validate required fields
         if (!deliveryId || !productId || !quantity || !status) {
-            console.error('Missing required fields. Request body:', req.body);
+            console.error('Missing required fields.');
             return res.status(400).json({
                 error: 'Delivery ID, Product ID, quantity, and status are required.',
             });
@@ -328,7 +337,6 @@ router.post('/evaluate-refund', async (req, res) => {
             return res.status(404).json({ error: 'Delivery not found.' });
         }
 
-        // Extract the purchase ID from the delivery
         const purchaseId = delivery.purchase._id;
 
         // Find the associated invoice
@@ -343,6 +351,19 @@ router.post('/evaluate-refund', async (req, res) => {
         if (!purchase) {
             console.error(`Purchase history not found for purchaseId: ${purchaseId}`);
             return res.status(404).json({ error: 'Purchase history not found.' });
+        }
+
+        // Fallback to find user details if email is missing in the purchase
+        let userEmail = purchase.email;
+        if (!userEmail) {
+            console.warn(`Email not found in purchase. Fetching from User model for userId: ${purchase.user}`);
+            const user = await User.findOne({ userId: purchase.user });
+            if (user) {
+                userEmail = user.email;
+                console.log(`User email retrieved from User model: ${userEmail}`);
+            } else {
+                console.error(`User not found for userId: ${purchase.user}`);
+            }
         }
 
         // Update the refund request with required fields
@@ -368,21 +389,47 @@ router.post('/evaluate-refund', async (req, res) => {
                 return res.status(404).json({ error: 'Product not found in inventory.' });
             }
 
-            // Increase stock due to refund
+            // **Increase stock due to refund**
             console.log(`Increasing stock by ${quantity} for productId: ${productId} due to refund...`);
-            await product.increaseStock(quantity, 'refund', purchase.user);
+            product.quantityInStock += quantity;
+            await product.save();
 
             // Calculate refund amount
             const refundedAmount = (productDetails.price * quantity).toFixed(2);
             console.log(`Refunded $${refundedAmount} to user: ${purchase.user}`);
 
-            // Send refund confirmation email
-            const emailSubject = `Refund Processed for ${productDetails.name}`;
-            const emailText = `Dear Customer, your refund for ${quantity} units of ${productDetails.name} has been processed. Refunded amount: $${refundedAmount}`;
-            const emailHtml = `<p>Dear Customer,</p><p>Your refund for <strong>${quantity} units</strong> of <strong>${productDetails.name}</strong> has been processed.</p><p><strong>Refunded amount:</strong> $${refundedAmount}</p>`;
-            await sendEmail(purchase.user, emailSubject, emailText, emailHtml);
+            // Send refund confirmation email if email is available
+            if (userEmail) {
+                const emailSubject = `Refund Processed for ${productDetails.name}`;
+                const emailText = `
+                    Dear ${purchase.user},
 
-            console.log('Refund process completed and email sent.');
+                    Your refund for ${quantity} unit(s) of ${productDetails.name} has been successfully processed.
+
+                    Refunded Amount: $${refundedAmount}.
+
+                    Thank you for shopping with us.
+
+                    Regards,
+                    Your Store Team
+                `;
+                const emailHtml = `
+                    <p>Dear ${purchase.user},</p>
+                    <p>Your refund for <strong>${quantity} unit(s)</strong> of <strong>${productDetails.name}</strong> has been successfully processed.</p>
+                    <p><strong>Refunded Amount:</strong> $${refundedAmount}</p>
+                    <p>Thank you for shopping with us.</p>
+                    <p>Regards,<br>Your Store Team</p>
+                `;
+
+                try {
+                    await sendEmail(userEmail, emailSubject, emailText, emailHtml);
+                    console.log(`Refund confirmation email sent to ${userEmail} successfully.`);
+                } catch (emailError) {
+                    console.error(`Error sending refund confirmation email to ${userEmail}:`, emailError.message);
+                }
+            } else {
+                console.error('Refund confirmation email not sent. User email not found.');
+            }
         } else {
             console.log(`Refund for product ${productId} has been rejected.`);
         }
@@ -397,7 +444,6 @@ router.post('/evaluate-refund', async (req, res) => {
         res.status(500).json({ error: 'Failed to evaluate refund.' });
     }
 });
-
 
 
 

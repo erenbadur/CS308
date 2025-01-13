@@ -209,10 +209,10 @@ router.get('/:productId/comments', async (req, res) => {
         // Fetch user details for each comment
         const commentsWithUsernames = await Promise.all(
             approvedComments.map(async (comment) => {
-                const user = await User.findOne({ userId: comment.user }); // Fetch user details
+                const user = await User.findOne({ userId: comment.user }); // Fetch user details by _id
                 return {
                     ...comment.toObject(),
-                    username: user ? user.name : 'Anonymous',
+                    username: user ? user.username : 'Anonymous',
                     createdAt: comment.createdAt, // Already available in the schema
                 };
             })

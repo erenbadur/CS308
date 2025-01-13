@@ -81,7 +81,7 @@ const AdminInterface = () => {
     const [revenueReport, setRevenueReport] = useState({ totalRevenue: 0, chartData: [] });
     const [refundRequests, setRefundRequests] = useState([]);
     const [statusFilter, setStatusFilter] = useState('all'); // Default filter to 'all'
-
+    const [discountDuration, setDiscountDuration] = useState('');
 
     // Fetch all categories on component mount or when activeContent changes to 'manageCategories' or 'manageProducts'
     useEffect(() => {
@@ -791,11 +791,11 @@ const AdminInterface = () => {
 
     const handleSetDiscount = async (e) => {
         e.preventDefault();
-        if (discountProducts.length === 0 || !discountPercentage) {
-            setErrorMessage('Please select products and enter a discount percentage.');
+        if (discountProducts.length === 0 || !discountPercentage || !discountDuration) {
+            setErrorMessage('Please select products, enter a discount percentage, and specify the duration.');
             return;
         }
-
+    
         setLoading(true);
         try {
             const response = await fetch('/api/sales/set-discount', {
@@ -804,14 +804,16 @@ const AdminInterface = () => {
                 body: JSON.stringify({
                     products: discountProducts,
                     discount: parseFloat(discountPercentage),
+                    duration: parseInt(discountDuration), // Send discount duration in days
                 }),
             });
-
+    
             const data = await response.json();
             if (response.ok) {
                 setSuccessMessage('Discount applied successfully.');
                 setDiscountProducts([]);
                 setDiscountPercentage('');
+                setDiscountDuration('');
                 fetchProducts(); // Fetch updated product data to reflect the new prices
             } else {
                 setErrorMessage(data.error || 'Failed to apply discount.');
@@ -823,6 +825,7 @@ const AdminInterface = () => {
             setLoading(false);
         }
     };
+    
 
 
     // FETCHING INVOICES - SALES MANAGER
@@ -932,6 +935,30 @@ const handleRefundEvaluation = async (deliveryId, productId, status, quantity) =
 };
 
 
+    const handlePrintInvoice = async (invoice) => {
+        try {
+            const response = await fetch(`/api/sales/invoices/download/${invoice.invoiceId}`);
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+
+                // Open the PDF in a new tab and trigger print
+                const newWindow = window.open(url);
+                if (newWindow) {
+                    newWindow.addEventListener('load', () => {
+                        newWindow.print();
+                    });
+                } else {
+                    setErrorMessage('Failed to open print window.');
+                }
+            } else {
+                setErrorMessage('Failed to download invoice for printing.');
+            }
+        } catch (error) {
+            console.error('Error printing invoice:', error);
+            setErrorMessage('An error occurred while printing the invoice.');
+        }
+    };
 
     
     
@@ -1657,9 +1684,8 @@ const handleRefundEvaluation = async (deliveryId, productId, status, quantity) =
 
 
 
-
-            {/* buraya sales manager ekliyorum 1. set discount */}
-            {activeContent === 'setDiscount' && (
+{/* Set Discounts */}
+{activeContent === 'setDiscount' && (
     <div className="set-discount">
         <h3>Set Discounts</h3>
 
@@ -1669,47 +1695,46 @@ const handleRefundEvaluation = async (deliveryId, productId, status, quantity) =
         ) : products.length > 0 ? (
             <form onSubmit={handleSetDiscount}>
                 <table>
-    <thead>
-        <tr>
-            <th>Select</th>
-            <th>Product Name</th>
-            <th>Original Price</th>
-            <th>Discount (%)</th>
-            <th>Discounted Price</th>
-            <th>Quantity in Stock</th>
-        </tr>
-    </thead>
-    <tbody>
-        {products.map((product) => (
-            <tr key={product.productId}>
-                <td>
-                    <input
-                        type="checkbox"
-                        value={product.productId}
-                        onChange={(e) => {
-                            const { checked, value } = e.target;
-                            setDiscountProducts((prev) =>
-                                checked
-                                    ? [...prev, value]
-                                    : prev.filter((id) => id !== value)
-                            );
-                        }}
-                    />
-                </td>
-                <td>{product.name}</td>
-                <td>${product.price.toFixed(2)}</td>
-                <td>{product.discount?.percentage || 0}%</td>
-                <td>
-                    ${product.discount
-                        ? (product.price * (1 - product.discount.percentage / 100)).toFixed(2)
-                        : product.price.toFixed(2)}
-                </td>
-                <td>{product.quantityInStock}</td>
-            </tr>
-        ))}
-    </tbody>
-</table>
-
+                    <thead>
+                        <tr>
+                            <th>Select</th>
+                            <th>Product Name</th>
+                            <th>Original Price</th>
+                            <th>Discount (%)</th>
+                            <th>Discounted Price</th>
+                            <th>Quantity in Stock</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {products.map((product) => (
+                            <tr key={product.productId}>
+                                <td>
+                                    <input
+                                        type="checkbox"
+                                        value={product.productId}
+                                        onChange={(e) => {
+                                            const { checked, value } = e.target;
+                                            setDiscountProducts((prev) =>
+                                                checked
+                                                    ? [...prev, value]
+                                                    : prev.filter((id) => id !== value)
+                                            );
+                                        }}
+                                    />
+                                </td>
+                                <td>{product.name}</td>
+                                <td>${product.price.toFixed(2)}</td>
+                                <td>{product.discount?.percentage || 0}%</td>
+                                <td>
+                                    ${product.discount
+                                        ? (product.price * (1 - product.discount.percentage / 100)).toFixed(2)
+                                        : product.price.toFixed(2)}
+                                </td>
+                                <td>{product.quantityInStock}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
 
                 <label>Discount Percentage:</label>
                 <input
@@ -1718,9 +1743,19 @@ const handleRefundEvaluation = async (deliveryId, productId, status, quantity) =
                     onChange={(e) => setDiscountPercentage(e.target.value)}
                     min="0"
                     max="100"
+                    required
                 />
 
-                <button type="submit" disabled={discountProducts.length === 0 || !discountPercentage}>
+                <label>Valid For (Days):</label>
+                <input
+                    type="number"
+                    value={discountDuration}
+                    onChange={(e) => setDiscountDuration(e.target.value)}
+                    min="1"
+                    required
+                />
+
+                <button type="submit" disabled={discountProducts.length === 0 || !discountPercentage || !discountDuration}>
                     Apply Discount
                 </button>
             </form>
@@ -1733,6 +1768,7 @@ const handleRefundEvaluation = async (deliveryId, productId, status, quantity) =
         {successMessage && <p className="success-message">{successMessage}</p>}
     </div>
 )}
+
 
 
 
@@ -1800,90 +1836,88 @@ const handleRefundEvaluation = async (deliveryId, productId, status, quantity) =
     <div className="view-invoices">
         <h3>View and Download Invoices</h3>
         
-       {/* Fetch Invoices Form */}
-<form
-    onSubmit={(e) => {
-        e.preventDefault();
-        fetchInvoices();
-    }}
->
-    <label>Start Date:</label>
-    <input
-        type="date"
-        value={startDate}
-        onChange={(e) => setStartDate(e.target.value)}
-        required
-    />
-    <label>End Date:</label>
-    <input
-        type="date"
-        value={endDate}
-        onChange={(e) => setEndDate(e.target.value)}
-        required
-    />
-    <button type="submit" disabled={loading}>
-        Fetch Invoices
-    </button>
-</form>
-{/* Display Invoices */}
-{invoices.length > 0 ? (
-    <table>
-        <thead>
-            <tr>
-                <th>Email</th>
-                <th>Products</th>
-                <th>Total Amount</th>
-                <th>Download</th>
-            </tr>
-        </thead>
-        <tbody>
-            {invoices.map((invoice) => (
-                <tr key={invoice._id}>
-                    <td>{invoice.email}</td>
-                    <td>
-                        {invoice.products
-                            .map((product) => `${product.name} x${product.quantity}`)
-                            .join(', ')}
-                    </td>
-                    <td>${invoice.totalAmount.toFixed(2)}</td>
-                    <td>
-                        
-                    <button
-    onClick={async () => {
-        try {
-            const response = await fetch(`/api/sales/invoices/download/${invoice.invoiceId}`, {
-                method: 'GET',
-            });
+        {/* Fetch Invoices Form */}
+        <form
+            onSubmit={(e) => {
+                e.preventDefault();
+                fetchInvoices();
+            }}
+        >
+            <label>Start Date:</label>
+            <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                required
+            />
+            <label>End Date:</label>
+            <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                required
+            />
+            <button type="submit" disabled={loading}>
+                Fetch Invoices
+            </button>
+        </form>
 
-            if (response.ok) {
-                const blob = await response.blob(); // Convert the response to a Blob
-                const url = window.URL.createObjectURL(blob); // Create a URL for the Blob
-                const a = document.createElement('a'); // Create a temporary anchor element
-                a.href = url;
-                a.download = `INV-${invoice.invoiceId}.pdf`; // Set the file name for download
-                a.click(); // Trigger the download
-                window.URL.revokeObjectURL(url); // Clean up the Blob URL
-                setSuccessMessage(`Invoice INV-${invoice.invoiceId}.pdf downloaded successfully.`);
-            } else {
-                setErrorMessage('Failed to download invoice.');
-            }
-        } catch (error) {
-            console.error('Error downloading invoice:', error);
-            setErrorMessage('An error occurred while downloading the invoice.');
-        }
-    }}
->
-    Download PDF
-</button>
+        {/* Display Invoices */}
+        {invoices.length > 0 ? (
+            <table>
+                <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th>Products</th>
+                        <th>Total Amount</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {invoices.map((invoice) => (
+                        <tr key={invoice._id}>
+                            <td>{invoice.email}</td>
+                            <td>{invoice.products.map((product) => `${product.name} x${product.quantity}`).join(', ')}</td>
+                            <td>${invoice.totalAmount.toFixed(2)}</td>
+                            <td>
+                                {/* Download Button */}
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            const response = await fetch(`/api/sales/invoices/download/${invoice.invoiceId}`);
+                                            if (response.ok) {
+                                                const blob = await response.blob();
+                                                const url = window.URL.createObjectURL(blob);
+                                                const a = document.createElement('a');
+                                                a.href = url;
+                                                a.download = `INV-${invoice.invoiceId}.pdf`;
+                                                a.click();
+                                                window.URL.revokeObjectURL(url);
+                                                setSuccessMessage(`Invoice INV-${invoice.invoiceId}.pdf downloaded successfully.`);
+                                            } else {
+                                                setErrorMessage('Failed to download invoice.');
+                                            }
+                                        } catch (error) {
+                                            console.error('Error downloading invoice:', error);
+                                            setErrorMessage('An error occurred while downloading the invoice.');
+                                        }
+                                    }}
+                                >
+                                    Download PDF
+                                </button>
 
-                    </td>
-                </tr>
-            ))}
-        </tbody>
-    </table>
-) : (
-    <p>No invoices found for the specified date range.</p>
-)}
+                                {/* Print Button */}
+                                <button onClick={() => handlePrintInvoice(invoice)}>
+                                    Print Invoice
+                                </button>
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        ) : (
+            <p>No invoices found for the specified date range.</p>
+        )}
 
         {/* Error and Success Messages */}
         {errorMessage && <p className="error-message">{errorMessage}</p>}

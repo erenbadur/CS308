@@ -89,7 +89,6 @@ const MainPage = () => {
     const [userId, setUserId] = useState(getUserId()); // Logged-in user's ID
     const [isLoggedIn, setIsLoggedIn] = useState(!!getUserId());
     const [stockWarnings, setStockWarnings] = useState({}); // Track stock warnings for cart items
-    const [userMap, setUserMap] = useState({});
     const [categories, setCategories] = useState([]);
     const [activeCategory, setActiveCategory] = useState("");
 
@@ -122,42 +121,6 @@ const MainPage = () => {
     const navigateToOrders = () => {
         navigate('/Orders'); // Navigate to the wishlist page
     };
-
-    useEffect(() => {
-        const fetchUsernames = async () => {
-            if (comments.length === 0) return;
-
-            // Extract unique userIds from comments
-            const uniqueUserIds = [...new Set(comments.map(comment => comment.user))];
-            console.log('Unique User IDs:', uniqueUserIds);
-
-            // Filter out userIds already in userMap
-            const userIdsToFetch = uniqueUserIds.filter(uid => !userMap[uid]);
-            console.log('User IDs to fetch:', userIdsToFetch);
-
-            const newUserMap = { ...userMap };
-
-            const userFetchPromises = userIdsToFetch.map(async (uid) => {
-                try {
-                    console.log(`Fetching username for userId: ${uid}`);
-                    const response = await axios.get(`/api/users/${uid}`);
-                    console.log(`Fetched username for ${uid}:`, response.data.username);
-                    newUserMap[uid] = response.data.username;
-                } catch (error) {
-                    console.error(`Error fetching user ${uid}:`, error.response?.data || error.message);
-                    newUserMap[uid] = 'Anonymous'; // Assign 'Anonymous' in case of error
-                }
-            });
-
-            await Promise.all(userFetchPromises);
-            setUserMap(newUserMap);
-            console.log('Updated User Map:', newUserMap);
-        };
-
-        if (comments.length > 0) {
-            fetchUsernames();
-        }
-    }, [comments, userMap]);
 
     useEffect(() => {
         const handleScroll = () => {
@@ -1261,7 +1224,7 @@ const MainPage = () => {
                                             <Box key={index} sx={{ mb: 3, p: 2, border: '1px solid #e0e0e0', borderRadius: '8px' }}>
                                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                                                     <Typography variant="subtitle2" component="span">
-                                                        <strong>{userMap[comment.user] || 'Anonymous'}</strong>
+                                                        <strong>{comment.username || 'Anonymous'}</strong>
                                                     </Typography>
                                                     <Typography variant="caption" color="textSecondary">
                                                         {comment.createdAt ? new Date(comment.createdAt).toLocaleDateString() : 'Unknown Date'}

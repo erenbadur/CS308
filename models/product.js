@@ -30,6 +30,7 @@ const productSchema = new Schema({
     imageUrl: { type: String, required: true },
     quantityInStock: { type: Number, required: true, min: 0, default: 100 },
     price: { type: Number, required: true, min: 0 },
+    originalPrice: { type: Number, default: 0 },
     warrantyStatus: { type: Boolean, default: true },
     distributor: { type: String, required: true },
     ratings: [
@@ -81,6 +82,16 @@ productSchema.methods.increaseStock = async function (quantity) {
 
     return updatedProduct;
 };
+
+// Method to restore original price after discount period ends
+productSchema.methods.restoreOriginalPrice = async function () {
+    if (this.discount && this.discount.validUntil <= new Date()) {
+        this.price = this.discount.originalPrice;
+        this.discount = null;
+        await this.save();
+    }
+};
+
 
 productSchema.index({ name: 'text', description: 'text', model: 'text' });
 

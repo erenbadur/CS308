@@ -251,6 +251,7 @@ router.get('/revenue-report', async (req, res) => {
         // Initialize variables
         let totalRevenue = 0;
         let totalProfit = 0;
+        let totalCost = 0;
         const dailyData = {};
 
         for (const invoice of invoices) {
@@ -258,19 +259,34 @@ router.get('/revenue-report', async (req, res) => {
 
             // Calculate revenue and profit for each invoice
             const revenue = invoice.totalAmount;
-            const cost = invoice.products.reduce((sum, product) => sum + (product.price / 2) * product.quantity, 0);
+
+            // Updated cost calculation with Number parsing and validation
+            const cost = invoice.products.reduce((sum, product) => {
+                const price = Number(product.price);
+                if (isNaN(price)) {
+                    console.warn(`Invalid price for product ID ${product.productId}:`, product.price);
+                    return sum; // Skip invalid prices
+                }
+                return sum + (price / 2) * product.quantity;
+            }, 0);
+
+
             const profit = revenue - cost;
 
             // Accumulate totals
             totalRevenue += revenue;
             totalProfit += profit;
+            totalCost += cost;
 
             // Aggregate daily data
             if (!dailyData[dateKey]) {
-                dailyData[dateKey] = { revenue: 0, profit: 0 };
+                dailyData[dateKey] = { revenue: 0, profit: 0 , cost: 0, };
             }
+
             dailyData[dateKey].revenue += revenue;
             dailyData[dateKey].profit += profit;
+            dailyData[dateKey].cost += cost;
+
         }
 
         // Prepare data for chart
@@ -278,12 +294,16 @@ router.get('/revenue-report', async (req, res) => {
             date,
             revenue: data.revenue,
             profit: data.profit,
+            cost: data.cost,
+
         }));
+
 
         res.status(200).json({
             message: 'Revenue and profit/loss report generated successfully.',
             totalRevenue,
             totalProfit,
+            totalCost,
             chartData,
         });
     } catch (error) {

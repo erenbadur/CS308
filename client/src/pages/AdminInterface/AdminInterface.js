@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import './AdminInterface.css';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TablePagination } from '@mui/material';
 
+import Chart from 'react-apexcharts';
+
 /**
  * AdminInterface component representing the admin dashboard.
  *
@@ -1009,15 +1011,72 @@ const handleRefundEvaluation = async (deliveryId, productId, status, quantity) =
         return 0;
     });
 
-    
+
+
+
+
+    // Prepare data and options for ApexCharts
+    const chartOptions = {
+        chart: {
+            type: 'area',
+            height: 350,
+            zoom: {
+                enabled: true,
+            },
+            toolbar: {
+                show: true,
+            },
+        },
+        dataLabels: {
+            enabled: false,
+        },
+        stroke: {
+            curve: 'smooth',
+        },
+        xaxis: {
+            type: 'datetime',
+            categories: revenueReport.chartData.map(item => item.date),
+        },
+        yaxis: {
+            title: {
+                text: 'Amount ($)',
+            },
+        },
+        tooltip: {
+            x: {
+                format: 'dd MMM yyyy',
+            },
+        },
+        colors: ['#00E396', '#FEB019', '#FF4560'],
+    };
+
+    const chartSeries = [
+        {
+            name: 'Revenue',
+            data: revenueReport.chartData.map(item => item.revenue),
+        },
+        
+        /*
+        {
+
+            name: 'Cost',
+            data: revenueReport.chartData.map(item => Number(item.cost) || 0),
+        },
+        */
+
+        {
+            name: 'Profit',
+            data: revenueReport.chartData.map(item => item.profit),
+        },
+    ];
+
+
 
 
     
     
 
     
-    
-
     return (
         <div className="admin-container">
             {/* Sidebar */}
@@ -1747,6 +1806,24 @@ const handleRefundEvaluation = async (deliveryId, productId, status, quantity) =
             <button type="submit">Generate Report</button>
         </form>
         <h4>Total Revenue: ${revenueReport.totalRevenue.toFixed(2)}</h4>
+
+
+
+
+                {/* Loss/Profit Chart */}
+        <div className="chart-container" style={{ width: '100%', height: 400 }}>
+
+            {revenueReport.chartData && revenueReport.chartData.length > 0 ? (
+                <Chart
+                    options={chartOptions}
+                    series={chartSeries}
+                    type="area"
+                    height={350}
+                />
+            ) : (
+                <p>No chart data available for the selected date range.</p>
+            )}
+        </div>
         {/* Add chart here if needed */}
     </div>
 )}

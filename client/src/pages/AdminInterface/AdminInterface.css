@@ -484,6 +484,118 @@ button:hover {
 }
 
 
+/* Set Price Section */
+.set-price {
+    padding: 20px;
+    border-radius: 10px;
+    background-color: #ffffff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    margin: 0 auto;
+    max-width: 1200px;
+    width: 100%;
+    text-align: center;
+}
+
+.set-price h3 {
+    font-size: 1.8rem;
+    color: #2c3e50;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #2c3e50;
+    padding-bottom: 10px;
+}
+
+.set-price table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.set-price th,
+.set-price td {
+    border: 1px solid #ddd;
+    padding: 12px;
+    text-align: center;
+    font-size: 1rem;
+}
+
+.set-price th {
+    background-color: #34495e;
+    color: #ecf0f1;
+}
+
+/* Adjusting input fields and buttons for Set Price section */
+
+/* General Fixes for Input Fields */
+.set-price input[type="number"] {
+    padding: 12px;
+    border: 1px solid #bdc3c7;
+    border-radius: 6px;
+    font-size: 1rem;
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 5px;
+    margin-bottom: 5px;
+    outline: none;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.set-price input[type="number"]:focus {
+    border-color: #1abc9c;
+    box-shadow: 0 0 5px rgba(26, 188, 156, 0.5);
+}
+
+.set-price input[type="number"]::placeholder {
+    color: #bdc3c7;
+    opacity: 0.8;
+}
+/* Ensure input fields clear on submit */
+.set-price form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+
+/* Fixing Button Consistency */
+.set-price button {
+    width: auto;
+    padding: 10px 20px;
+    background-color: #1abc9c;
+    color: #ffffff;
+    font-size: 1rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.set-price button:hover {
+    background-color: #16a085;
+    transform: scale(1.05);
+}
+
+
+/* Table Styling for Uniform Layout */
+.set-price table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.set-price th, .set-price td {
+    border: 1px solid #ddd;
+    padding: 12px;
+    text-align: center;
+    font-size: 1rem;
+}
+
+.set-price th {
+    background-color: #34495e;
+    color: #ecf0f1;
+}
+
+
 .view-invoices h3 {
     font-size: 1.8rem;
     color: #2c3e50;
@@ -649,7 +761,13 @@ button:hover {
     .set-discount, .view-invoices, .revenue-report, .refund-requests {
         padding: 15px;
     }
-
+    .set-price {
+        padding: 15px;
+    }
+    .set-price input[type="number"], .set-price button {
+        width: 100%;
+        box-sizing: border-box;
+    }
     table {
         font-size: 0.9rem;
     }

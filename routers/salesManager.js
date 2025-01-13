@@ -19,22 +19,23 @@ const transporter = nodemailer.createTransport({
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
     },
-});
 
-// Set discounts and notify users
+});
 router.post('/set-discount', async (req, res) => {
     const { products, discount } = req.body;
 
     try {
-        // Validate input
+        // Input Validation
         if (!products || !Array.isArray(products) || products.length === 0) {
             return res.status(400).json({ error: 'Products array is required.' });
         }
-        if (discount < 0 || discount > 100) {
-            return res.status(400).json({ error: 'Discount must be between 0 and 100.' });
+        if (typeof discount !== 'number' || discount < 0 || discount > 100) {
+            return res.status(400).json({ error: 'Discount must be a number between 0 and 100.' });
         }
 
         const updatedProducts = [];
+        const emailPromises = [];
+
         for (const productId of products) {
             const product = await Product.findOne({ productId });
             if (!product) {
@@ -42,59 +43,85 @@ router.post('/set-discount', async (req, res) => {
                 continue;
             }
 
-            // Store original price before applying the discount
-            if (!product.discount || product.discount.percentage === 0) {
+            // Check if a discount is already active
+            const isDiscountActive = product.discount &&
+                                      product.discount.percentage > 0 &&
+                                      new Date(product.discount.validUntil) >= new Date();
+
+            if (isDiscountActive) {
+                console.warn(`Discount already active for product ID ${productId}. Skipping.`);
+                continue;
+            }
+
+            // Store original price if not already set
+            if (!product.originalPrice || product.originalPrice === 0) {
                 product.originalPrice = product.price;
             }
 
             // Calculate the discounted price
-            const discountedPrice = product.originalPrice * (1 - discount / 100);
-            product.price = parseFloat(discountedPrice.toFixed(2));
+            const discountedPrice = (product.originalPrice * (1 - discount / 100)).toFixed(2);
+            product.price = parseFloat(discountedPrice);
 
-            // Set the discount details
+            // Set Discount Details
             product.discount = {
                 percentage: discount,
-                validUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-                originalPrice: product.originalPrice,
+                validUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+                purchasesDuringDiscount: 0, // Reset purchases during discount
             };
 
             await product.save();
             updatedProducts.push(product);
 
-            // Notify users who have this product in their wishlist
+            // Notify Users with the Product in their Wishlist
             const wishlists = await Wishlist.find({ productId });
             if (wishlists.length > 0) {
                 for (const wishlistItem of wishlists) {
                     const user = await User.findOne({ userId: wishlistItem.userId });
                     if (user?.email) {
-                        // Send email notification
                         const mailOptions = {
                             from: process.env.EMAIL_USER,
                             to: user.email,
                             subject: `Discount Alert: ${product.name}`,
-                            text: `Great news! The product "${product.name}" is now available at a ${discount}% discount for only $${product.price}.\n\nHurry up, the discount is valid until ${new Date(product.discount.validUntil).toLocaleDateString()}!`,
+                            text: `Great news! The product "${product.name}" is now available at a ${discount}% discount for only $${discountedPrice}.\n\nHurry up, the discount is valid until ${new Date(product.discount.validUntil).toLocaleDateString()}!`,
                         };
 
-                        try {
-                            await transporter.sendMail(mailOptions);
-                            console.log(`Email sent to ${user.email} for product ${product.name}`);
-                        } catch (emailError) {
-                            console.error(`Failed to send email to ${user.email}:`, emailError.message);
-                        }
+                        // Push email sending promises to the array
+                        emailPromises.push(
+                            transporter.sendMail(mailOptions)
+                                .then(() => {
+                                    console.log(`Email sent to ${user.email} for product ${product.name}`);
+                                })
+                                .catch((emailError) => {
+                                    console.error(`Failed to send email to ${user.email}:`, emailError.message);
+                                })
+                        );
                     }
                 }
             }
         }
 
+        // Send response immediately without waiting for all emails
         res.status(200).json({
-            message: 'Discount applied successfully and users notified.',
+            message: 'Discount applied successfully. Users are being notified.',
             updatedProducts,
         });
+
+        // Handle email sending asynchronously
+        Promise.all(emailPromises)
+            .then(() => {
+                console.log('All emails have been processed.');
+            })
+            .catch((err) => {
+                console.error('Error in sending emails:', err);
+            });
+
     } catch (error) {
         console.error('Error applying discount:', error.message);
         res.status(500).json({ error: 'An error occurred while applying discounts.' });
     }
 });
+
+
 
 router.get('/refund-requests', async (req, res) => {
     try {
@@ -422,7 +449,7 @@ router.post('/evaluate-refund', async (req, res) => {
             if (userEmail) {
                 const emailSubject = `Refund Processed for ${productDetails.name}`;
                 const emailText = `
-                    Dear ${purchase.user},
+                    Dear user,
 
                     Your refund for ${quantity} unit(s) of ${productDetails.name} has been successfully processed.
 
@@ -431,14 +458,14 @@ router.post('/evaluate-refund', async (req, res) => {
                     Thank you for shopping with us.
 
                     Regards,
-                    Your Store Team
+                    Your N308 Team
                 `;
                 const emailHtml = `
-                    <p>Dear ${purchase.user},</p>
+                    <p>Dear user,</p>
                     <p>Your refund for <strong>${quantity} unit(s)</strong> of <strong>${productDetails.name}</strong> has been successfully processed.</p>
                     <p><strong>Refunded Amount:</strong> $${refundedAmount}</p>
                     <p>Thank you for shopping with us.</p>
-                    <p>Regards,<br>Your Store Team</p>
+                    <p>Regards,<br>Your N308 Team</p>
                 `;
 
                 try {
@@ -467,38 +494,97 @@ router.post('/evaluate-refund', async (req, res) => {
 
 
 
-
-
-// Cancel discounts
 router.post('/cancel-discount', async (req, res) => {
     const { products } = req.body;
 
+    if (!products || products.length === 0) {
+        return res.status(400).json({ error: 'No products provided to cancel the discount.' });
+    }
+
     try {
-        if (!products || !Array.isArray(products) || products.length === 0) {
-            return res.status(400).json({ error: 'Products array is required.' });
+        // Fetch products that are in the provided list
+        const productDocs = await Product.find({ productId: { $in: products } });
+
+        if (productDocs.length === 0) {
+            return res.status(404).json({ error: 'No matching products found to cancel the discount.' });
         }
 
-        const updatedProducts = [];
-        for (const productId of products) {
-            const product = await Product.findOne({ productId });
-            if (!product) continue;
+        // Update each product by restoring the original price
+        const updates = productDocs.map(async (product) => {
+            if (product.discount && product.discount.percentage > 0) {
+                // Calculate the original price based on the discounted price
+                const originalPrice = product.price / (1 - product.discount.percentage / 100);
 
-            product.discount = {
-                percentage: 0,
-                validUntil: null,
-            };
-            await product.save();
-            updatedProducts.push(product);
-        }
+                product.price = originalPrice.toFixed(2); // Restore the original price
+                product.discount.percentage = 0;
+                product.discount.validUntil = null;
+                product.discount.purchasesDuringDiscount = 0;
+                return product.save();
+            }
+        });
 
-        res.status(200).json({
-            message: 'Discounts canceled successfully.',
-            updatedProducts,
+        // Wait for all updates to complete
+        await Promise.all(updates);
+
+        return res.status(200).json({
+            message: `Discount canceled for ${productDocs.length} products.`,
         });
     } catch (error) {
-        console.error(error.message);
-        res.status(500).json({ error: 'An error occurred while canceling discounts.' });
+        console.error('Error canceling discount:', error);
+        return res.status(500).json({ error: 'An error occurred while canceling the discount.' });
     }
 });
+
+
+
+
+
+
+
+//update the price
+
+// PATCH /api/sales/update-price/:productId
+router.patch('/update-price/:productId', async (req, res) => {
+    const { productId } = req.params;
+    const { price } = req.body;
+
+    // Validate the price
+    if (typeof price !== 'number' || price <= 0) {
+        return res.status(400).json({ error: 'Price must be a positive number.' });
+    }
+
+    try {
+        // Find the product by productId
+        const product = await Product.findOne({ productId });
+        if (!product) {
+            return res.status(404).json({ error: 'Product not found.' });
+        }
+
+        // Set originalPrice if not already set
+        if (!product.originalPrice || product.originalPrice === 0) {
+            product.originalPrice = product.price;
+        }
+
+        // Update the price
+        product.price = price;
+
+        // Save the updated product
+        await product.save();
+
+        res.status(200).json({
+            message: 'Product price updated successfully.',
+            product: {
+                productId: product.productId,
+                name: product.name,
+                price: product.price,
+                originalPrice: product.originalPrice,
+            },
+        });
+    } catch (error) {
+        console.error('Error updating product price:', error);
+        res.status(500).json({ error: 'An error occurred while updating the product price.' });
+    }
+});
+
 
 module.exports = router;

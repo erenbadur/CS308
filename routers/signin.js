@@ -3,89 +3,110 @@ const bcrypt = require('bcrypt');
 const User = require('../models/user');
 const Cart = require('../models/cartModel');
 const router = express.Router();
+const { body, validationResult } = require('express-validator');
 
 // Sign-Up Route
-router.post('/signin', async (req, res) => {
-  const { username, email, password } = req.body;
-
-  try {
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' });
+router.post(
+  '/signin',
+  [
+    body('username').trim().notEmpty().withMessage('Username is required').escape(),
+    body('email').isEmail().withMessage('Invalid email address').normalizeEmail(),
+    body('password')
+      .isLength({ min: 8 }).withMessage('Password must be at least 8 characters long')
+      .escape(),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
     }
 
+    const { username, email, password } = req.body;
 
-    // Create new user
-    const newUser = new User({ username, email, password});
-    await newUser.save();
+    try {
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        return res.status(400).json({ message: 'User already exists' });
+      }
 
-    res.status(201).json({ message: 'User created successfully' });
-  } catch (error) {
-    console.error('Error creating user:', error);
-    res.status(500).json({ message: 'Server error' });
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const newUser = new User({ username, email, password: hashedPassword });
+      await newUser.save();
+
+      res.status(201).json({ message: 'User created successfully' });
+    } catch (error) {
+      console.error('Error creating user:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
   }
-});
+);
 
-// Login Route
-router.post('/login', async (req, res) => {
-  const { username, password, sessionId } = req.body;
 
-  try {
+router.post(
+  '/login',
+  [
+    body('username').trim().notEmpty().withMessage('Username is required').escape(),
+    body('password').trim().notEmpty().withMessage('Password is required').escape(),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { username, password, sessionId } = req.body;
+
+    try {
       const user = await User.findOne({ username }).select('+password');
       if (!user) {
-          //console.log("invalid credentials beacuse of user"); for debugging
-          return res.status(400).json({ message: 'Invalid credentials' });
+        return res.status(400).json({ message: 'Invalid credentials' });
       }
-      //console.log("invalid credentials because of match"); for debugging
+
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
-          return res.status(400).json({ message: 'Invalid credentials' });
+        return res.status(400).json({ message: 'Invalid credentials' });
       }
 
       let userCart = await Cart.findOne({ userId: user.userId });
 
-      console.log("merging carts");
       if (sessionId) {
-          const guestCart = await Cart.findOne({ sessionId, userId: null });
-          if (guestCart) {
-              if (!userCart) {
-                  userCart = guestCart;
-                  userCart.userId = user.userId;
-                  userCart.sessionId = null;
-                  await userCart.save();
-                  //await guestCart.deleteOne();
-                  console.log("created new cart for the user and merged it with guest cart");
+        const guestCart = await Cart.findOne({ sessionId, userId: null });
+        if (guestCart) {
+          if (!userCart) {
+            userCart = guestCart;
+            userCart.userId = user.userId;
+            userCart.sessionId = null;
+            await userCart.save();
+          } else {
+            guestCart.items.forEach((guestItem) => {
+              const existingItem = userCart.items.find(
+                (item) => item.productId === guestItem.productId
+              );
+              if (existingItem) {
+                existingItem.quantity += guestItem.quantity;
               } else {
-                  // Merge guestCart into userCart
-                  console.log("user cart already exists, merging user and guest carts");
-                  guestCart.items.forEach((guestItem) => {
-                      const existingItem = userCart.items.find(
-                          (item) => item.productId === guestItem.productId
-                      );
-                      if (existingItem) {
-                          existingItem.quantity += guestItem.quantity;
-                      } else {
-                          userCart.items.push(guestItem);
-                      }
-                  });
-                  await userCart.save();
-                  await guestCart.deleteOne();
+                userCart.items.push(guestItem);
               }
+            });
+            await userCart.save();
+            await guestCart.deleteOne();
           }
+        }
       }
 
       res.status(200).json({
-          userId: user.userId,
-          cart: userCart ? userCart.items : [],
-          role: user.role,
-          message: 'Login successful',
+        userId: user.userId,
+        cart: userCart ? userCart.items : [],
+        role: user.role,
+        message: 'Login successful',
       });
-  } catch (error) {
+    } catch (error) {
       console.error('Error during login:', error);
       res.status(500).json({ message: 'Internal server error' });
+    }
   }
-});
+);
+
 
 
 

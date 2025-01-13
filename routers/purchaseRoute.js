@@ -10,7 +10,7 @@ const pdf = require('pdfkit');
 const fs = require('fs');
 const PurchaseHistory = require('../models/PurchaseHistory');
 const Invoice = require('../models/invoice'); // Import Invoice model
-
+const crypto = require('crypto'); // Import crypto
 // Load environment variables
 require('dotenv').config({ path: path.join(__dirname, '../mail.env') });
 
@@ -196,21 +196,33 @@ router.post("/confirm-payment", async (req, res) => {
 
 
 
-// Generate invoice PDF and return as buffer
+// Generate invoice PDF, hash it, and return the hashed buffer
 const generateInvoiceFile = (user, products, totalAmount, invoiceId) => {
     return new Promise((resolve, reject) => {
         const pdfDoc = new pdf();
         const invoiceChunks = [];
 
         pdfDoc.on('data', (chunk) => invoiceChunks.push(chunk));
-        pdfDoc.on('end', () => resolve(Buffer.concat(invoiceChunks)));
+        pdfDoc.on('end', () => {
+            const buffer = Buffer.concat(invoiceChunks);
+
+            // Hash the PDF content using SHA256
+            const hash = crypto.createHash('sha256').update(buffer).digest('hex');
+
+            // Save the hashed content as a PDF file
+            const filePath = `invoices/Invoice-${invoiceId}-${hash}.pdf`;
+            fs.writeFileSync(filePath, buffer);
+
+            console.log(`Invoice saved as hashed PDF: ${filePath}`);
+            resolve(filePath);
+        });
         pdfDoc.on('error', (error) => reject(error));
 
         // Invoice Header
         pdfDoc.fontSize(20).text('Invoice', { align: 'center' }).moveDown();
 
         // Invoice Metadata
-        pdfDoc.fontSize(12).text(`Invoice ID: ${invoiceId}`); // Use actual Invoice ID
+        pdfDoc.fontSize(12).text(`Invoice ID: ${invoiceId}`);
         pdfDoc.text(`Date: ${new Date().toLocaleDateString()}`).moveDown();
 
         // Customer Information
